@@ -1,0 +1,69 @@
+/*
+ * Assumption Drift — Design tokens
+ * All [data-ad-theme] elements inherit these CSS custom properties.
+ * Values here represent the "modern" theme (default).
+ * Override any subset of these in a theme file to create a new theme.
+ */
+[data-ad-theme] {
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  --ad-font-base: system-ui, -apple-system, sans-serif;
+  --ad-font-scale: 1;               /* multiply font sizes by this for themes */
+
+  /* ── Backgrounds ────────────────────────────────────────────────────── */
+  --ad-color-bg: transparent;       /* outer container */
+  --ad-color-bg-card: #f9f9f9;      /* scenario/feedback cards */
+  --ad-color-bg-choice: #ffffff;    /* un-selected choice button */
+  --ad-color-bg-feedback: #fafafa;  /* inline feedback panel */
+
+  /* ── Borders ────────────────────────────────────────────────────────── */
+  --ad-color-border: #e2e2e2;
+  --ad-color-border-subtle: #e5e5e5;
+  --ad-border-width-card: 1px;
+  --ad-border-width-choice: 2px;
+  --ad-border-style: solid;
+
+  /* ── Text ───────────────────────────────────────────────────────────── */
+  --ad-color-text: #111111;
+  --ad-color-text-muted: #555555;
+  --ad-color-text-label: #888888;
+  --ad-color-text-secondary: #444444;
+  --ad-color-text-loading: #666666;
+
+  /* ── Accent / interactive ───────────────────────────────────────────── */
+  --ad-color-accent: #7c3aed;
+  --ad-color-accent-hover: #6d28d9;
+  --ad-color-accent-subtle: #f5f0ff;   /* choice hover bg */
+  --ad-color-accent-muted: #ede9fe;    /* choice selected bg */
+  --ad-color-accent-text: #ffffff;     /* text on accent bg */
+  --ad-color-accent-border: #7c3aed;  /* selected choice border */
+
+  /* ── Drift bar ──────────────────────────────────────────────────────── */
+  --ad-color-drift-bar: #7c3aed;
+  --ad-color-drift-text: #444444;
+
+  /* ── State: correct ─────────────────────────────────────────────────── */
+  --ad-color-correct: #16a34a;
+  --ad-color-correct-bg: #dcfce7;
+  --ad-color-correct-border: #16a34a;
+
+  /* ── State: incorrect ───────────────────────────────────────────────── */
+  --ad-color-incorrect: #dc2626;
+  --ad-color-incorrect-bg: #fee2e2;
+  --ad-color-incorrect-border: #dc2626;
+
+  /* ── Shape ──────────────────────────────────────────────────────────── */
+  --ad-radius-sm: 6px;
+  --ad-radius-md: 8px;
+
+  /* ── Elevation / shadows ────────────────────────────────────────────── */
+  --ad-shadow-card: none;
+  --ad-shadow-btn: none;
+  --ad-shadow-choice: none;
+  --ad-shadow-choice-selected: none;
+
+  /* ── Button active press effect ─────────────────────────────────────── */
+  --ad-btn-active-translate: 0, 0;
+
+  /* ── Transitions ────────────────────────────────────────────────────── */
+  --ad-transition: 0.15s ease;
+}

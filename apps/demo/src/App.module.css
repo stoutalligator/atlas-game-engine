@@ -40,19 +40,27 @@
   padding: 1.25rem 1.5rem;
 }
 
-.selectLabel {
-  display: block;
-  font-weight: 600;
-  font-size: 0.875rem;
-  margin-bottom: 0.5rem;
-  color: #333;
-}
-
-.selectRow {
+.selectorRow {
   display: flex;
   gap: 0.75rem;
-  align-items: center;
+  align-items: flex-end;
   flex-wrap: wrap;
+}
+
+.selectorField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 160px;
+}
+
+.selectLabel {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .select {

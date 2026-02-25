@@ -1,0 +1,81 @@
+/*
+ * Assumption Drift — Terminal theme
+ * Phosphor-green monochrome on a dark background. CRT vibe.
+ * Requires: tokens.css to be loaded first.
+ */
+[data-ad-theme="terminal"] {
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  --ad-font-base: "Courier New", Courier, monospace;
+
+  /* ── Backgrounds ────────────────────────────────────────────────────── */
+  --ad-color-bg: #0d0d0d;
+  --ad-color-bg-card: #111111;
+  --ad-color-bg-choice: #0d0d0d;
+  --ad-color-bg-feedback: #111111;
+
+  /* ── Borders ────────────────────────────────────────────────────────── */
+  --ad-color-border: #1a7a1a;
+  --ad-color-border-subtle: #1a7a1a;
+  --ad-border-width-card: 1px;
+  --ad-border-width-choice: 1px;
+
+  /* ── Text ───────────────────────────────────────────────────────────── */
+  --ad-color-text: #33ff33;
+  --ad-color-text-muted: #22bb22;
+  --ad-color-text-label: #22bb22;
+  --ad-color-text-secondary: #33ff33;
+  --ad-color-text-loading: #22bb22;
+
+  /* ── Accent / interactive ───────────────────────────────────────────── */
+  --ad-color-accent: #33ff33;
+  --ad-color-accent-hover: #55ff55;
+  --ad-color-accent-subtle: #0d200d;   /* very dark green hover */
+  --ad-color-accent-muted: #0d200d;    /* selected choice bg */
+  --ad-color-accent-text: #0d0d0d;     /* dark text on green button */
+  --ad-color-accent-border: #33ff33;
+
+  /* ── Drift bar ──────────────────────────────────────────────────────── */
+  --ad-color-drift-bar: #33ff33;
+  --ad-color-drift-text: #33ff33;
+
+  /* ── State: correct ─────────────────────────────────────────────────── */
+  --ad-color-correct: #33ff33;
+  --ad-color-correct-bg: #0d200d;
+  --ad-color-correct-border: #33ff33;
+
+  /* ── State: incorrect ───────────────────────────────────────────────── */
+  --ad-color-incorrect: #ff3333;
+  --ad-color-incorrect-bg: #200d0d;
+  --ad-color-incorrect-border: #ff3333;
+
+  /* ── Shape: no rounding ─────────────────────────────────────────────── */
+  --ad-radius-sm: 0px;
+  --ad-radius-md: 0px;
+
+  /* ── Elevation ──────────────────────────────────────────────────────── */
+  --ad-shadow-card: 0 0 8px rgba(51, 255, 51, 0.15);
+  --ad-shadow-btn: 0 0 6px rgba(51, 255, 51, 0.4);
+  --ad-shadow-choice: none;
+  --ad-shadow-choice-selected: 0 0 8px rgba(51, 255, 51, 0.5);
+
+  /* ── No active press effect ─────────────────────────────────────────── */
+  --ad-btn-active-translate: 0, 0;
+
+  --ad-transition: 0.1s ease;
+}
+
+/* Scanline overlay on the whole game area — pure CSS, no JS */
+[data-ad-theme="terminal"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.05) 2px,
+    rgba(0, 0, 0, 0.05) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}

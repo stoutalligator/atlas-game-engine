@@ -1,5 +1,5 @@
 import { DailyGame, GamePackSchema, LocalStorageAdapter } from "@atlas/engine";
-import type { GamePack, GameResult } from "@atlas/engine";
+import type { GamePack, GameResult, Theme } from "@atlas/engine";
 import { useState } from "react";
 
 // ── Static imports of the canonical packs (single source of truth) ──────────
@@ -27,6 +27,7 @@ const storage = new LocalStorageAdapter();
 // ---------------------------------------------------------------------------
 export function App() {
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [theme, setTheme] = useState<Theme>("modern");
   const [activePack, setActivePack] = useState<GamePack | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [result, setResult] = useState<GameResult | null>(null);
@@ -63,30 +64,53 @@ export function App() {
       </header>
 
       <main className={styles.main}>
-        {/* ── Pack selector ── */}
+        {/* ── Pack + theme selector ── */}
         <section className={styles.selector}>
-          <label className={styles.selectLabel} htmlFor="pack-select">
-            Select a pack
-          </label>
-          <div className={styles.selectRow}>
-            <select
-              id="pack-select"
-              className={styles.select}
-              value={selectedIndex}
-              onChange={(e) => {
-                setSelectedIndex(Number(e.target.value));
-                setActivePack(null);
-                setValidationErrors([]);
-                setResult(null);
-              }}
+          <div className={styles.selectorRow}>
+            <div className={styles.selectorField}>
+              <label className={styles.selectLabel} htmlFor="pack-select">
+                Pack
+              </label>
+              <select
+                id="pack-select"
+                className={styles.select}
+                value={selectedIndex}
+                onChange={(e) => {
+                  setSelectedIndex(Number(e.target.value));
+                  setActivePack(null);
+                  setValidationErrors([]);
+                  setResult(null);
+                }}
+              >
+                {PACK_OPTIONS.map((opt, i) => (
+                  <option key={i} value={i}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.selectorField}>
+              <label className={styles.selectLabel} htmlFor="theme-select">
+                Theme
+              </label>
+              <select
+                id="theme-select"
+                className={styles.select}
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as Theme)}
+              >
+                <option value="modern">Modern</option>
+                <option value="8bit">8-Bit</option>
+                <option value="terminal">Terminal</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              className={styles.startButton}
+              onClick={handleStart}
             >
-              {PACK_OPTIONS.map((opt, i) => (
-                <option key={i} value={i}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <button type="button" className={styles.startButton} onClick={handleStart}>
               {activePack ? "Restart" : "Start"}
             </button>
           </div>
@@ -108,10 +132,11 @@ export function App() {
         {activePack && (
           <section className={styles.gameWrapper}>
             <DailyGame
-              key={activePack.packId}
+              key={`${activePack.packId}-${theme}`}
               pack={activePack}
               storage={storage}
               onComplete={handleComplete}
+              theme={theme}
             />
           </section>
         )}

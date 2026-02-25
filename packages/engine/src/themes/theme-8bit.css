@@ -1,0 +1,69 @@
+/*
+ * Assumption Drift — 8-Bit theme
+ * Inspired by Windows 95 / classic DOS era UI.
+ * Requires: tokens.css to be loaded first.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+[data-ad-theme="8bit"] {
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  --ad-font-base: "Press Start 2P", "Courier New", monospace;
+  --ad-font-scale: 0.75; /* Press Start 2P is large; scale down */
+
+  /* ── Backgrounds ────────────────────────────────────────────────────── */
+  --ad-color-bg: #008080;              /* Windows 95 teal desktop */
+  --ad-color-bg-card: #c0c0c0;         /* classic silver window */
+  --ad-color-bg-choice: #d4d0c8;       /* slightly raised button face */
+  --ad-color-bg-feedback: #c0c0c0;
+
+  /* ── Borders ────────────────────────────────────────────────────────── */
+  --ad-color-border: #000000;
+  --ad-color-border-subtle: #808080;
+  --ad-border-width-card: 2px;
+  --ad-border-width-choice: 2px;
+
+  /* ── Text ───────────────────────────────────────────────────────────── */
+  --ad-color-text: #000000;
+  --ad-color-text-muted: #444444;
+  --ad-color-text-label: #000080;
+  --ad-color-text-secondary: #000000;
+  --ad-color-text-loading: #000000;
+
+  /* ── Accent / interactive ───────────────────────────────────────────── */
+  --ad-color-accent: #000080;          /* classic Windows navy */
+  --ad-color-accent-hover: #0000aa;
+  --ad-color-accent-subtle: #c4c4ff;   /* light lavender hover */
+  --ad-color-accent-muted: #c4c4ff;    /* selected choice bg */
+  --ad-color-accent-text: #ffffff;
+  --ad-color-accent-border: #000080;
+
+  /* ── Drift bar ──────────────────────────────────────────────────────── */
+  --ad-color-drift-bar: #800000;       /* maroon — DOS warning color */
+  --ad-color-drift-text: #000000;
+
+  /* ── State: correct ─────────────────────────────────────────────────── */
+  --ad-color-correct: #006400;
+  --ad-color-correct-bg: #90ee90;
+  --ad-color-correct-border: #006400;
+
+  /* ── State: incorrect ───────────────────────────────────────────────── */
+  --ad-color-incorrect: #8b0000;
+  --ad-color-incorrect-bg: #ffb3b3;
+  --ad-color-incorrect-border: #8b0000;
+
+  /* ── Shape: hard pixel edges, no rounding ───────────────────────────── */
+  --ad-radius-sm: 0px;
+  --ad-radius-md: 0px;
+
+  /* ── Elevation: pixel-offset drop shadows ───────────────────────────── */
+  --ad-shadow-card: 4px 4px 0px #000000;
+  --ad-shadow-btn: 3px 3px 0px #000000;
+  --ad-shadow-choice: 2px 2px 0px #808080;
+  --ad-shadow-choice-selected: inset 1px 1px 0px #000000;
+
+  /* ── Button press effect ────────────────────────────────────────────── */
+  --ad-btn-active-translate: 2px, 2px;
+
+  /* ── No transitions — instant, pixel-perfect ───────────────────────── */
+  --ad-transition: 0s;
+}
