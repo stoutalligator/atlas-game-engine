@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "gameType": "assumption_drift",
+  "gameId": "2026-03-03",
+  "packId": "2026-03-03-assumption-drift-hard",
+  "title": "Assumption Drift — Benefit Design Shift",
+  "meta": {
+    "difficulty": "hard",
+    "tags": ["health economics", "risk pooling", "selection", "moral hazard"]
+  },
+  "payload": {
+    "instructions": "Select the most likely primary effect of the drift.",
+    "questions": [
+      {
+        "id": "q1",
+        "scenario": "A health insurance plan currently has moderate deductibles and broad provider access.",
+        "drift": "The insurer lowers deductibles substantially while keeping premiums unchanged.",
+        "prompt": "What is the most likely immediate behavioral or risk effect?",
+        "choiceStyle": "conceptual",
+        "choices": [
+          { "id": "util_up", "label": "Utilization increases" },
+          { "id": "risk_pool_improves", "label": "Risk pool improves" },
+          { "id": "moral_hazard", "label": "Moral hazard increases" },
+          { "id": "adverse_selection_decreases", "label": "Adverse selection decreases" },
+          { "id": "claim_variance_down", "label": "Claim variance decreases" },
+          { "id": "no_change", "label": "No significant effect" }
+        ],
+        "answer": "moral_hazard",
+        "solution": {
+          "text": "Lower deductibles reduce cost-sharing, increasing the likelihood that insured individuals consume more care than they otherwise would. This reflects a classic moral hazard effect."
+        }
+      }
+    ]
+  }
+}

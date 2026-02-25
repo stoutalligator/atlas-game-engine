@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "gameType": "assumption_drift",
+  "gameId": "2026-03-01",
+  "packId": "2026-03-01-assumption-drift-easy",
+  "title": "Assumption Drift — Duration Sensitivity",
+  "meta": {
+    "difficulty": "easy",
+    "tags": ["interest rates", "duration", "price sensitivity"]
+  },
+  "payload": {
+    "instructions": "A single assumption changes. Predict the impact.",
+    "questions": [
+      {
+        "id": "q1",
+        "scenario": "A fixed-income portfolio has a duration of 4 years.",
+        "drift": "The portfolio is rebalanced to increase duration to 7 years.",
+        "prompt": "If interest rates decrease slightly, what happens to the magnitude of the portfolio's price increase?",
+        "choiceStyle": "directional",
+        "choices": [
+          { "id": "inc", "label": "Increase" },
+          { "id": "dec", "label": "Decrease" },
+          { "id": "same", "label": "No material change" }
+        ],
+        "answer": "inc",
+        "solution": {
+          "text": "Higher duration increases sensitivity to interest rate changes. When rates fall, longer-duration portfolios experience larger price increases."
+        }
+      }
+    ]
+  }
+}

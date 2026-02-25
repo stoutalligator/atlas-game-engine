@@ -1,0 +1,221 @@
+/* All colour/shape values reference CSS custom properties defined in
+   packages/engine/src/themes/tokens.css (and overridden per theme).
+   Structural values (max-width, padding, gap) remain hardcoded. */
+
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+  font-family: var(--ad-font-base);
+  color: var(--ad-color-text);
+  background: var(--ad-color-bg);
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: var(--ad-color-text-loading);
+  font-family: var(--ad-font-base);
+}
+
+.title {
+  font-size: calc(1.25rem * var(--ad-font-scale, 1));
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  color: var(--ad-color-text);
+}
+
+.instructions {
+  color: var(--ad-color-text-muted);
+  font-size: calc(0.9rem * var(--ad-font-scale, 1));
+  margin-bottom: 1.25rem;
+}
+
+.card {
+  background: var(--ad-color-bg-card);
+  border: var(--ad-border-width-card) var(--ad-border-style) var(--ad-color-border);
+  border-radius: var(--ad-radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--ad-shadow-card);
+}
+
+.label {
+  font-size: calc(0.75rem * var(--ad-font-scale, 1));
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ad-color-text-label);
+  margin: 0 0 0.25rem;
+}
+
+.scenario {
+  margin: 0 0 1rem;
+  line-height: 1.55;
+  color: var(--ad-color-text);
+  font-family: var(--ad-font-content);
+  font-size: calc(0.975rem * var(--ad-font-scale, 1));
+}
+
+.drift {
+  margin: 0 0 0.75rem;
+  font-style: italic;
+  color: var(--ad-color-drift-text);
+  line-height: 1.55;
+  border-left: 3px solid var(--ad-color-drift-bar);
+  padding-left: 0.75rem;
+  font-family: var(--ad-font-content);
+  font-size: calc(0.975rem * var(--ad-font-scale, 1));
+}
+
+.prompt {
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.5;
+  color: var(--ad-color-text);
+  font-family: var(--ad-font-content);
+  font-size: calc(1rem * var(--ad-font-scale, 1));
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.choice {
+  text-align: left;
+  background: var(--ad-color-bg-choice);
+  border: var(--ad-border-width-choice) var(--ad-border-style) var(--ad-color-border);
+  border-radius: var(--ad-radius-sm);
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  font-size: calc(0.95rem * var(--ad-font-scale, 1));
+  font-family: var(--ad-font-base);
+  color: var(--ad-color-text);
+  box-shadow: var(--ad-shadow-choice);
+  transition: border-color var(--ad-transition), background var(--ad-transition);
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--ad-color-accent-border);
+  background: var(--ad-color-accent-subtle);
+}
+
+.choice:active:not(:disabled) {
+  transform: translate(var(--ad-btn-active-translate));
+}
+
+.choiceSelected {
+  border-color: var(--ad-color-accent-border) !important;
+  background: var(--ad-color-accent-muted) !important;
+  box-shadow: var(--ad-shadow-choice-selected) !important;
+}
+
+.choiceCorrect {
+  border-color: var(--ad-color-correct-border) !important;
+  background: var(--ad-color-correct-bg) !important;
+}
+
+.choiceWrong {
+  border-color: var(--ad-color-incorrect-border) !important;
+  background: var(--ad-color-incorrect-bg) !important;
+}
+
+.button {
+  background: var(--ad-color-accent);
+  color: var(--ad-color-accent-text);
+  border: var(--ad-border-width-choice) var(--ad-border-style) var(--ad-color-accent);
+  border-radius: var(--ad-radius-sm);
+  padding: 0.65rem 1.5rem;
+  font-size: calc(0.95rem * var(--ad-font-scale, 1));
+  font-family: var(--ad-font-base);
+  cursor: pointer;
+  box-shadow: var(--ad-shadow-btn);
+  transition: background var(--ad-transition), box-shadow var(--ad-transition);
+}
+
+.button:hover:not(:disabled) {
+  background: var(--ad-color-accent-hover);
+}
+
+.button:active:not(:disabled) {
+  transform: translate(var(--ad-btn-active-translate));
+  box-shadow: none;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.feedback {
+  background: var(--ad-color-bg-feedback);
+  border: var(--ad-border-width-card) var(--ad-border-style) var(--ad-color-border-subtle);
+  border-radius: var(--ad-radius-md);
+  padding: 1rem 1.25rem;
+  margin-top: 0.75rem;
+}
+
+.correct {
+  color: var(--ad-color-correct);
+  font-weight: 600;
+  font-family: var(--ad-font-content);
+}
+
+.incorrect {
+  color: var(--ad-color-incorrect);
+  font-weight: 600;
+  font-family: var(--ad-font-content);
+}
+
+.solutionText {
+  color: var(--ad-color-text-secondary);
+  font-size: calc(0.9rem * var(--ad-font-scale, 1));
+  line-height: 1.6;
+  margin: 0.5rem 0;
+  font-family: var(--ad-font-content);
+}
+
+/* ── Results view ─────────────────────────────────────────────────────── */
+
+.results {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.score {
+  font-size: calc(1.4rem * var(--ad-font-scale, 1));
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--ad-color-text);
+  font-family: var(--ad-font-content);
+}
+
+.shareGrid {
+  font-size: 1.75rem; /* emoji size — intentionally not scaled */
+  margin-bottom: 1rem;
+  letter-spacing: 0.1em;
+}
+
+.shareCell {
+  display: inline-block;
+}
+
+.reviewCard {
+  background: var(--ad-color-bg-card);
+  border: var(--ad-border-width-card) var(--ad-border-style) var(--ad-color-border);
+  border-radius: var(--ad-radius-md);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  box-shadow: var(--ad-shadow-card);
+  font-family: var(--ad-font-content);
+}
+
+.reviewQuestion {
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  color: var(--ad-color-text);
+  font-family: var(--ad-font-content);
+}

@@ -1,0 +1,73 @@
+/*
+ * Assumption Drift — 8-Bit theme (Bright)
+ * Inspired by Game Boy Color / NES cartridge art: vivid primaries,
+ * crisp pixel borders, but modern readable fonts for long-form content.
+ * Requires: tokens.css to be loaded first.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+[data-ad-theme="8bit"] {
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  /* UI chrome (buttons, labels, title) keep the pixel font */
+  --ad-font-base: "Press Start 2P", "Courier New", monospace;
+  /* Scenario / drift / prompt / solution use a modern readable face */
+  --ad-font-content: system-ui, -apple-system, sans-serif;
+  --ad-font-scale: 0.72;
+
+  /* ── Backgrounds ────────────────────────────────────────────────────── */
+  --ad-color-bg: #fef9ec;              /* warm cream — like aged cartridge paper */
+  --ad-color-bg-card: #ffffff;         /* crisp white cards */
+  --ad-color-bg-choice: #f4f0ff;       /* very light lavender */
+  --ad-color-bg-feedback: #ffffff;
+
+  /* ── Borders ────────────────────────────────────────────────────────── */
+  --ad-color-border: #1a1a2e;          /* deep navy — softer than pure black */
+  --ad-color-border-subtle: #1a1a2e;
+  --ad-border-width-card: 2px;
+  --ad-border-width-choice: 2px;
+
+  /* ── Text ───────────────────────────────────────────────────────────── */
+  --ad-color-text: #1a1a2e;
+  --ad-color-text-muted: #4a4a6a;
+  --ad-color-text-label: #0050c8;      /* bright blue label caps */
+  --ad-color-text-secondary: #2e2e4e;
+  --ad-color-text-loading: #4a4a6a;
+
+  /* ── Accent / interactive ───────────────────────────────────────────── */
+  --ad-color-accent: #0050c8;          /* NES royal blue */
+  --ad-color-accent-hover: #003ea0;
+  --ad-color-accent-subtle: #ddeeff;   /* light sky on hover */
+  --ad-color-accent-muted: #bbddff;    /* selected choice bg */
+  --ad-color-accent-text: #ffffff;
+  --ad-color-accent-border: #0050c8;
+
+  /* ── Drift bar ──────────────────────────────────────────────────────── */
+  --ad-color-drift-bar: #e8400c;       /* vivid orange-red — NES fire palette */
+  --ad-color-drift-text: #2e2e4e;
+
+  /* ── State: correct ─────────────────────────────────────────────────── */
+  --ad-color-correct: #007a2f;         /* bright grass green */
+  --ad-color-correct-bg: #d4f5df;
+  --ad-color-correct-border: #007a2f;
+
+  /* ── State: incorrect ───────────────────────────────────────────────── */
+  --ad-color-incorrect: #cc1a1a;       /* vivid red */
+  --ad-color-incorrect-bg: #ffe0e0;
+  --ad-color-incorrect-border: #cc1a1a;
+
+  /* ── Shape: hard pixel edges, no rounding ───────────────────────────── */
+  --ad-radius-sm: 0px;
+  --ad-radius-md: 0px;
+
+  /* ── Elevation: coloured pixel-offset shadows (not muddy black) ─────── */
+  --ad-shadow-card: 4px 4px 0px #0050c8;          /* blue pixel shadow */
+  --ad-shadow-btn: 3px 3px 0px #003ea0;
+  --ad-shadow-choice: 2px 2px 0px #aaccee;
+  --ad-shadow-choice-selected: inset 1px 1px 0px #0050c8;
+
+  /* ── Button press effect ────────────────────────────────────────────── */
+  --ad-btn-active-translate: 3px, 3px;
+
+  /* ── No transitions — instant, pixel-perfect ───────────────────────── */
+  --ad-transition: 0s;
+}

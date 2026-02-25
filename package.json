@@ -1,0 +1,21 @@
+{
+  "name": "atlas-game-engine",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Assumption Drift daily game engine monorepo",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter \"apps/demo\" dev",
+    "build": "pnpm --filter \"@atlas/engine\" build && pnpm --filter \"apps/demo\" build",
+    "test": "pnpm --filter \"@atlas/engine\" test",
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "typescript": "^5.7.3"
+  }
+}
+
