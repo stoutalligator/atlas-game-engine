@@ -7,6 +7,10 @@
 [data-ad-theme] {
   /* ── Typography ─────────────────────────────────────────────────────── */
   --ad-font-base: system-ui, -apple-system, sans-serif;
+  /* Content font is used for long-form reading text (scenario, drift, prompt, solution).
+     Theme overrides can set this to a more readable face while keeping --ad-font-base
+     for UI chrome (buttons, labels, headings). */
+  --ad-font-content: var(--ad-font-base);
   --ad-font-scale: 1;               /* multiply font sizes by this for themes */
 
   /* ── Backgrounds ────────────────────────────────────────────────────── */

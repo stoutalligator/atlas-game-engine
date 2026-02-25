@@ -1,68 +1,72 @@
 /*
- * Assumption Drift — 8-Bit theme
- * Inspired by Windows 95 / classic DOS era UI.
+ * Assumption Drift — 8-Bit theme (Bright)
+ * Inspired by Game Boy Color / NES cartridge art: vivid primaries,
+ * crisp pixel borders, but modern readable fonts for long-form content.
  * Requires: tokens.css to be loaded first.
  */
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
 [data-ad-theme="8bit"] {
   /* ── Typography ─────────────────────────────────────────────────────── */
+  /* UI chrome (buttons, labels, title) keep the pixel font */
   --ad-font-base: "Press Start 2P", "Courier New", monospace;
-  --ad-font-scale: 0.75; /* Press Start 2P is large; scale down */
+  /* Scenario / drift / prompt / solution use a modern readable face */
+  --ad-font-content: system-ui, -apple-system, sans-serif;
+  --ad-font-scale: 0.72;
 
   /* ── Backgrounds ────────────────────────────────────────────────────── */
-  --ad-color-bg: #008080;              /* Windows 95 teal desktop */
-  --ad-color-bg-card: #c0c0c0;         /* classic silver window */
-  --ad-color-bg-choice: #d4d0c8;       /* slightly raised button face */
-  --ad-color-bg-feedback: #c0c0c0;
+  --ad-color-bg: #fef9ec;              /* warm cream — like aged cartridge paper */
+  --ad-color-bg-card: #ffffff;         /* crisp white cards */
+  --ad-color-bg-choice: #f4f0ff;       /* very light lavender */
+  --ad-color-bg-feedback: #ffffff;
 
   /* ── Borders ────────────────────────────────────────────────────────── */
-  --ad-color-border: #000000;
-  --ad-color-border-subtle: #808080;
+  --ad-color-border: #1a1a2e;          /* deep navy — softer than pure black */
+  --ad-color-border-subtle: #1a1a2e;
   --ad-border-width-card: 2px;
   --ad-border-width-choice: 2px;
 
   /* ── Text ───────────────────────────────────────────────────────────── */
-  --ad-color-text: #000000;
-  --ad-color-text-muted: #444444;
-  --ad-color-text-label: #000080;
-  --ad-color-text-secondary: #000000;
-  --ad-color-text-loading: #000000;
+  --ad-color-text: #1a1a2e;
+  --ad-color-text-muted: #4a4a6a;
+  --ad-color-text-label: #0050c8;      /* bright blue label caps */
+  --ad-color-text-secondary: #2e2e4e;
+  --ad-color-text-loading: #4a4a6a;
 
   /* ── Accent / interactive ───────────────────────────────────────────── */
-  --ad-color-accent: #000080;          /* classic Windows navy */
-  --ad-color-accent-hover: #0000aa;
-  --ad-color-accent-subtle: #c4c4ff;   /* light lavender hover */
-  --ad-color-accent-muted: #c4c4ff;    /* selected choice bg */
+  --ad-color-accent: #0050c8;          /* NES royal blue */
+  --ad-color-accent-hover: #003ea0;
+  --ad-color-accent-subtle: #ddeeff;   /* light sky on hover */
+  --ad-color-accent-muted: #bbddff;    /* selected choice bg */
   --ad-color-accent-text: #ffffff;
-  --ad-color-accent-border: #000080;
+  --ad-color-accent-border: #0050c8;
 
   /* ── Drift bar ──────────────────────────────────────────────────────── */
-  --ad-color-drift-bar: #800000;       /* maroon — DOS warning color */
-  --ad-color-drift-text: #000000;
+  --ad-color-drift-bar: #e8400c;       /* vivid orange-red — NES fire palette */
+  --ad-color-drift-text: #2e2e4e;
 
   /* ── State: correct ─────────────────────────────────────────────────── */
-  --ad-color-correct: #006400;
-  --ad-color-correct-bg: #90ee90;
-  --ad-color-correct-border: #006400;
+  --ad-color-correct: #007a2f;         /* bright grass green */
+  --ad-color-correct-bg: #d4f5df;
+  --ad-color-correct-border: #007a2f;
 
   /* ── State: incorrect ───────────────────────────────────────────────── */
-  --ad-color-incorrect: #8b0000;
-  --ad-color-incorrect-bg: #ffb3b3;
-  --ad-color-incorrect-border: #8b0000;
+  --ad-color-incorrect: #cc1a1a;       /* vivid red */
+  --ad-color-incorrect-bg: #ffe0e0;
+  --ad-color-incorrect-border: #cc1a1a;
 
   /* ── Shape: hard pixel edges, no rounding ───────────────────────────── */
   --ad-radius-sm: 0px;
   --ad-radius-md: 0px;
 
-  /* ── Elevation: pixel-offset drop shadows ───────────────────────────── */
-  --ad-shadow-card: 4px 4px 0px #000000;
-  --ad-shadow-btn: 3px 3px 0px #000000;
-  --ad-shadow-choice: 2px 2px 0px #808080;
-  --ad-shadow-choice-selected: inset 1px 1px 0px #000000;
+  /* ── Elevation: coloured pixel-offset shadows (not muddy black) ─────── */
+  --ad-shadow-card: 4px 4px 0px #0050c8;          /* blue pixel shadow */
+  --ad-shadow-btn: 3px 3px 0px #003ea0;
+  --ad-shadow-choice: 2px 2px 0px #aaccee;
+  --ad-shadow-choice-selected: inset 1px 1px 0px #0050c8;
 
   /* ── Button press effect ────────────────────────────────────────────── */
-  --ad-btn-active-translate: 2px, 2px;
+  --ad-btn-active-translate: 3px, 3px;
 
   /* ── No transitions — instant, pixel-perfect ───────────────────────── */
   --ad-transition: 0s;

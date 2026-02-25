@@ -53,6 +53,8 @@
   margin: 0 0 1rem;
   line-height: 1.55;
   color: var(--ad-color-text);
+  font-family: var(--ad-font-content);
+  font-size: calc(0.975rem * var(--ad-font-scale, 1));
 }
 
 .drift {
@@ -62,6 +64,8 @@
   line-height: 1.55;
   border-left: 3px solid var(--ad-color-drift-bar);
   padding-left: 0.75rem;
+  font-family: var(--ad-font-content);
+  font-size: calc(0.975rem * var(--ad-font-scale, 1));
 }
 
 .prompt {
@@ -69,6 +73,8 @@
   margin: 0;
   line-height: 1.5;
   color: var(--ad-color-text);
+  font-family: var(--ad-font-content);
+  font-size: calc(1rem * var(--ad-font-scale, 1));
 }
 
 .choices {
@@ -155,11 +161,13 @@
 .correct {
   color: var(--ad-color-correct);
   font-weight: 600;
+  font-family: var(--ad-font-content);
 }
 
 .incorrect {
   color: var(--ad-color-incorrect);
   font-weight: 600;
+  font-family: var(--ad-font-content);
 }
 
 .solutionText {
@@ -167,6 +175,7 @@
   font-size: calc(0.9rem * var(--ad-font-scale, 1));
   line-height: 1.6;
   margin: 0.5rem 0;
+  font-family: var(--ad-font-content);
 }
 
 /* ── Results view ─────────────────────────────────────────────────────── */
@@ -181,6 +190,7 @@
   font-weight: 700;
   margin-bottom: 0.5rem;
   color: var(--ad-color-text);
+  font-family: var(--ad-font-content);
 }
 
 .shareGrid {
@@ -200,10 +210,12 @@
   padding: 1rem 1.25rem;
   margin-bottom: 0.75rem;
   box-shadow: var(--ad-shadow-card);
+  font-family: var(--ad-font-content);
 }
 
 .reviewQuestion {
   font-weight: 600;
   margin: 0 0 0.5rem;
   color: var(--ad-color-text);
+  font-family: var(--ad-font-content);
 }
