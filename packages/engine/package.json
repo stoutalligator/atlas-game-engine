@@ -1,8 +1,8 @@
 {
   "name": "@atlas/engine",
-  "version": "0.0.1",
-  "private": false,
-  "description": "Assumption Drift game engine library",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Reusable daily game engine — Assumption Drift",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -14,6 +14,9 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
