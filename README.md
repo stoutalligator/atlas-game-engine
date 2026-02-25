@@ -192,3 +192,75 @@ const remoteAdapter: StorageAdapter = {
   }
 }
 ```
+
+---
+
+## Using the engine in another repo
+
+### 1. Create a GitHub PAT
+
+1. GitHub → **Settings → Developer Settings → Personal Access Tokens → Fine-grained tokens**
+2. **Generate new token** — Repository access: `atlas-game-engine` only, Permission: `Contents: Read-only`
+3. Copy the token (you only see it once)
+
+### 2. Add the dependency
+
+In your host repo's `package.json`:
+
+```json
+{
+  "dependencies": {
+    "@atlas/engine": "github:YOUR_GITHUB_USERNAME/atlas-game-engine#v1.0.0"
+  }
+}
+```
+
+### 3. Add `.npmrc` to your host repo root
+
+```ini
+//github.com:_authToken=${GH_TOKEN}
+```
+
+Commit this file. The token value is never committed — it comes from your environment.
+
+### 4. Set `GH_TOKEN`
+
+**Locally** — add to your shell or `.env.local` (gitignored):
+```bash
+GH_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+```
+
+**On Vercel** — Settings → Environment Variables → add `GH_TOKEN` for all environments.
+
+### 5. Install and use
+
+```bash
+pnpm install
+```
+
+```tsx
+import { DailyGame, LocalStorageAdapter } from "@atlas/engine";
+import type { GamePack } from "@atlas/engine";
+import myPack from "./packs/my-pack.json";
+
+const storage = new LocalStorageAdapter();
+
+<DailyGame
+  pack={myPack as GamePack}
+  storage={storage}
+  theme="8bit"
+  onComplete={(result) => console.log(result)}
+/>
+```
+
+Packs are plain JSON files that live in your host repo — load them via static import or `fetch()`.
+
+### 6. Tagging new releases
+
+```bash
+# in this repo after changes land on main
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+Then bump the `#v1.0.0` reference in your host repo and run `pnpm install`.
