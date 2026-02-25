@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@atlas/engine": ["../../packages/engine/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

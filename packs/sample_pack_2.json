@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "gameType": "assumption_drift",
+  "gameId": "2026-03-02",
+  "packId": "2026-03-02-assumption-drift-medium",
+  "title": "Assumption Drift — Frequency vs Severity",
+  "meta": {
+    "difficulty": "medium",
+    "tags": ["insurance risk", "aggregate loss", "frequency-severity"]
+  },
+  "payload": {
+    "instructions": "Consider how the drift affects the target metric.",
+    "questions": [
+      {
+        "id": "q1",
+        "scenario": "An insurer models aggregate loss as the product of claim frequency and average severity.",
+        "drift": "Claim frequency increases by 10%, while average severity decreases by 8%.",
+        "prompt": "What is the most likely impact on expected aggregate loss?",
+        "choiceStyle": "directional",
+        "choices": [
+          { "id": "inc", "label": "Increase" },
+          { "id": "dec", "label": "Decrease" },
+          { "id": "same", "label": "Roughly unchanged" },
+          { "id": "depends", "label": "Depends on additional assumptions" }
+        ],
+        "answer": "inc",
+        "solution": {
+          "text": "Expected aggregate loss is proportional to frequency × severity. A 10% increase combined with an 8% decrease results in a net increase (1.10 × 0.92 ≈ 1.012)."
+        }
+      }
+    ]
+  }
+}
