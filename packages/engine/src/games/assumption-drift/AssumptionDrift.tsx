@@ -32,10 +32,7 @@ function buildShareText(
   ].join("\n");
 }
 
-function buildResult(
-  pack: AssumptionDriftPack,
-  state: PersistedState,
-): GameResult {
+function buildResult(pack: AssumptionDriftPack, state: PersistedState): GameResult {
   const score = state.responses.filter((r) => r.correct).length;
   const maxScore = pack.payload.questions.length;
   const isPerfect = score === maxScore;
@@ -84,6 +81,7 @@ export function AssumptionDrift({ pack, storage, onComplete }: GameComponentProp
   const completedRef = useRef(false);
 
   // ── Load persisted state on mount ────────────────────────────────────────
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs only once on mount
   useEffect(() => {
     storage.load(storageKey).then((raw) => {
       const saved = raw as PersistedState | null;
@@ -114,6 +112,7 @@ export function AssumptionDrift({ pack, storage, onComplete }: GameComponentProp
   }, [completed, loaded, startedAt, responses, completedAt, typedPack, onComplete]);
 
   // Also fire if we loaded an already-completed state
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs only when `loaded` changes
   useEffect(() => {
     if (loaded && completed && completedRef.current) {
       const state: PersistedState = { startedAt, responses, completed: true, completedAt };
@@ -185,7 +184,11 @@ export function AssumptionDrift({ pack, storage, onComplete }: GameComponentProp
                   {chosen?.label}
                 </span>
               </p>
-              {!r.correct && <p>Correct: <span className={styles.correct}>{correct?.label}</span></p>}
+              {!r.correct && (
+                <p>
+                  Correct: <span className={styles.correct}>{correct?.label}</span>
+                </p>
+              )}
               <p className={styles.solutionText}>{q?.solution.text}</p>
             </div>
           );
@@ -249,8 +252,10 @@ export function AssumptionDrift({ pack, storage, onComplete }: GameComponentProp
         {question.choices.map((choice) => {
           let choiceClass = styles.choice;
           if (submitted) {
-            if (choice.id === question.answer) choiceClass = `${styles.choice} ${styles.choiceCorrect}`;
-            else if (choice.id === selectedChoiceId) choiceClass = `${styles.choice} ${styles.choiceWrong}`;
+            if (choice.id === question.answer)
+              choiceClass = `${styles.choice} ${styles.choiceCorrect}`;
+            else if (choice.id === selectedChoiceId)
+              choiceClass = `${styles.choice} ${styles.choiceWrong}`;
           } else if (choice.id === selectedChoiceId) {
             choiceClass = `${styles.choice} ${styles.choiceSelected}`;
           }
@@ -283,7 +288,9 @@ export function AssumptionDrift({ pack, storage, onComplete }: GameComponentProp
       {submitted && (
         <div className={styles.feedback}>
           <p className={selectedChoiceId === question.answer ? styles.correct : styles.incorrect}>
-            {selectedChoiceId === question.answer ? "✅ Correct!" : `❌ The answer was: ${correctChoice?.label}`}
+            {selectedChoiceId === question.answer
+              ? "✅ Correct!"
+              : `❌ The answer was: ${correctChoice?.label}`}
           </p>
           <p className={styles.solutionText}>{question.solution.text}</p>
           {!isLast && (

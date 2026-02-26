@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "pnpm --filter \"apps/demo\" dev",
-    "build": "pnpm --filter \"@atlas/engine\" build && pnpm --filter \"apps/demo\" build",
-    "test": "pnpm --filter \"@atlas/engine\" test",
+    "build": "pnpm --filter \"@stoutalligator/engine\" build && pnpm --filter \"apps/demo\" build",
+    "test": "pnpm --filter \"@stoutalligator/engine\" test",
     "lint": "biome check .",
     "format": "biome format --write ."
   },
@@ -18,4 +18,3 @@
     "typescript": "^5.7.3"
   }
 }
-

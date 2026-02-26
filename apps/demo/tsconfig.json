@@ -3,7 +3,7 @@
   "compilerOptions": {
     "noEmit": true,
     "paths": {
-      "@atlas/engine": ["../../packages/engine/src/index.ts"]
+      "@stoutalligator/engine": ["../../packages/engine/src/index.ts"]
     }
   },
   "include": ["src"]
