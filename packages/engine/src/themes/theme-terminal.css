@@ -29,9 +29,9 @@
   /* ── Accent / interactive ───────────────────────────────────────────── */
   --ad-color-accent: #33ff33;
   --ad-color-accent-hover: #55ff55;
-  --ad-color-accent-subtle: #0d200d;   /* very dark green hover */
-  --ad-color-accent-muted: #0d200d;    /* selected choice bg */
-  --ad-color-accent-text: #0d0d0d;     /* dark text on green button */
+  --ad-color-accent-subtle: #0d200d; /* very dark green hover */
+  --ad-color-accent-muted: #0d200d; /* selected choice bg */
+  --ad-color-accent-text: #0d0d0d; /* dark text on green button */
   --ad-color-accent-border: #33ff33;
 
   /* ── Drift bar ──────────────────────────────────────────────────────── */

@@ -78,6 +78,4 @@ export const AssumptionDriftPackSchema = z.object({
  * Game-type registry: add new z.discriminatedUnion branches here as new
  * gameType values are introduced.
  */
-export const GamePackSchema = z.discriminatedUnion("gameType", [
-  AssumptionDriftPackSchema,
-]);
+export const GamePackSchema = z.discriminatedUnion("gameType", [AssumptionDriftPackSchema]);

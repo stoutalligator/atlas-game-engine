@@ -11,13 +11,13 @@
      Theme overrides can set this to a more readable face while keeping --ad-font-base
      for UI chrome (buttons, labels, headings). */
   --ad-font-content: var(--ad-font-base);
-  --ad-font-scale: 1;               /* multiply font sizes by this for themes */
+  --ad-font-scale: 1; /* multiply font sizes by this for themes */
 
   /* ── Backgrounds ────────────────────────────────────────────────────── */
-  --ad-color-bg: transparent;       /* outer container */
-  --ad-color-bg-card: #f9f9f9;      /* scenario/feedback cards */
-  --ad-color-bg-choice: #ffffff;    /* un-selected choice button */
-  --ad-color-bg-feedback: #fafafa;  /* inline feedback panel */
+  --ad-color-bg: transparent; /* outer container */
+  --ad-color-bg-card: #f9f9f9; /* scenario/feedback cards */
+  --ad-color-bg-choice: #ffffff; /* un-selected choice button */
+  --ad-color-bg-feedback: #fafafa; /* inline feedback panel */
 
   /* ── Borders ────────────────────────────────────────────────────────── */
   --ad-color-border: #e2e2e2;
@@ -36,10 +36,10 @@
   /* ── Accent / interactive ───────────────────────────────────────────── */
   --ad-color-accent: #7c3aed;
   --ad-color-accent-hover: #6d28d9;
-  --ad-color-accent-subtle: #f5f0ff;   /* choice hover bg */
-  --ad-color-accent-muted: #ede9fe;    /* choice selected bg */
-  --ad-color-accent-text: #ffffff;     /* text on accent bg */
-  --ad-color-accent-border: #7c3aed;  /* selected choice border */
+  --ad-color-accent-subtle: #f5f0ff; /* choice hover bg */
+  --ad-color-accent-muted: #ede9fe; /* choice selected bg */
+  --ad-color-accent-text: #ffffff; /* text on accent bg */
+  --ad-color-accent-border: #7c3aed; /* selected choice border */
 
   /* ── Drift bar ──────────────────────────────────────────────────────── */
   --ad-color-drift-bar: #7c3aed;

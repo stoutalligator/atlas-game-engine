@@ -83,7 +83,7 @@ export function App() {
                 }}
               >
                 {PACK_OPTIONS.map((opt, i) => (
-                  <option key={i} value={i}>
+                  <option key={opt.label} value={i}>
                     {opt.label}
                   </option>
                 ))}
@@ -106,11 +106,7 @@ export function App() {
               </select>
             </div>
 
-            <button
-              type="button"
-              className={styles.startButton}
-              onClick={handleStart}
-            >
+            <button type="button" className={styles.startButton} onClick={handleStart}>
               {activePack ? "Restart" : "Start"}
             </button>
           </div>
@@ -121,8 +117,8 @@ export function App() {
           <section className={styles.errorBox}>
             <strong>Pack validation failed:</strong>
             <ul>
-              {validationErrors.map((msg, i) => (
-                <li key={i}>{msg}</li>
+              {validationErrors.map((msg) => (
+                <li key={msg}>{msg}</li>
               ))}
             </ul>
           </section>
