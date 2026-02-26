@@ -27,6 +27,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Set package version from tag
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "Tag '$GITHUB_REF_NAME' does not match expected 'vX.Y.Z' format" && exit 1
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          cd packages/engine && npm version "$VERSION" --no-git-tag-version
+
       - name: Build
         run: pnpm --filter "@stoutalligator/engine" build
 
