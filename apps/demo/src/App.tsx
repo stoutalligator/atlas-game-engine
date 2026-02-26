@@ -1,5 +1,5 @@
-import { DailyGame, GamePackSchema, LocalStorageAdapter } from "@atlas/engine";
-import type { GamePack, GameResult, Theme } from "@atlas/engine";
+import { DailyGame, GamePackSchema, LocalStorageAdapter } from "@stoutalligator/engine";
+import type { GamePack, GameResult, Theme } from "@stoutalligator/engine";
 import { useState } from "react";
 
 // ── Static imports of the canonical packs (single source of truth) ──────────

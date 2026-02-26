@@ -8,7 +8,7 @@ export default defineConfig({
     alias: {
       // Allow the demo to consume the engine from source during dev,
       // falling back to the built package when running standalone.
-      "@atlas/engine": resolve(__dirname, "../../packages/engine/src/index.ts"),
+      "@stoutalligator/engine": resolve(__dirname, "../../packages/engine/src/index.ts"),
     },
   },
 });
