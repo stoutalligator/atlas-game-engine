@@ -34,3 +34,4 @@ jobs:
         run: pnpm --filter "@stoutalligator/engine" publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
