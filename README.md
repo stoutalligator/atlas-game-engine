@@ -64,7 +64,96 @@ pnpm --filter apps/demo dev
 
 ---
 
-## Engine API (`@atlas/engine`)
+---
+
+## SlidePuzzle API
+
+`SlidePuzzle` is a fully standalone slide-puzzle game component. It requires no pack, storage adapter, or server — just import and render.
+
+### `<SlidePuzzle>` component
+
+```tsx
+import { SlidePuzzle } from "@stoutalligator/engine";
+
+// Random puzzle (default — "Generate New Puzzle" regenerates on click)
+<SlidePuzzle />
+
+// Harder random puzzles with 8-bit theme
+<SlidePuzzle difficulty="hard" theme="8bit" />
+
+// Daily puzzle: same date → same puzzle for every user (deterministic)
+<SlidePuzzle date="2026-03-06" difficulty="hard" theme="terminal" />
+```
+
+**Props:**
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `date` | `string` | — | ISO date string (e.g. `"2026-03-06"`). Seeds the puzzle so all users see the same layout for that date. |
+| `difficulty` | `"easy" \| "medium" \| "hard"` | `"medium"` | Controls grid size and number of scramble moves (easy: ~15–30, medium: ~40–70, hard: ~80–120). |
+| `theme` | `"modern" \| "8bit" \| "terminal"` | `"modern"` | Visual theme. |
+
+**Themes:**
+
+| Theme | Description |
+|---|---|
+| `modern` | Clean rounded UI, soft colours, system font (default) |
+| `8bit` | Retro pixel style — square tiles, bold primary colours, chunky borders, monospace font |
+| `terminal` | Dark hacker aesthetic — black background, green-on-black monospace, minimal decoration |
+
+---
+
+### `generatePuzzle(options?)` function
+
+Generates a `PuzzleConfig` without rendering any UI. Useful for server-side seeding, custom renderers, or testing.
+
+```ts
+import { generatePuzzle } from "@stoutalligator/engine";
+import type { PuzzleConfig, SlidePuzzleOptions } from "@stoutalligator/engine";
+
+// Random puzzle (medium difficulty)
+const puzzle: PuzzleConfig = generatePuzzle();
+
+// Deterministic daily puzzle — same output every time for the same date+difficulty
+const daily = generatePuzzle({ date: "2026-03-06", difficulty: "hard" });
+
+// PuzzleConfig shape
+interface PuzzleConfig {
+  gridWidth: number;
+  gridHeight: number;
+  validCells: Set<string>;  // "row,col" strings
+  pieces: Piece[];
+  gate: Gate;
+}
+```
+
+**Options (`SlidePuzzleOptions`):**
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `date` | `string` | — | ISO date string. When set, output is deterministic (seeded PRNG). |
+| `difficulty` | `"easy" \| "medium" \| "hard"` | `"medium"` | Difficulty preset. |
+
+---
+
+### Full TypeScript types
+
+```ts
+import type {
+  PuzzleConfig,          // full puzzle state
+  Piece,                 // individual piece
+  Gate,                  // gate position
+  PieceColor,            // "person" | "orange" | "blue" | "green" | "purple" | "black"
+  SlidePuzzleDifficulty, // "easy" | "medium" | "hard"
+  SlidePuzzleTheme,      // "modern" | "8bit" | "terminal"
+  SlidePuzzleOptions,    // generatePuzzle() options
+  SlidePuzzleProps,      // <SlidePuzzle> props
+} from "@stoutalligator/engine";
+```
+
+---
+
+## Assumption Drift Engine API (`@stoutalligator/engine`)
 
 ### Types
 
@@ -74,13 +163,13 @@ import type {
   AssumptionDriftPack,  // specific pack shape
   GameResult,           // what onComplete emits
   StorageAdapter,       // interface for persistence
-} from "@atlas/engine";
+} from "@stoutalligator/engine";
 ```
 
 ### Zod schemas
 
 ```ts
-import { GamePackSchema, AssumptionDriftPackSchema } from "@atlas/engine";
+import { GamePackSchema, AssumptionDriftPackSchema } from "@stoutalligator/engine";
 
 const result = GamePackSchema.safeParse(rawJson);
 if (!result.success) console.error(result.error.issues);
@@ -89,8 +178,8 @@ if (!result.success) console.error(result.error.issues);
 ### `<DailyGame>` component
 
 ```tsx
-import { DailyGame, LocalStorageAdapter } from "@atlas/engine";
-import type { GameResult } from "@atlas/engine";
+import { DailyGame, LocalStorageAdapter } from "@stoutalligator/engine";
+import type { GameResult } from "@stoutalligator/engine";
 
 const storage = new LocalStorageAdapter();
 
@@ -152,7 +241,7 @@ interface GameResult {
 ## Custom `StorageAdapter`
 
 ```ts
-import type { StorageAdapter } from "@atlas/engine";
+import type { StorageAdapter } from "@stoutalligator/engine";
 
 const remoteAdapter: StorageAdapter = {
   async load(key) { /* fetch from API */ },
@@ -210,7 +299,7 @@ In your host repo's `package.json`:
 ```json
 {
   "dependencies": {
-    "@atlas/engine": "github:YOUR_GITHUB_USERNAME/atlas-game-engine#v1.0.0"
+    "@stoutalligator/engine": "github:YOUR_GITHUB_USERNAME/atlas-game-engine#v1.0.0"
   }
 }
 ```
@@ -239,8 +328,8 @@ pnpm install
 ```
 
 ```tsx
-import { DailyGame, LocalStorageAdapter } from "@atlas/engine";
-import type { GamePack } from "@atlas/engine";
+import { DailyGame, LocalStorageAdapter } from "@stoutalligator/engine";
+import type { GamePack } from "@stoutalligator/engine";
 import myPack from "./packs/my-pack.json";
 
 const storage = new LocalStorageAdapter();
