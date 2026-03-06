@@ -305,4 +305,45 @@ describe("generatePuzzle", () => {
       expect(cfg.gate.index).toBeGreaterThanOrEqual(0);
     }
   });
+
+  it("produces the same puzzle layout for the same date (deterministic seeding)", () => {
+    const a = generatePuzzle({ date: "2026-03-06" });
+    const b = generatePuzzle({ date: "2026-03-06" });
+    expect(a.gridWidth).toBe(b.gridWidth);
+    expect(a.gridHeight).toBe(b.gridHeight);
+    expect(a.gate).toEqual(b.gate);
+    const posA = a.pieces.map((p) => `${p.color}:${p.col},${p.row}`).sort().join("|");
+    const posB = b.pieces.map((p) => `${p.color}:${p.col},${p.row}`).sort().join("|");
+    expect(posA).toBe(posB);
+  });
+
+  it("produces different puzzles for different dates", () => {
+    const a = generatePuzzle({ date: "2026-03-06" });
+    const b = generatePuzzle({ date: "2026-03-07" });
+    // Grid layout, gate, or piece positions must differ across different dates
+    const posA = a.pieces.map((p) => `${p.col},${p.row}`).sort().join("|");
+    const posB = b.pieces.map((p) => `${p.col},${p.row}`).sort().join("|");
+    const samePuzzle =
+      a.gridWidth === b.gridWidth &&
+      a.gridHeight === b.gridHeight &&
+      a.gate.side === b.gate.side &&
+      a.gate.index === b.gate.index &&
+      posA === posB;
+    // Very unlikely that two different dates produce the exact same scrambled layout
+    expect(samePuzzle).toBe(false);
+  });
+
+  it("hard difficulty uses larger grids (≥40 valid cells)", () => {
+    for (let i = 0; i < 10; i++) {
+      const cfg = generatePuzzle({ date: `2026-0${(i % 9) + 1}-01`, difficulty: "hard" });
+      expect(cfg.validCells.size).toBeGreaterThanOrEqual(40);
+    }
+  });
+
+  it("easy difficulty uses smaller grids (≤36 valid cells)", () => {
+    for (let i = 0; i < 10; i++) {
+      const cfg = generatePuzzle({ date: `2026-0${(i % 9) + 1}-01`, difficulty: "easy" });
+      expect(cfg.validCells.size).toBeLessThanOrEqual(36);
+    }
+  });
 });

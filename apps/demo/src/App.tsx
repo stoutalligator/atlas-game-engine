@@ -4,7 +4,13 @@ import {
   LocalStorageAdapter,
   SlidePuzzle,
 } from "@stoutalligator/engine";
-import type { GamePack, GameResult, Theme } from "@stoutalligator/engine";
+import type {
+  GamePack,
+  GameResult,
+  SlidePuzzleDifficulty,
+  SlidePuzzleTheme,
+  Theme,
+} from "@stoutalligator/engine";
 import { useState } from "react";
 
 // ── Static imports of the canonical packs (single source of truth) ──────────
@@ -32,6 +38,13 @@ const storage = new LocalStorageAdapter();
 // ---------------------------------------------------------------------------
 export function App() {
   const [activeTab, setActiveTab] = useState<"assumption" | "slide">("slide");
+
+  // ── Slide Puzzle controls ──
+  const [slideDifficulty, setSlideDifficulty] = useState<SlidePuzzleDifficulty>("medium");
+  const [slideTheme, setSlideTheme] = useState<SlidePuzzleTheme>("modern");
+  const [slideDate, setSlideDate] = useState<string>("");
+
+  // ── Assumption Drift controls ──
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [theme, setTheme] = useState<Theme>("modern");
   const [activePack, setActivePack] = useState<GamePack | null>(null);
@@ -91,7 +104,64 @@ export function App() {
         {/* ── Slide Puzzle tab ── */}
         {activeTab === "slide" && (
           <section className={styles.gameWrapper}>
-            <SlidePuzzle />
+            {/* Controls */}
+            <section className={styles.selector}>
+              <div className={styles.selectorRow}>
+                <div className={styles.selectorField}>
+                  <label className={styles.selectLabel} htmlFor="slide-difficulty">
+                    Difficulty
+                  </label>
+                  <select
+                    id="slide-difficulty"
+                    className={styles.select}
+                    value={slideDifficulty}
+                    onChange={(e) => setSlideDifficulty(e.target.value as SlidePuzzleDifficulty)}
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+
+                <div className={styles.selectorField}>
+                  <label className={styles.selectLabel} htmlFor="slide-theme">
+                    Theme
+                  </label>
+                  <select
+                    id="slide-theme"
+                    className={styles.select}
+                    value={slideTheme}
+                    onChange={(e) => setSlideTheme(e.target.value as SlidePuzzleTheme)}
+                  >
+                    <option value="modern">Modern</option>
+                    <option value="8bit">8-Bit</option>
+                    <option value="terminal">Terminal</option>
+                  </select>
+                </div>
+
+                <div className={styles.selectorField}>
+                  <label className={styles.selectLabel} htmlFor="slide-date">
+                    Date (daily puzzle)
+                  </label>
+                  <input
+                    id="slide-date"
+                    type="date"
+                    className={styles.select}
+                    value={slideDate}
+                    onChange={(e) => setSlideDate(e.target.value)}
+                    placeholder="optional"
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Game — key forces remount when difficulty or date changes */}
+            <SlidePuzzle
+              key={`${slideDate}-${slideDifficulty}`}
+              difficulty={slideDifficulty}
+              theme={slideTheme}
+              date={slideDate || undefined}
+            />
           </section>
         )}
 

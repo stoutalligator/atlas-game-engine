@@ -191,6 +191,7 @@
 .piecePerson {
   background: #e8e8f0;
   border-color: #9ca3af;
+  color: #2d2d2d; /* SVG fill via currentColor */
 }
 
 .pieceOrange {
@@ -251,4 +252,273 @@
   border-radius: 4px;
   border: 1.5px solid rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
+}
+
+/* ── Difficulty badge ───────────────────────────────────────────────────── */
+
+.difficultyBadge {
+  display: inline-block;
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.18rem 0.45rem;
+  border-radius: 4px;
+  margin-left: 0.55rem;
+  vertical-align: middle;
+  position: relative;
+  top: -0.12rem;
+}
+
+.difficultyBadge[data-difficulty="easy"] {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.difficultyBadge[data-difficulty="medium"] {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.difficultyBadge[data-difficulty="hard"] {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* ── Date label ─────────────────────────────────────────────────────────── */
+
+.dateLabel {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0;
+  font-style: italic;
+}
+
+/* ── 8-bit theme ─────────────────────────────────────────────────────────── */
+
+.container[data-theme="8bit"] {
+  font-family: "Courier New", Courier, monospace;
+  background: #f5f5e8;
+}
+
+.container[data-theme="8bit"] .title {
+  font-family: "Courier New", Courier, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.container[data-theme="8bit"] .difficultyBadge {
+  border-radius: 0;
+  border: 2px solid currentColor;
+  font-family: "Courier New", monospace;
+}
+
+.container[data-theme="8bit"] .statValue {
+  font-family: "Courier New", monospace;
+}
+
+.container[data-theme="8bit"] .newBtn {
+  border-radius: 0;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 #1a1a2e;
+  transition: none;
+}
+
+.container[data-theme="8bit"] .newBtn:hover {
+  transform: none;
+  box-shadow: 2px 2px 0 #1a1a2e;
+}
+
+.container[data-theme="8bit"] .newBtn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.container[data-theme="8bit"] .winBanner {
+  border-radius: 0;
+  background: #16a34a;
+  box-shadow: 4px 4px 0 #0d5c25;
+}
+
+.container[data-theme="8bit"] .cell {
+  border-radius: 0;
+  background: #e0e0cc;
+  border: 2px solid #a0a088;
+}
+
+.container[data-theme="8bit"] .piece {
+  border-radius: 0;
+  border-width: 3px;
+}
+
+.container[data-theme="8bit"] .gateArrow {
+  border-radius: 0;
+  font-size: 16px;
+}
+
+.container[data-theme="8bit"] .piecePerson {
+  background: #c0c0c0;
+  border-color: #606060;
+  color: #000;
+}
+
+.container[data-theme="8bit"] .pieceOrange {
+  background: #ff8000;
+  border-color: #cc5200;
+}
+
+.container[data-theme="8bit"] .pieceBlue {
+  background: #0066cc;
+  border-color: #004499;
+}
+
+.container[data-theme="8bit"] .pieceGreen {
+  background: #00aa00;
+  border-color: #007700;
+}
+
+.container[data-theme="8bit"] .piecePurple {
+  background: #aa00aa;
+  border-color: #770077;
+}
+
+.container[data-theme="8bit"] .pieceBlack {
+  background: #111;
+  border-color: #000;
+}
+
+/* ── Terminal theme ──────────────────────────────────────────────────────── */
+
+.container[data-theme="terminal"] {
+  font-family: "Courier New", Courier, monospace;
+  background: #0a0a0a;
+  color: #00ff41;
+}
+
+.container[data-theme="terminal"] .title {
+  color: #00ff41;
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 0.12em;
+}
+
+.container[data-theme="terminal"] .dateLabel {
+  color: #00802b;
+  font-style: normal;
+}
+
+.container[data-theme="terminal"] .difficultyBadge {
+  border-radius: 0;
+  font-family: "Courier New", monospace;
+}
+
+.container[data-theme="terminal"] .difficultyBadge[data-difficulty="easy"] {
+  background: #001a05;
+  color: #00ff41;
+}
+
+.container[data-theme="terminal"] .difficultyBadge[data-difficulty="medium"] {
+  background: #1a1000;
+  color: #ffcc00;
+}
+
+.container[data-theme="terminal"] .difficultyBadge[data-difficulty="hard"] {
+  background: #1a0000;
+  color: #ff4444;
+}
+
+.container[data-theme="terminal"] .statLabel {
+  color: #006b1c;
+}
+
+.container[data-theme="terminal"] .statValue {
+  color: #00ff41;
+  font-family: "Courier New", monospace;
+}
+
+.container[data-theme="terminal"] .hint {
+  color: #006b1c;
+}
+
+.container[data-theme="terminal"] .newBtn {
+  background: #001a05;
+  color: #00ff41;
+  border: 1px solid #00ff41;
+  border-radius: 0;
+  box-shadow: none;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.container[data-theme="terminal"] .newBtn:hover {
+  background: #002e0a;
+}
+
+.container[data-theme="terminal"] .newBtn:active {
+  transform: none;
+}
+
+.container[data-theme="terminal"] .winBanner {
+  background: #001a05;
+  border: 1px solid #00ff41;
+  border-radius: 0;
+  box-shadow: none;
+  color: #00ff41;
+}
+
+.container[data-theme="terminal"] .cell {
+  background: #0d0d0d;
+  border-color: #1a3a1a;
+  border-radius: 0;
+}
+
+.container[data-theme="terminal"] .piece {
+  border-radius: 0;
+  border-width: 1px;
+}
+
+.container[data-theme="terminal"] .piece:hover:not(.pieceImmovable) {
+  transform: none;
+}
+
+.container[data-theme="terminal"] .piecePerson {
+  background: #001a05;
+  border-color: #00ff41;
+  color: #00ff41;
+}
+
+.container[data-theme="terminal"] .pieceOrange {
+  background: #1a0800;
+  border-color: #ff6600;
+}
+
+.container[data-theme="terminal"] .pieceBlue {
+  background: #00051a;
+  border-color: #0088ff;
+}
+
+.container[data-theme="terminal"] .pieceGreen {
+  background: #001500;
+  border-color: #00cc44;
+}
+
+.container[data-theme="terminal"] .piecePurple {
+  background: #0d0014;
+  border-color: #aa44cc;
+}
+
+.container[data-theme="terminal"] .pieceBlack {
+  background: #050505;
+  border-color: #333;
+}
+
+.container[data-theme="terminal"] .gateArrow {
+  background: #001a05;
+  color: #00ff41;
+  border-radius: 0;
+  box-shadow: 0 0 0 1px #00ff41;
+}
+
+.container[data-theme="terminal"] .legend {
+  color: #006b1c;
 }

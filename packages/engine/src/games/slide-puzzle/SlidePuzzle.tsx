@@ -3,11 +3,11 @@ import styles from "./SlidePuzzle.module.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type PieceColor = "person" | "orange" | "blue" | "green" | "purple" | "black";
-type Direction = "up" | "down" | "left" | "right";
-type GateSide = "top" | "bottom" | "left" | "right";
+export type PieceColor = "person" | "orange" | "blue" | "green" | "purple" | "black";
+export type Direction = "up" | "down" | "left" | "right";
+export type GateSide = "top" | "bottom" | "left" | "right";
 
-interface Piece {
+export interface Piece {
   id: string;
   color: PieceColor;
   col: number; // top-left column
@@ -17,19 +17,51 @@ interface Piece {
   immovable: boolean;
 }
 
-interface Gate {
+export interface Gate {
   side: GateSide;
   /** Column index for top/bottom gates; row index for left/right gates */
   index: number;
 }
 
-interface PuzzleConfig {
+export interface PuzzleConfig {
   gridWidth: number;
   gridHeight: number;
   /** Set of "row,col" strings representing valid grid cells */
   validCells: Set<string>;
   pieces: Piece[];
   gate: Gate;
+}
+
+/** Difficulty preset controlling puzzle complexity. */
+export type SlidePuzzleDifficulty = "easy" | "medium" | "hard";
+
+/** Visual theme for the puzzle UI. */
+export type SlidePuzzleTheme = "modern" | "8bit" | "terminal";
+
+/** Options accepted by generatePuzzle(). */
+export interface SlidePuzzleOptions {
+  /**
+   * ISO date string (e.g. "2026-03-06"). When provided, generatePuzzle returns
+   * the same puzzle for that date every time — useful for daily puzzles where
+   * all users should see an identical layout.
+   */
+  date?: string;
+  /** Controls scramble depth and which template set is used. Default: "medium" */
+  difficulty?: SlidePuzzleDifficulty;
+}
+
+/** Props accepted by the <SlidePuzzle> component. */
+export interface SlidePuzzleProps {
+  /**
+   * ISO date string (e.g. "2026-03-06"). Seeds the initial puzzle so all users
+   * receive the same layout for the same date. Clicking "Generate New Puzzle"
+   * afterwards produces random puzzles.
+   */
+  date?: string;
+  /** Controls puzzle complexity. Default: "medium" */
+  difficulty?: SlidePuzzleDifficulty;
+  /** Visual theme. Default: "modern" */
+  theme?: SlidePuzzleTheme;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -39,9 +71,48 @@ const GAP = 4; // px gap between cells
 const BORDER = 5; // px border thickness
 
 // Scramble tuning constants
-const MIN_SCRAMBLE_MOVES = 40; // minimum random moves applied when generating a puzzle
-const SCRAMBLE_MOVES_RANGE = 30; // random extra moves added on top of the minimum
 const MAX_MOVE_ATTEMPTS = 50; // retry limit when searching for a valid scramble move
+
+// ── Seeded RNG ──────────────────────────────────────────────────────────────
+
+type Rng = () => number;
+
+/** Mulberry32 — fast seeded PRNG, no external dependencies. */
+function mulberry32(seed: number): Rng {
+  let s = seed;
+  return function () {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** FNV-1a hash of a string → deterministic u32 seed. */
+function hashString(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) | 0;
+  }
+  return h >>> 0;
+}
+
+// ── Difficulty settings ─────────────────────────────────────────────────────
+
+interface DifficultySettings {
+  minMoves: number;
+  movesRange: number;
+  /** Only use templates with at most this many valid cells (easy = smaller grids). */
+  maxCells?: number;
+  /** Only use templates with at least this many valid cells (hard = larger grids). */
+  minCells?: number;
+}
+
+const DIFFICULTY_SETTINGS: Record<SlidePuzzleDifficulty, DifficultySettings> = {
+  easy:   { minMoves: 15, movesRange: 15, maxCells: 36 },
+  medium: { minMoves: 40, movesRange: 30 },
+  hard:   { minMoves: 80, movesRange: 40, minCells: 40 },
+};
 
 // ── Utility helpers ────────────────────────────────────────────────────────
 
@@ -300,6 +371,7 @@ function tryPlace(
   occupied: Set<string>,
   w: number,
   h: number,
+  rng: Rng,
 ): { col: number; row: number } | null {
   const candidates: { row: number; col: number }[] = [];
 
@@ -313,7 +385,7 @@ function tryPlace(
   }
 
   if (candidates.length === 0) return null;
-  return candidates[Math.floor(Math.random() * candidates.length)];
+  return candidates[Math.floor(rng() * candidates.length)];
 }
 
 /**
@@ -321,9 +393,26 @@ function tryPlace(
  * 1. Placing pieces (person adjacent to gate, others randomly).
  * 2. Scrambling via N random valid moves (guarantees solvability by reversal).
  */
-export function generatePuzzle(): PuzzleConfig {
+export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
+  const { date, difficulty = "medium" } = options;
+  // When a date is supplied, use a deterministic seeded RNG so the same date
+  // always produces an identical puzzle layout for all users.
+  const rng: Rng = date
+    ? mulberry32(hashString(`${date}:${difficulty}`))
+    : Math.random;
+
+  const settings = DIFFICULTY_SETTINGS[difficulty];
   const TEMPLATES = makeTemplates();
-  const tmpl = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)];
+
+  // Filter templates to those appropriate for the chosen difficulty.
+  let tmplCandidates = TEMPLATES;
+  if (settings.maxCells !== undefined)
+    tmplCandidates = tmplCandidates.filter((t) => t.cells.size <= settings.maxCells!);
+  if (settings.minCells !== undefined)
+    tmplCandidates = tmplCandidates.filter((t) => t.cells.size >= settings.minCells!);
+  if (tmplCandidates.length === 0) tmplCandidates = TEMPLATES; // safety fallback
+
+  const tmpl = tmplCandidates[Math.floor(rng() * tmplCandidates.length)];
   const { gw, gh, cells, gate, pieces: defs } = tmpl;
 
   const pieces: Piece[] = [];
@@ -364,7 +453,7 @@ export function generatePuzzle(): PuzzleConfig {
 
   // Place remaining pieces
   for (const def of defs) {
-    const pos = tryPlace(cells, occupied, def.w, def.h);
+    const pos = tryPlace(cells, occupied, def.w, def.h, rng);
     if (!pos) continue;
 
     pieces.push({
@@ -383,7 +472,7 @@ export function generatePuzzle(): PuzzleConfig {
   let cfg: PuzzleConfig = { gridWidth: gw, gridHeight: gh, validCells: cells, pieces, gate };
 
   // Scramble: random valid moves (guarantees solvability)
-  const nMoves = MIN_SCRAMBLE_MOVES + Math.floor(Math.random() * SCRAMBLE_MOVES_RANGE);
+  const nMoves = settings.minMoves + Math.floor(rng() * settings.movesRange);
   const DIRS: Direction[] = ["up", "down", "left", "right"];
   let lastId: string | null = null;
 
@@ -391,8 +480,8 @@ export function generatePuzzle(): PuzzleConfig {
     const movable = cfg.pieces.filter((p) => !p.immovable);
 
     for (let attempt = 0; attempt < MAX_MOVE_ATTEMPTS; attempt++) {
-      const p = movable[Math.floor(Math.random() * movable.length)];
-      const dir = DIRS[Math.floor(Math.random() * DIRS.length)];
+      const p = movable[Math.floor(rng() * movable.length)];
+      const dir = DIRS[Math.floor(rng() * DIRS.length)];
 
       if (p.id === lastId) continue;
       if (!canMove(cfg, p.id, dir)) continue;
@@ -431,7 +520,7 @@ function pieceCSS(p: Piece): React.CSSProperties {
 type Seg = { key: string; style: React.CSSProperties };
 
 /** Render four border strips with a gap at the gate position. */
-function borderSegments(cfg: PuzzleConfig): Seg[] {
+function borderSegments(cfg: PuzzleConfig, borderColor: string): Seg[] {
   const { gate, gridWidth: gw, gridHeight: gh } = cfg;
   const step = CELL + GAP;
   const totalW = gw * step - GAP;
@@ -440,7 +529,7 @@ function borderSegments(cfg: PuzzleConfig): Seg[] {
   const gateEnd = gateStart + CELL;
   const B = BORDER;
 
-  const base: React.CSSProperties = { position: "absolute", background: "#1a1a2e" };
+  const base: React.CSSProperties = { position: "absolute", background: borderColor };
 
   const seg = (key: string, style: React.CSSProperties): Seg => ({
     key,
@@ -515,8 +604,12 @@ const ARROW_CHAR: Record<GateSide, string> = { top: "↑", bottom: "↓", left: 
 // ── Component ──────────────────────────────────────────────────────────────
 
 /** Standalone slide-puzzle game — no external pack or storage required. */
-export function SlidePuzzle() {
-  const [cfg, setCfg] = useState<PuzzleConfig>(() => generatePuzzle());
+export function SlidePuzzle({
+  date,
+  difficulty = "medium",
+  theme = "modern",
+}: SlidePuzzleProps = {}) {
+  const [cfg, setCfg] = useState<PuzzleConfig>(() => generatePuzzle({ date, difficulty }));
   const [selected, setSelected] = useState<string | null>(null);
   const [moves, setMoves] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -612,7 +705,7 @@ export function SlidePuzzle() {
 
   // ── New puzzle ────────────────────────────────────────────────────────────
   const handleNew = () => {
-    setCfg(generatePuzzle());
+    setCfg(generatePuzzle({ difficulty }));
     setSelected(null);
     setMoves(0);
     setElapsed(0);
@@ -624,15 +717,23 @@ export function SlidePuzzle() {
   const boardH = cfg.gridHeight * (CELL + GAP) - GAP;
   const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const ss = String(elapsed % 60).padStart(2, "0");
-  const segs = borderSegments(cfg);
+  const borderColor =
+    theme === "terminal" ? "#00ff41" : theme === "8bit" ? "#000000" : "#1a1a2e";
+  const segs = borderSegments(cfg, borderColor);
   const arrowSt = gateArrowStyle(cfg);
   const arrowChar = ARROW_CHAR[cfg.gate.side];
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} data-theme={theme}>
       {/* ── Header ── */}
       <div className={styles.header}>
-        <h1 className={styles.title}>Slide Puzzle</h1>
+        <h1 className={styles.title}>
+          Slide Puzzle
+          <span className={styles.difficultyBadge} data-difficulty={difficulty}>
+            {difficulty.toUpperCase()}
+          </span>
+        </h1>
+        {date && <p className={styles.dateLabel}>Daily Puzzle · {date}</p>}
 
         <div className={styles.statsRow}>
           <div className={styles.stat}>
@@ -744,17 +845,12 @@ export function SlidePuzzle() {
                     aria-label="Person"
                   >
                     <title>Person</title>
-                    <circle cx="16" cy="9" r="6" fill="#2d2d2d" />
-                    <path
-                      d="M6 28 C6 20 26 20 26 28"
-                      fill="#2d2d2d"
-                      stroke="#2d2d2d"
-                      strokeWidth="1"
-                    />
-                    <rect x="13" y="14" width="6" height="8" rx="1" fill="#444" />
-                    <line x1="13" y1="16" x2="13" y2="22" stroke="#666" strokeWidth="1.5" />
-                    <line x1="19" y1="16" x2="19" y2="22" stroke="#666" strokeWidth="1.5" />
-                    <line x1="16" y1="17" x2="16" y2="19" stroke="#888" strokeWidth="1" />
+                    <circle cx="16" cy="9" r="6" fill="currentColor" />
+                    <path d="M6 28 C6 20 26 20 26 28" fill="currentColor" />
+                    <rect x="13" y="14" width="6" height="8" rx="1" fill="currentColor" opacity="0.7" />
+                    <line x1="13" y1="16" x2="13" y2="22" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
+                    <line x1="19" y1="16" x2="19" y2="22" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
+                    <line x1="16" y1="17" x2="16" y2="19" stroke="currentColor" strokeWidth="1" opacity="0.35" />
                   </svg>
                 )}
               </div>
