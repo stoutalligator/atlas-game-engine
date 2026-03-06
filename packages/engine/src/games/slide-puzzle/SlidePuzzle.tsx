@@ -3,7 +3,15 @@ import styles from "./SlidePuzzle.module.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type PieceColor = "person" | "orange" | "blue" | "green" | "purple" | "black";
+export type PieceColor =
+  | "person"
+  | "orange"
+  | "blue"
+  | "green"
+  | "purple"
+  | "black"
+  | "brown"
+  | "teal";
 export type Direction = "up" | "down" | "left" | "right";
 export type GateSide = "top" | "bottom" | "left" | "right";
 
@@ -15,6 +23,12 @@ export interface Piece {
   width: number; // cells wide
   height: number; // cells tall
   immovable: boolean;
+  /**
+   * For non-rectangular pieces: relative [dc, dr] offsets of each occupied cell
+   * from the top-left corner of the bounding box. When absent, the full
+   * width×height rectangle is used.
+   */
+  cellOffsets?: Array<[number, number]>;
 }
 
 export interface Gate {
@@ -150,11 +164,18 @@ function isGateExit(gate: Gate, gw: number, gh: number, r: number, c: number): b
   }
 }
 
+/** Returns the absolute [col, row] coordinates for every cell occupied by piece p. */
+function pieceAbsCells(p: Piece): Array<[col: number, row: number]> {
+  if (p.cellOffsets) return p.cellOffsets.map(([dc, dr]) => [p.col + dc, p.row + dr]);
+  const cells: Array<[number, number]> = [];
+  for (let dc = 0; dc < p.width; dc++)
+    for (let dr = 0; dr < p.height; dr++) cells.push([p.col + dc, p.row + dr]);
+  return cells;
+}
+
 function buildOccupancy(pieces: Piece[]): Map<string, string> {
   const m = new Map<string, string>();
-  for (const p of pieces)
-    for (let c = p.col; c < p.col + p.width; c++)
-      for (let r = p.row; r < p.row + p.height; r++) m.set(ck(r, c), p.id);
+  for (const p of pieces) for (const [c, r] of pieceAbsCells(p)) m.set(ck(r, c), p.id);
   return m;
 }
 
@@ -164,38 +185,34 @@ function canMove(cfg: PuzzleConfig, pieceId: string, dir: Direction): boolean {
   const piece = cfg.pieces.find((p) => p.id === pieceId);
   if (!piece || piece.immovable) return false;
 
+  // All movable pieces can slide in any of the four directions.
+
   const dx = dir === "right" ? 1 : dir === "left" ? -1 : 0;
   const dy = dir === "down" ? 1 : dir === "up" ? -1 : 0;
 
-  const nr = piece.row + dy;
-  const nc = piece.col + dx;
   const isPerson = piece.color === "person";
   const occ = buildOccupancy(cfg.pieces);
+  const currentCells = new Set(pieceAbsCells(piece).map(([c, r]) => ck(r, c)));
 
-  for (let c = nc; c < nc + piece.width; c++) {
-    for (let r = nr; r < nr + piece.height; r++) {
-      // This cell was already occupied by the current piece — OK
-      if (
-        c >= piece.col &&
-        c < piece.col + piece.width &&
-        r >= piece.row &&
-        r < piece.row + piece.height
-      )
-        continue;
+  for (const [c, r] of pieceAbsCells(piece)) {
+    const nc = c + dx;
+    const nr = r + dy;
 
-      // Gate exit cell: only the person may enter
-      if (isGateExit(cfg.gate, cfg.gridWidth, cfg.gridHeight, r, c)) {
-        if (!isPerson) return false;
-        continue;
-      }
+    // This cell would land on a position already held by this piece (overlap after slide) — OK
+    if (currentCells.has(ck(nr, nc))) continue;
 
-      // Must be a valid grid cell
-      if (!cfg.validCells.has(ck(r, c))) return false;
-
-      // Must not be occupied by another piece
-      const occupant = occ.get(ck(r, c));
-      if (occupant && occupant !== pieceId) return false;
+    // Gate exit cell: only the person may enter
+    if (isGateExit(cfg.gate, cfg.gridWidth, cfg.gridHeight, nr, nc)) {
+      if (!isPerson) return false;
+      continue;
     }
+
+    // Must be a valid grid cell
+    if (!cfg.validCells.has(ck(nr, nc))) return false;
+
+    // Must not be occupied by another piece
+    const occupant = occ.get(ck(nr, nc));
+    if (occupant && occupant !== pieceId) return false;
   }
 
   return true;
@@ -225,6 +242,8 @@ interface PieceDef {
   w: number;
   h: number;
   immovable?: boolean;
+  /** Non-rectangular piece: relative [dc, dr] cell offsets (same semantics as Piece.cellOffsets). */
+  cellOffsets?: Array<[number, number]>;
 }
 
 interface Template {
@@ -236,135 +255,235 @@ interface Template {
 }
 
 function makeTemplates(): Template[] {
+  // Mix of large (3×1, 1×3) and medium (2×1, 1×2) pieces.
+  // Large pieces create hard-to-break blockades; medium pieces add flexibility
+  // so there are just enough moves to make the puzzle solvable but non-trivial.
+  // No immovable pieces — all blockers are movable. Axis-lock applies throughout.
   return [
-    // 7×7, gate right
+    // ── 6×6, gate right row 2 ─────────────────────────────────────────────
+    {
+      gw: 6,
+      gh: 6,
+      cells: makeRectGrid(6, 6),
+      gate: { side: "right", index: 2 },
+      pieces: [
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
+        { color: "blue", w: 2, h: 1 },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "green", w: 1, h: 3 },
+        { color: "green", w: 2, h: 1 },
+        { color: "purple", w: 1, h: 2 },
+        { color: "teal", w: 2, h: 2 },
+      ],
+    },
+    // ── 7×7, gate right row 3 ─────────────────────────────────────────────
     {
       gw: 7,
       gh: 7,
       cells: makeRectGrid(7, 7),
-      gate: { side: "right", index: 6 },
+      gate: { side: "right", index: 3 },
       pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 1, h: 2 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
         { color: "blue", w: 2, h: 1 },
+        { color: "blue", w: 1, h: 2 },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "orange", w: 2, h: 1 },
+        { color: "green", w: 3, h: 1 },
         { color: "green", w: 1, h: 3 },
-        { color: "purple", w: 3, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-        { color: "black", w: 2, h: 1, immovable: true },
+        { color: "purple", w: 1, h: 3 },
+        { color: "purple", w: 2, h: 1 },
+        { color: "teal", w: 2, h: 2 },
+        { color: "brown", w: 3, h: 3 },
+        // L-shape: ##  (missing bottom-right corner)
+        //           #·
+        {
+          color: "black",
+          w: 2,
+          h: 2,
+          cellOffsets: [
+            [0, 0],
+            [1, 0],
+            [0, 1],
+          ],
+        },
       ],
     },
-    // 7×7, gate bottom
+    // ── 7×7, gate bottom col 3 ────────────────────────────────────────────
     {
       gw: 7,
       gh: 7,
       cells: makeRectGrid(7, 7),
       gate: { side: "bottom", index: 3 },
       pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 1, h: 2 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
         { color: "blue", w: 2, h: 1 },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "orange", w: 1, h: 2 },
         { color: "green", w: 3, h: 1 },
         { color: "green", w: 1, h: 3 },
-        { color: "purple", w: 3, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-        { color: "black", w: 1, h: 2, immovable: true },
+        { color: "purple", w: 1, h: 3 },
+        { color: "purple", w: 2, h: 1 },
+        { color: "teal", w: 2, h: 2 },
+        { color: "brown", w: 3, h: 3 },
+        // L-shape: ##  (missing bottom-left corner)
+        //           ·#
+        {
+          color: "black",
+          w: 2,
+          h: 2,
+          cellOffsets: [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+          ],
+        },
       ],
     },
-    // 5×5, gate right
-    {
-      gw: 5,
-      gh: 5,
-      cells: makeRectGrid(5, 5),
-      gate: { side: "right", index: 2 },
-      pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 1, h: 2 },
-        { color: "green", w: 1, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-      ],
-    },
-    // 8×6, gate bottom
-    {
-      gw: 8,
-      gh: 6,
-      cells: makeRectGrid(8, 6),
-      gate: { side: "bottom", index: 5 },
-      pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 2, h: 1 },
-        { color: "blue", w: 1, h: 2 },
-        { color: "green", w: 3, h: 1 },
-        { color: "purple", w: 3, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-        { color: "black", w: 2, h: 1, immovable: true },
-      ],
-    },
-    // 7×7 L-shape (cut top-right 3×3), gate right
-    {
-      gw: 7,
-      gh: 7,
-      cells: makeLGrid(7, 7, 3, 3),
-      gate: { side: "right", index: 5 },
-      pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 1, h: 2 },
-        { color: "blue", w: 2, h: 1 },
-        { color: "green", w: 1, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-      ],
-    },
-    // 6×6, gate left
+    // ── 6×6, gate left row 3 ──────────────────────────────────────────────
     {
       gw: 6,
       gh: 6,
       cells: makeRectGrid(6, 6),
       gate: { side: "left", index: 3 },
       pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 2, h: 1 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
         { color: "blue", w: 1, h: 2 },
-        { color: "green", w: 1, h: 3 },
-        { color: "purple", w: 3, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "green", w: 3, h: 1 },
+        { color: "green", w: 1, h: 2 },
+        { color: "purple", w: 2, h: 1 },
+        { color: "teal", w: 2, h: 2 },
       ],
     },
-    // 7×7, gate top
+    // ── 7×7, gate top col 3 ───────────────────────────────────────────────
     {
       gw: 7,
       gh: 7,
       cells: makeRectGrid(7, 7),
-      gate: { side: "top", index: 2 },
+      gate: { side: "top", index: 3 },
       pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
         { color: "blue", w: 2, h: 1 },
         { color: "blue", w: 1, h: 2 },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "orange", w: 1, h: 2 },
         { color: "green", w: 3, h: 1 },
         { color: "green", w: 1, h: 3 },
-        { color: "purple", w: 3, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-        { color: "black", w: 1, h: 2, immovable: true },
+        { color: "purple", w: 1, h: 3 },
+        { color: "purple", w: 2, h: 1 },
+        { color: "teal", w: 2, h: 2 },
+        { color: "brown", w: 3, h: 3 },
+        // L-shape: #·  (missing top-right corner)
+        //           ##
+        {
+          color: "black",
+          w: 2,
+          h: 2,
+          cellOffsets: [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+          ],
+        },
+      ],
+    },
+    // ── 8×6, gate right row 2 ─────────────────────────────────────────────
+    {
+      gw: 8,
+      gh: 6,
+      cells: makeRectGrid(8, 6),
+      gate: { side: "right", index: 2 },
+      pieces: [
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
+        { color: "blue", w: 2, h: 1 },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "orange", w: 2, h: 1 },
+        { color: "green", w: 3, h: 1 },
+        { color: "green", w: 1, h: 3 },
+        { color: "purple", w: 3, h: 1 },
+        { color: "purple", w: 1, h: 2 },
+        { color: "teal", w: 2, h: 2 },
+        { color: "brown", w: 3, h: 3 },
+        // L-shape: ·#  (missing top-left corner)
+        //           ##
+        {
+          color: "black",
+          w: 2,
+          h: 2,
+          cellOffsets: [
+            [1, 0],
+            [0, 1],
+            [1, 1],
+          ],
+        },
+      ],
+    },
+    // ── 5×5, gate right row 2 (easy) ──────────────────────────────────────
+    {
+      gw: 5,
+      gh: 5,
+      cells: makeRectGrid(5, 5),
+      gate: { side: "right", index: 2 },
+      pieces: [
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
+        { color: "orange", w: 2, h: 1 },
+        { color: "orange", w: 1, h: 2 },
+        { color: "green", w: 1, h: 3 },
+        { color: "purple", w: 3, h: 1 },
+        { color: "teal", w: 2, h: 2 },
+      ],
+    },
+    // ── 7×7 L-shape (cut top-right 3×3), gate right row 5 ────────────────
+    {
+      gw: 7,
+      gh: 7,
+      cells: makeLGrid(7, 7, 3, 3),
+      gate: { side: "right", index: 5 },
+      pieces: [
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
+        { color: "orange", w: 2, h: 1 },
+        { color: "orange", w: 1, h: 2 },
+        { color: "green", w: 3, h: 1 },
+        { color: "green", w: 1, h: 3 },
+        { color: "purple", w: 2, h: 1 },
+        { color: "purple", w: 1, h: 2 },
+        { color: "teal", w: 2, h: 2 },
+        { color: "brown", w: 3, h: 3 },
+        // L-shape: ##  (missing bottom-right corner)
+        //           #·
+        {
+          color: "black",
+          w: 2,
+          h: 2,
+          cellOffsets: [
+            [0, 0],
+            [1, 0],
+            [0, 1],
+          ],
+        },
       ],
     },
   ];
 }
 
 /**
- * Try to find a valid top-left position (col, row) for a piece of size w×h
- * within validCells, avoiding already-occupied cells.
+ * Try to find a valid top-left position (col, row) for a piece within validCells,
+ * avoiding already-occupied cells. If cellOffsets is provided the piece is non-rectangular
+ * and each offset cell is checked individually; otherwise the full w×h rectangle is used.
  */
 function tryPlace(
   cells: Set<string>,
@@ -372,20 +491,66 @@ function tryPlace(
   w: number,
   h: number,
   rng: Rng,
+  cellOffsets?: Array<[number, number]>,
 ): { col: number; row: number } | null {
   const candidates: { row: number; col: number }[] = [];
 
   for (const k of cells) {
     const [r, c] = k.split(",").map(Number);
     let fits = true;
-    for (let dc = 0; dc < w && fits; dc++)
-      for (let dr = 0; dr < h && fits; dr++)
-        if (!cells.has(ck(r + dr, c + dc)) || occupied.has(ck(r + dr, c + dc))) fits = false;
+    if (cellOffsets) {
+      for (const [dc, dr] of cellOffsets) {
+        if (!cells.has(ck(r + dr, c + dc)) || occupied.has(ck(r + dr, c + dc))) {
+          fits = false;
+          break;
+        }
+      }
+    } else {
+      for (let dc = 0; dc < w && fits; dc++)
+        for (let dr = 0; dr < h && fits; dr++)
+          if (!cells.has(ck(r + dr, c + dc)) || occupied.has(ck(r + dr, c + dc))) fits = false;
+    }
     if (fits) candidates.push({ row: r, col: c });
   }
 
   if (candidates.length === 0) return null;
   return candidates[Math.floor(rng() * candidates.length)];
+}
+
+/**
+ * Returns true if the person can reach the gate exit by moving only in the
+ * toward-gate direction without needing to shift any other piece — i.e. a
+ * trivial straight-shot that requires zero puzzle-solving effort.
+ */
+function hasClearPath(cfg: PuzzleConfig): boolean {
+  const { gate, gridWidth: gw, gridHeight: gh } = cfg;
+  const person = cfg.pieces.find((p) => p.color === "person");
+  if (!person) return false;
+  const occ = buildOccupancy(cfg.pieces);
+
+  const towardDir: Direction =
+    gate.side === "right"
+      ? "right"
+      : gate.side === "left"
+        ? "left"
+        : gate.side === "top"
+          ? "up"
+          : "down";
+
+  const dx = towardDir === "right" ? 1 : towardDir === "left" ? -1 : 0;
+  const dy = towardDir === "down" ? 1 : towardDir === "up" ? -1 : 0;
+
+  let r = person.row + dy;
+  let c = person.col + dx;
+
+  while (r >= 0 && r < gh && c >= 0 && c < gw) {
+    if (isGateExit(gate, gw, gh, r, c)) return true;
+    if (occ.has(ck(r, c)) && occ.get(ck(r, c)) !== "person") return false;
+    r += dy;
+    c += dx;
+  }
+  // Reached grid boundary without hitting the gate — not a clear path.
+  return false;
 }
 
 /**
@@ -420,7 +585,9 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
   const pieces: Piece[] = [];
   const occupied = new Set<string>();
 
-  // Place person adjacent to the gate (one step inside the grid)
+  // Place person adjacent to the gate (one step inside the grid).
+  // This creates the solved initial state required for solvability-by-reversal:
+  // the person can exit in one move, so reversing the scramble always solves the puzzle.
   let pCol = 0;
   let pRow = 0;
   switch (gate.side) {
@@ -455,10 +622,10 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
 
   // Place remaining pieces
   for (const def of defs) {
-    const pos = tryPlace(cells, occupied, def.w, def.h, rng);
+    const pos = tryPlace(cells, occupied, def.w, def.h, rng, def.cellOffsets);
     if (!pos) continue;
 
-    pieces.push({
+    const placed: Piece = {
       id: nextId(def.color),
       color: def.color,
       col: pos.col,
@@ -466,37 +633,138 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
       width: def.w,
       height: def.h,
       immovable: def.immovable ?? false,
-    });
-    for (let dc = 0; dc < def.w; dc++)
-      for (let dr = 0; dr < def.h; dr++) occupied.add(ck(pos.row + dr, pos.col + dc));
+      cellOffsets: def.cellOffsets,
+    };
+    pieces.push(placed);
+    for (const [c, r] of pieceAbsCells(placed)) occupied.add(ck(r, c));
   }
 
+  // ── Build initial sparse config: person + template pieces only ──────────
+  // Filler is intentionally NOT added yet so Phase 1 can reliably navigate
+  // the person to the far wall without a packed grid blocking the path.
   let cfg: PuzzleConfig = { gridWidth: gw, gridHeight: gh, validCells: cells, pieces, gate };
 
-  // Scramble: random valid moves (guarantees solvability)
-  const nMoves = settings.minMoves + Math.floor(rng() * settings.movesRange);
   const DIRS: Direction[] = ["up", "down", "left", "right"];
+
+  const awayDir: Direction =
+    gate.side === "right"
+      ? "left"
+      : gate.side === "left"
+        ? "right"
+        : gate.side === "top"
+          ? "down"
+          : "up";
+
+  const isOnFarWall = (c: PuzzleConfig): boolean => {
+    const person = c.pieces.find((p) => p.color === "person");
+    if (!person) return false;
+    switch (gate.side) {
+      case "right":
+        return person.col === 0;
+      case "left":
+        return person.col === gw - 1;
+      case "top":
+        return person.row === gh - 1;
+      case "bottom":
+        return person.row === 0;
+    }
+  };
+
+  // ── Phase 1: push person to the far wall on the sparse grid ──────────────
+  // The sparse grid makes unblocking easy and reliable. Solvability guarantee:
+  // the full move sequence (Phase 1 + Phase 2) can be reversed to reach the
+  // gate, so the puzzle is always solvable.
+  for (let attempt = 0; attempt < 2000 && !isOnFarWall(cfg); attempt++) {
+    if (canMove(cfg, "person", awayDir)) {
+      cfg = applyMove(cfg, "person", awayDir);
+    } else {
+      const others = cfg.pieces.filter((p) => !p.immovable && p.color !== "person");
+      for (let sub = 0; sub < 30; sub++) {
+        const p = others[Math.floor(rng() * others.length)];
+        const d = DIRS[Math.floor(rng() * DIRS.length)];
+        if (canMove(cfg, p.id, d)) {
+          cfg = applyMove(cfg, p.id, d);
+          break;
+        }
+      }
+    }
+  }
+
+  // ── Add filler AFTER person is confirmed on the far wall ─────────────────
+  // Now we pack the grid. Filler pieces will be scrambled in Phase 2 too.
+  {
+    // Rebuild occupation from post-Phase-1 piece positions.
+    const occ = new Set<string>();
+    for (const p of cfg.pieces) for (const [c, r] of pieceAbsCells(p)) occ.add(ck(r, c));
+
+    const minFreeCells = Math.max(5, Math.floor(cells.size * 0.2));
+    const fillerColors: PieceColor[] = ["orange", "blue", "green", "purple", "brown", "teal"];
+    let fillerColorIdx = 0;
+    const fillerSizes = [
+      { w: 3, h: 1 },
+      { w: 1, h: 3 },
+      { w: 2, h: 1 },
+      { w: 1, h: 2 },
+    ];
+    const newPieces = [...cfg.pieces];
+
+    for (const { w, h } of fillerSizes) {
+      let pos = tryPlace(cells, occ, w, h, rng);
+      while (pos !== null && cells.size - occ.size >= minFreeCells + w * h) {
+        const color = fillerColors[fillerColorIdx++ % fillerColors.length];
+        newPieces.push({
+          id: nextId(color),
+          color,
+          col: pos.col,
+          row: pos.row,
+          width: w,
+          height: h,
+          immovable: false,
+        });
+        for (let dc = 0; dc < w; dc++)
+          for (let dr = 0; dr < h; dr++) occ.add(ck(pos.row + dr, pos.col + dc));
+        pos = tryPlace(cells, occ, w, h, rng);
+      }
+    }
+    cfg = { ...cfg, pieces: newPieces };
+  }
+
+  // ── Phase 2: scramble NON-PERSON pieces only ──────────────────────────────
+  // The person is NEVER moved in Phase 2. This gives two hard guarantees:
+  //   1. Person stays on the far wall in the final puzzle — always far from gate.
+  //   2. Solvability: reverse Phase 2 → restores Phase 1 end state →
+  //      reverse Phase 1 → person adjacent to gate → exits.
+  const nMoves = settings.minMoves + Math.floor(rng() * settings.movesRange);
   let lastId: string | null = null;
 
   for (let i = 0; i < nMoves; i++) {
-    const movable = cfg.pieces.filter((p) => !p.immovable);
+    const movable = cfg.pieces.filter((p) => !p.immovable && p.color !== "person");
+    if (movable.length === 0) break;
 
     for (let attempt = 0; attempt < MAX_MOVE_ATTEMPTS; attempt++) {
       const p = movable[Math.floor(rng() * movable.length)];
       const dir = DIRS[Math.floor(rng() * DIRS.length)];
-
       if (p.id === lastId) continue;
       if (!canMove(cfg, p.id, dir)) continue;
-
-      // Do not let the person exit through the gate during scrambling
-      if (p.color === "person") {
-        const dx = dir === "right" ? 1 : dir === "left" ? -1 : 0;
-        const dy = dir === "down" ? 1 : dir === "up" ? -1 : 0;
-        if (isGateExit(gate, gw, gh, p.row + dy, p.col + dx)) continue;
-      }
-
       cfg = applyMove(cfg, p.id, dir);
       lastId = p.id;
+      break;
+    }
+  }
+
+  // Final check: if the person has a clear straight-shot to the gate with no
+  // pieces in the way, this puzzle is trivially easy — run one more scramble
+  // pass (non-person pieces only) until the path is blocked.
+  let antiTrivialAttempts = 0;
+  while (hasClearPath(cfg) && antiTrivialAttempts < 200) {
+    antiTrivialAttempts++;
+    const movable = cfg.pieces.filter((p) => !p.immovable && p.color !== "person");
+    if (movable.length === 0) break;
+    for (let attempt = 0; attempt < MAX_MOVE_ATTEMPTS; attempt++) {
+      const p = movable[Math.floor(rng() * movable.length)];
+      const dir = DIRS[Math.floor(rng() * DIRS.length)];
+      if (!canMove(cfg, p.id, dir)) continue;
+      cfg = applyMove(cfg, p.id, dir);
       break;
     }
   }
@@ -510,6 +778,57 @@ function cellToXY(c: number, r: number): { left: number; top: number } {
   return { left: c * (CELL + GAP), top: r * (CELL + GAP) };
 }
 
+/**
+ * Returns the SVG path `d` string for a 3-cell L-shape piece whose bounding box is 2×2.
+ * Uses arc commands so all corners — including the concave inner notch —
+ * are smoothly rounded (r=10). The missing corner is inferred from whichever of the
+ * four (dc,dr) positions is absent.
+ *
+ * Arc convention: outer convex corners use sweep=1; the single concave notch uses sweep=0.
+ */
+function lShapePathD(cellOffsets: Array<[number, number]>): string {
+  const r = 10;
+  const C = CELL; // 68
+  const tot = C + GAP; // 72  — leading edge of second cell
+  const end = 2 * C + GAP; // 140 — full bounding-box span
+
+  // Inset outer boundary coords so the stroke (max 3px, half = 1.5) stays within the
+  // bounding box, matching how CSS border behaves for rectangular pieces.
+  const pad = 1.5;
+  const ep = end - 2 * pad; // path-local outer extent (translate(pad,pad) applied in JSX)
+
+  const has = (dc: number, dr: number) => cellOffsets.some(([a, b]) => a === dc && b === dr);
+  const A = (sweep: 0 | 1, x: number, y: number) => `A ${r},${r} 0 0,${sweep} ${x},${y}`;
+
+  let d: string;
+  if (!has(1, 1)) {
+    // missing bottom-right
+    d = `M ${r},0 L ${ep - r},0 ${A(1, ep, r)} L ${ep},${C - r} ${A(1, ep - r, C)} L ${C + r},${C} ${A(0, C, C + r)} L ${C},${ep - r} ${A(1, C - r, ep)} L ${r},${ep} ${A(1, 0, ep - r)} L 0,${r} ${A(1, r, 0)} Z`;
+  } else if (!has(1, 0)) {
+    // missing top-right
+    d = `M ${r},0 L ${C - r},0 ${A(1, C, r)} L ${C},${tot - r} ${A(0, C + r, tot)} L ${ep - r},${tot} ${A(1, ep, tot + r)} L ${ep},${ep - r} ${A(1, ep - r, ep)} L ${r},${ep} ${A(1, 0, ep - r)} L 0,${r} ${A(1, r, 0)} Z`;
+  } else if (!has(0, 1)) {
+    // missing bottom-left
+    d = `M ${r},0 L ${ep - r},0 ${A(1, ep, r)} L ${ep},${ep - r} ${A(1, ep - r, ep)} L ${tot + r},${ep} ${A(1, tot, ep - r)} L ${tot},${C + r} ${A(0, tot - r, C)} L ${r},${C} ${A(1, 0, C - r)} L 0,${r} ${A(1, r, 0)} Z`;
+  } else {
+    // missing top-left
+    d = `M ${tot + r},0 L ${ep - r},0 ${A(1, ep, r)} L ${ep},${ep - r} ${A(1, ep - r, ep)} L ${r},${ep} ${A(1, 0, ep - r)} L 0,${tot + r} ${A(1, r, tot)} L ${tot - r},${tot} ${A(0, tot, tot - r)} L ${tot},${r} ${A(1, tot + r, 0)} Z`;
+  }
+  return d;
+}
+
+/** Fill and stroke colours for each PieceColor (default/modern theme). */
+const PIECE_SVG_COLORS: Record<PieceColor, { fill: string; stroke: string }> = {
+  person: { fill: "#e8e8f0", stroke: "#9ca3af" },
+  orange: { fill: "#f4a261", stroke: "#d97b3a" },
+  blue: { fill: "#7ec8e3", stroke: "#3fa8c8" },
+  green: { fill: "#86c87e", stroke: "#4e9e4a" },
+  purple: { fill: "#c9a5d6", stroke: "#9966bb" },
+  black: { fill: "#f4a0a0", stroke: "#d96060" },
+  brown: { fill: "#c4956a", stroke: "#8b5e3c" },
+  teal: { fill: "#5ec4c4", stroke: "#2a8f8f" },
+};
+
 function pieceCSS(p: Piece): React.CSSProperties {
   return {
     left: p.col * (CELL + GAP),
@@ -521,58 +840,88 @@ function pieceCSS(p: Piece): React.CSSProperties {
 
 type Seg = { key: string; style: React.CSSProperties };
 
-/** Render four border strips with a gap at the gate position. */
+/** Render border strips that trace the actual perimeter of validCells, with a gap at the gate.
+ *  Works for any grid shape (rectangle, L-shape, etc.) — no special-casing needed.
+ */
 function borderSegments(cfg: PuzzleConfig, borderColor: string): Seg[] {
-  const { gate, gridWidth: gw, gridHeight: gh } = cfg;
+  const { gate, gridWidth: gw, gridHeight: gh, validCells } = cfg;
   const step = CELL + GAP;
-  const totalW = gw * step - GAP;
-  const totalH = gh * step - GAP;
-  const gateStart = gate.index * step;
-  const gateEnd = gateStart + CELL;
   const B = BORDER;
-
   const base: React.CSSProperties = { position: "absolute", background: borderColor };
-
-  const seg = (key: string, style: React.CSSProperties): Seg => ({
-    key,
-    style: { ...base, ...style },
-  });
-
   const segs: Seg[] = [];
+  let idx = 0;
 
-  // Top
-  if (gate.side === "top") {
-    if (gateStart > 0) segs.push(seg("t1", { top: -B, left: -B, width: gateStart + B, height: B }));
-    if (gateEnd < totalW) segs.push(seg("t2", { top: -B, left: gateEnd, right: -B, height: B }));
-  } else {
-    segs.push(seg("t", { top: -B, left: -B, width: totalW + 2 * B, height: B }));
+  const push = (style: React.CSSProperties) =>
+    segs.push({ key: `b${idx++}`, style: { ...base, ...style } });
+
+  const isValid = (r: number, c: number) => validCells.has(ck(r, c));
+
+  // ── Horizontal boundary segments ──────────────────────────────────────────
+  // y-boundary `r` sits between row (r-1) above and row r below.
+  // A border strip is needed wherever exactly one side is a valid cell.
+  // A gate on top/bottom creates a gap by interrupting the current run.
+  for (let r = 0; r <= gh; r++) {
+    let runStart: number | null = null;
+
+    const flushH = (c: number) => {
+      if (runStart === null) return;
+      push({
+        top: r * step - B,
+        left: runStart * step - B,
+        width: (c - runStart) * step - GAP + 2 * B,
+        height: B,
+      });
+      runStart = null;
+    };
+
+    for (let c = 0; c < gw; c++) {
+      const aboveValid = r > 0 && isValid(r - 1, c);
+      const belowValid = r < gh && isValid(r, c);
+      const isBorder = aboveValid !== belowValid;
+      const isGate =
+        (gate.side === "top" && r === 0 && c === gate.index) ||
+        (gate.side === "bottom" && r === gh && c === gate.index);
+
+      if (isBorder && !isGate) {
+        if (runStart === null) runStart = c;
+      } else {
+        flushH(c);
+      }
+    }
+    flushH(gw);
   }
 
-  // Bottom
-  if (gate.side === "bottom") {
-    if (gateStart > 0)
-      segs.push(seg("b1", { bottom: -B, left: -B, width: gateStart + B, height: B }));
-    if (gateEnd < totalW) segs.push(seg("b2", { bottom: -B, left: gateEnd, right: -B, height: B }));
-  } else {
-    segs.push(seg("b", { bottom: -B, left: -B, width: totalW + 2 * B, height: B }));
-  }
+  // ── Vertical boundary segments ────────────────────────────────────────────
+  // x-boundary `c` sits between column (c-1) on the left and column c on the right.
+  for (let c = 0; c <= gw; c++) {
+    let runStart: number | null = null;
 
-  // Left
-  if (gate.side === "left") {
-    if (gateStart > 0) segs.push(seg("l1", { top: 0, left: -B, width: B, height: gateStart }));
-    if (gateEnd < totalH)
-      segs.push(seg("l2", { top: gateEnd, left: -B, width: B, height: totalH - gateEnd }));
-  } else {
-    segs.push(seg("l", { top: 0, left: -B, width: B, height: totalH }));
-  }
+    const flushV = (r: number) => {
+      if (runStart === null) return;
+      push({
+        left: c * step - B,
+        top: runStart * step - B,
+        width: B,
+        height: (r - runStart) * step - GAP + 2 * B,
+      });
+      runStart = null;
+    };
 
-  // Right
-  if (gate.side === "right") {
-    if (gateStart > 0) segs.push(seg("r1", { top: 0, right: -B, width: B, height: gateStart }));
-    if (gateEnd < totalH)
-      segs.push(seg("r2", { top: gateEnd, right: -B, width: B, height: totalH - gateEnd }));
-  } else {
-    segs.push(seg("r", { top: 0, right: -B, width: B, height: totalH }));
+    for (let r = 0; r < gh; r++) {
+      const leftValid = c > 0 && isValid(r, c - 1);
+      const rightValid = c < gw && isValid(r, c);
+      const isBorder = leftValid !== rightValid;
+      const isGate =
+        (gate.side === "left" && c === 0 && r === gate.index) ||
+        (gate.side === "right" && c === gw && r === gate.index);
+
+      if (isBorder && !isGate) {
+        if (runStart === null) runStart = r;
+      } else {
+        flushV(r);
+      }
+    }
+    flushV(gh);
   }
 
   return segs;
@@ -611,7 +960,8 @@ export function SlidePuzzle({
   difficulty = "medium",
   theme = "modern",
 }: SlidePuzzleProps = {}) {
-  const [cfg, setCfg] = useState<PuzzleConfig>(() => generatePuzzle({ date, difficulty }));
+  const initialCfg = useRef<PuzzleConfig>(generatePuzzle({ date, difficulty }));
+  const [cfg, setCfg] = useState<PuzzleConfig>(initialCfg.current);
   const [selected, setSelected] = useState<string | null>(null);
   const [moves, setMoves] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -707,12 +1057,24 @@ export function SlidePuzzle({
 
   // ── New puzzle ────────────────────────────────────────────────────────────
   const handleNew = () => {
-    setCfg(generatePuzzle({ difficulty }));
+    const next = generatePuzzle({ difficulty });
+    initialCfg.current = next;
+    setCfg(next);
     setSelected(null);
     setMoves(0);
     setElapsed(0);
     setWon(false);
   };
+
+  const handleReset = () => {
+    setCfg(initialCfg.current);
+    setSelected(null);
+    setMoves(0);
+    setElapsed(0);
+    setWon(false);
+  };
+
+  const [showHelp, setShowHelp] = useState(false);
 
   // ── Derived values ────────────────────────────────────────────────────────
   const boardW = cfg.gridWidth * (CELL + GAP) - GAP;
@@ -749,10 +1111,74 @@ export function SlidePuzzle({
           </div>
         </div>
 
-        <button type="button" className={styles.newBtn} onClick={handleNew}>
-          Generate New Puzzle
-        </button>
+        <div className={styles.btnRow}>
+          <button type="button" className={styles.resetBtn} onClick={handleReset}>
+            Reset Puzzle
+          </button>
+          <button type="button" className={styles.newBtn} onClick={handleNew}>
+            New Puzzle
+          </button>
+          <button
+            type="button"
+            className={styles.helpBtn}
+            onClick={() => setShowHelp((v) => !v)}
+            aria-label="How to play"
+          >
+            ?
+          </button>
+        </div>
       </div>
+
+      {/* ── How-to-play modal ── */}
+      {showHelp && (
+        <dialog
+          className={styles.helpOverlay}
+          aria-label="How to play"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowHelp(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setShowHelp(false);
+          }}
+          open
+        >
+          <div
+            className={styles.helpPanel}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <div className={styles.helpHeader}>
+              <span className={styles.helpTitle}>How to Play:</span>
+              <button
+                type="button"
+                className={styles.helpClose}
+                onClick={() => setShowHelp(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <ul className={styles.helpList}>
+              <li>
+                <strong>Objective:</strong> slide the 👤 piece through the exit gate on the edge of
+                the grid.
+              </li>
+              <li>
+                <strong>Select &amp; move:</strong> click any piece to select it, then use the{" "}
+                <strong>arrow keys</strong> to slide it, or <strong>drag</strong> it directly.
+              </li>
+              <li>
+                <strong>All pieces slide freely</strong> in any direction — but only into empty
+                cells.
+              </li>
+              <li>
+                Use <strong>Reset Puzzle</strong> to restore the starting position, or{" "}
+                <strong>New Puzzle</strong> to generate a fresh one.
+              </li>
+            </ul>
+          </div>
+        </dialog>
+      )}
 
       {/* ── Status messages ── */}
       {won ? (
@@ -805,23 +1231,33 @@ export function SlidePuzzle({
               colorClass,
               isSelected ? styles.pieceSelected : "",
               p.immovable ? styles.pieceImmovable : "",
+              p.cellOffsets ? styles.pieceL : "",
             ]
               .filter(Boolean)
               .join(" ");
+
+            const divStyle: React.CSSProperties =
+              p.cellOffsets && isSelected
+                ? { ...pieceCSS(p), filter: "drop-shadow(0 0 4px rgba(37,99,235,0.55))" }
+                : pieceCSS(p);
 
             return (
               <div
                 key={p.id}
                 className={cls}
-                style={pieceCSS(p)}
+                style={divStyle}
                 role={p.immovable ? undefined : "button"}
                 tabIndex={p.immovable ? undefined : 0}
                 aria-label={`${p.color} piece`}
                 aria-pressed={p.id === selected}
                 onClick={(e) => {
+                  if (p.cellOffsets) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const dc = Math.floor((e.clientX - rect.left) / (CELL + GAP));
+                    const dr = Math.floor((e.clientY - rect.top) / (CELL + GAP));
+                    if (!p.cellOffsets.some(([a, b]) => a === dc && b === dr)) return;
+                  }
                   e.stopPropagation();
-                  if (p.immovable || won) return;
-                  setSelected((prev) => (prev === p.id ? null : p.id));
                 }}
                 onKeyDown={(e) => {
                   if (p.immovable || won) return;
@@ -832,12 +1268,44 @@ export function SlidePuzzle({
                 }}
                 onMouseDown={(e) => {
                   if (p.immovable || won) return;
+                  if (p.cellOffsets) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const dc = Math.floor((e.clientX - rect.left) / (CELL + GAP));
+                    const dr = Math.floor((e.clientY - rect.top) / (CELL + GAP));
+                    if (!p.cellOffsets.some(([a, b]) => a === dc && b === dr)) return;
+                  }
                   e.preventDefault();
                   e.stopPropagation();
-                  setSelected(p.id);
+                  setSelected((prev) => (prev === p.id ? null : p.id));
                   drag.current = { id: p.id, sx: e.clientX, sy: e.clientY };
                 }}
               >
+                {p.cellOffsets && (
+                  <svg
+                    width={p.width * CELL + (p.width - 1) * GAP}
+                    height={p.height * CELL + (p.height - 1) * GAP}
+                    viewBox={`0 0 ${p.width * CELL + (p.width - 1) * GAP} ${p.height * CELL + (p.height - 1) * GAP}`}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      overflow: "hidden",
+                      pointerEvents: "none",
+                    }}
+                    aria-hidden="true"
+                  >
+                    <g transform="translate(1.5, 1.5)">
+                      <path
+                        d={lShapePathD(p.cellOffsets)}
+                        fill={PIECE_SVG_COLORS[p.color].fill}
+                        stroke={isSelected ? "#2563eb" : PIECE_SVG_COLORS[p.color].stroke}
+                        strokeWidth={isSelected ? 3 : 2.5}
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                      />
+                    </g>
+                  </svg>
+                )}
                 {p.color === "person" && (
                   <svg
                     viewBox="0 0 32 32"
@@ -891,28 +1359,6 @@ export function SlidePuzzle({
           })}
         </div>
       </div>
-
-      <p className={styles.legend}>
-        <span className={styles.legendItem}>
-          <span className={styles.legendSwatch} style={{ background: "#e8e8f0" }} />
-          Person
-        </span>
-        <span className={styles.legendItem}>
-          <span className={styles.legendSwatch} style={{ background: "#f4a261" }} />
-          Movable box
-        </span>
-        <span className={styles.legendItem}>
-          <span className={styles.legendSwatch} style={{ background: "#2d2d2d" }} />
-          Immovable
-        </span>
-        <span className={styles.legendItem}>
-          <span
-            className={styles.legendSwatch}
-            style={{ background: "#4ade80", border: "2px solid #16a34a" }}
-          />
-          Gate (exit)
-        </span>
-      </p>
     </div>
   );
 }

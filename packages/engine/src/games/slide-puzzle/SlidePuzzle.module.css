@@ -59,6 +59,33 @@
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
 
+.btnRow {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.resetBtn {
+  background: transparent;
+  color: #2563eb;
+  border: 2px solid #2563eb;
+  border-radius: 8px;
+  padding: 0.6rem 1.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.resetBtn:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.resetBtn:active {
+  transform: scale(0.97);
+}
+
 .newBtn {
   background: #2563eb;
   color: #fff;
@@ -78,6 +105,92 @@
 
 .newBtn:active {
   transform: scale(0.97);
+}
+
+.helpBtn {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: 2px solid #6b7280;
+  background: transparent;
+  color: #6b7280;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.helpBtn:hover {
+  background: #f3f4f6;
+  border-color: #374151;
+  color: #374151;
+}
+
+/* ── Help modal ──────────────────────────────────────────────────────────── */
+
+.helpOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.helpPanel {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.5rem 1.75rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+}
+
+.helpHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.helpTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.helpClose {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  color: #6b7280;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+
+.helpClose:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.helpList {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  color: #374151;
+  font-size: 0.92rem;
+  line-height: 1.5;
 }
 
 /* ── Status messages ────────────────────────────────────────────────────── */
@@ -186,6 +299,14 @@
   transform: none !important;
 }
 
+/* L-shaped pieces: visuals are handled entirely by an inline SVG child */
+.pieceL {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
 /* Piece colours */
 
 .piecePerson {
@@ -215,8 +336,18 @@
 }
 
 .pieceBlack {
-  background: #2d2d2d;
-  border-color: #111;
+  background: #f4a0a0;
+  border-color: #d96060;
+}
+
+.pieceBrown {
+  background: #c4956a;
+  border-color: #8b5e3c;
+}
+
+.pieceTeal {
+  background: #5ec4c4;
+  border-color: #2a8f8f;
 }
 
 /* ── Person SVG icon ────────────────────────────────────────────────────── */
@@ -316,6 +447,22 @@
   font-family: "Courier New", monospace;
 }
 
+.container[data-theme="8bit"] .resetBtn {
+  border-radius: 0;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+  transition: none;
+}
+
+.container[data-theme="8bit"] .resetBtn:hover {
+  background: rgba(37, 99, 235, 0.15);
+  transform: none;
+}
+
+.container[data-theme="8bit"] .resetBtn:active {
+  transform: translate(2px, 2px);
+}
+
 .container[data-theme="8bit"] .newBtn {
   border-radius: 0;
   font-family: "Courier New", monospace;
@@ -383,8 +530,18 @@
 }
 
 .container[data-theme="8bit"] .pieceBlack {
-  background: #111;
-  border-color: #000;
+  background: #ee6666;
+  border-color: #cc2222;
+}
+
+.container[data-theme="8bit"] .pieceBrown {
+  background: #996633;
+  border-color: #663300;
+}
+
+.container[data-theme="8bit"] .pieceTeal {
+  background: #008888;
+  border-color: #005555;
 }
 
 /* ── Terminal theme ──────────────────────────────────────────────────────── */
@@ -437,6 +594,24 @@
 
 .container[data-theme="terminal"] .hint {
   color: #006b1c;
+}
+
+.container[data-theme="terminal"] .resetBtn {
+  background: transparent;
+  color: #00ff41;
+  border: 1px solid #00ff41;
+  border-radius: 0;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.container[data-theme="terminal"] .resetBtn:hover {
+  background: #001a05;
+}
+
+.container[data-theme="terminal"] .resetBtn:active {
+  transform: none;
 }
 
 .container[data-theme="terminal"] .newBtn {
@@ -508,8 +683,18 @@
 }
 
 .container[data-theme="terminal"] .pieceBlack {
-  background: #050505;
-  border-color: #333;
+  background: #3a0808;
+  border-color: #cc2222;
+}
+
+.container[data-theme="terminal"] .pieceBrown {
+  background: #1a0a00;
+  border-color: #cc8844;
+}
+
+.container[data-theme="terminal"] .pieceTeal {
+  background: #001a1a;
+  border-color: #00cccc;
 }
 
 .container[data-theme="terminal"] .gateArrow {
