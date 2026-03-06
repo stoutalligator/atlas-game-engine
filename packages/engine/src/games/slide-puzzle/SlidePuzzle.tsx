@@ -28,7 +28,7 @@ export interface PuzzleConfig {
   gridHeight: number;
   /** Set of "row,col" strings representing valid grid cells */
   validCells: Set<string>;
-  pieces: Piece[];
+  pieces: Piece[]
   gate: Gate;
 }
 
@@ -164,6 +164,8 @@ function canMove(cfg: PuzzleConfig, pieceId: string, dir: Direction): boolean {
   const piece = cfg.pieces.find((p) => p.id === pieceId);
   if (!piece || piece.immovable) return false;
 
+  // All movable pieces can slide in any of the four directions.
+
   const dx = dir === "right" ? 1 : dir === "left" ? -1 : 0;
   const dy = dir === "down" ? 1 : dir === "up" ? -1 : 0;
 
@@ -236,127 +238,145 @@ interface Template {
 }
 
 function makeTemplates(): Template[] {
+  // Mix of large (3×1, 1×3) and medium (2×1, 1×2) pieces.
+  // Large pieces create hard-to-break blockades; medium pieces add flexibility
+  // so there are just enough moves to make the puzzle solvable but non-trivial.
+  // No immovable pieces — all blockers are movable. Axis-lock applies throughout.
   return [
-    // 7×7, gate right
+    // ── 6×6, gate right row 2 ─────────────────────────────────────────────
     {
-      gw: 7,
-      gh: 7,
-      cells: makeRectGrid(7, 7),
-      gate: { side: "right", index: 6 },
+      gw: 6, gh: 6,
+      cells: makeRectGrid(6, 6),
+      gate: { side: "right", index: 2 },
       pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 1, h: 2 },
-        { color: "blue", w: 2, h: 1 },
-        { color: "green", w: 1, h: 3 },
-        { color: "purple", w: 3, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-        { color: "black", w: 2, h: 1, immovable: true },
+        { color: "blue",   w: 3, h: 1 },
+        { color: "blue",   w: 1, h: 3 },
+        { color: "blue",   w: 2, h: 1 },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "green",  w: 1, h: 3 },
+        { color: "green",  w: 2, h: 1 },
+        { color: "purple", w: 1, h: 2 },
       ],
     },
-    // 7×7, gate bottom
+    // ── 7×7, gate right row 3 ─────────────────────────────────────────────
     {
-      gw: 7,
-      gh: 7,
+      gw: 7, gh: 7,
+      cells: makeRectGrid(7, 7),
+      gate: { side: "right", index: 3 },
+      pieces: [
+        { color: "blue",   w: 3, h: 1 },
+        { color: "blue",   w: 1, h: 3 },
+        { color: "blue",   w: 2, h: 1 },
+        { color: "blue",   w: 1, h: 2 },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "orange", w: 2, h: 1 },
+        { color: "green",  w: 3, h: 1 },
+        { color: "green",  w: 1, h: 3 },
+        { color: "purple", w: 1, h: 3 },
+        { color: "purple", w: 2, h: 1 },
+      ],
+    },
+    // ── 7×7, gate bottom col 3 ────────────────────────────────────────────
+    {
+      gw: 7, gh: 7,
       cells: makeRectGrid(7, 7),
       gate: { side: "bottom", index: 3 },
       pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 1, h: 2 },
-        { color: "blue", w: 2, h: 1 },
-        { color: "green", w: 3, h: 1 },
-        { color: "green", w: 1, h: 3 },
-        { color: "purple", w: 3, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-        { color: "black", w: 1, h: 2, immovable: true },
+        { color: "blue",   w: 3, h: 1 },
+        { color: "blue",   w: 1, h: 3 },
+        { color: "blue",   w: 2, h: 1 },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "orange", w: 1, h: 2 },
+        { color: "green",  w: 3, h: 1 },
+        { color: "green",  w: 1, h: 3 },
+        { color: "purple", w: 1, h: 3 },
+        { color: "purple", w: 2, h: 1 },
       ],
     },
-    // 5×5, gate right
+    // ── 6×6, gate left row 3 ──────────────────────────────────────────────
     {
-      gw: 5,
-      gh: 5,
-      cells: makeRectGrid(5, 5),
-      gate: { side: "right", index: 2 },
-      pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 1, h: 2 },
-        { color: "green", w: 1, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-      ],
-    },
-    // 8×6, gate bottom
-    {
-      gw: 8,
-      gh: 6,
-      cells: makeRectGrid(8, 6),
-      gate: { side: "bottom", index: 5 },
-      pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 2, h: 1 },
-        { color: "blue", w: 1, h: 2 },
-        { color: "green", w: 3, h: 1 },
-        { color: "purple", w: 3, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-        { color: "black", w: 2, h: 1, immovable: true },
-      ],
-    },
-    // 7×7 L-shape (cut top-right 3×3), gate right
-    {
-      gw: 7,
-      gh: 7,
-      cells: makeLGrid(7, 7, 3, 3),
-      gate: { side: "right", index: 5 },
-      pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 1, h: 2 },
-        { color: "blue", w: 2, h: 1 },
-        { color: "green", w: 1, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-      ],
-    },
-    // 6×6, gate left
-    {
-      gw: 6,
-      gh: 6,
+      gw: 6, gh: 6,
       cells: makeRectGrid(6, 6),
       gate: { side: "left", index: 3 },
       pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 2, h: 1 },
-        { color: "blue", w: 1, h: 2 },
-        { color: "green", w: 1, h: 3 },
-        { color: "purple", w: 3, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
+        { color: "blue",   w: 3, h: 1 },
+        { color: "blue",   w: 1, h: 3 },
+        { color: "blue",   w: 1, h: 2 },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "green",  w: 3, h: 1 },
+        { color: "green",  w: 1, h: 2 },
+        { color: "purple", w: 2, h: 1 },
       ],
     },
-    // 7×7, gate top
+    // ── 7×7, gate top col 3 ───────────────────────────────────────────────
     {
-      gw: 7,
-      gh: 7,
+      gw: 7, gh: 7,
       cells: makeRectGrid(7, 7),
-      gate: { side: "top", index: 2 },
+      gate: { side: "top", index: 3 },
       pieces: [
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "orange", w: 1, h: 1 },
-        { color: "blue", w: 2, h: 1 },
-        { color: "blue", w: 1, h: 2 },
-        { color: "green", w: 3, h: 1 },
-        { color: "green", w: 1, h: 3 },
-        { color: "purple", w: 3, h: 3 },
-        { color: "black", w: 1, h: 1, immovable: true },
-        { color: "black", w: 1, h: 2, immovable: true },
+        { color: "blue",   w: 3, h: 1 },
+        { color: "blue",   w: 1, h: 3 },
+        { color: "blue",   w: 2, h: 1 },
+        { color: "blue",   w: 1, h: 2 },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "orange", w: 1, h: 2 },
+        { color: "green",  w: 3, h: 1 },
+        { color: "green",  w: 1, h: 3 },
+        { color: "purple", w: 1, h: 3 },
+        { color: "purple", w: 2, h: 1 },
+      ],
+    },
+    // ── 8×6, gate right row 2 ─────────────────────────────────────────────
+    {
+      gw: 8, gh: 6,
+      cells: makeRectGrid(8, 6),
+      gate: { side: "right", index: 2 },
+      pieces: [
+        { color: "blue",   w: 3, h: 1 },
+        { color: "blue",   w: 1, h: 3 },
+        { color: "blue",   w: 2, h: 1 },
+        { color: "orange", w: 3, h: 1 },
+        { color: "orange", w: 1, h: 3 },
+        { color: "orange", w: 2, h: 1 },
+        { color: "green",  w: 3, h: 1 },
+        { color: "green",  w: 1, h: 3 },
+        { color: "purple", w: 3, h: 1 },
+        { color: "purple", w: 1, h: 2 },
+      ],
+    },
+    // ── 5×5, gate right row 2 (easy) ──────────────────────────────────────
+    {
+      gw: 5, gh: 5,
+      cells: makeRectGrid(5, 5),
+      gate: { side: "right", index: 2 },
+      pieces: [
+        { color: "blue",   w: 3, h: 1 },
+        { color: "blue",   w: 1, h: 3 },
+        { color: "orange", w: 2, h: 1 },
+        { color: "orange", w: 1, h: 2 },
+        { color: "green",  w: 1, h: 3 },
+        { color: "purple", w: 3, h: 1 },
+      ],
+    },
+    // ── 7×7 L-shape (cut top-right 3×3), gate right row 5 ────────────────
+    {
+      gw: 7, gh: 7,
+      cells: makeLGrid(7, 7, 3, 3),
+      gate: { side: "right", index: 5 },
+      pieces: [
+        { color: "blue",   w: 3, h: 1 },
+        { color: "blue",   w: 1, h: 3 },
+        { color: "orange", w: 2, h: 1 },
+        { color: "orange", w: 1, h: 2 },
+        { color: "green",  w: 3, h: 1 },
+        { color: "green",  w: 1, h: 3 },
+        { color: "purple", w: 2, h: 1 },
+        { color: "purple", w: 1, h: 2 },
       ],
     },
   ];
@@ -389,6 +409,37 @@ function tryPlace(
 }
 
 /**
+ * Returns true if the person can reach the gate exit by moving only in the
+ * toward-gate direction without needing to shift any other piece — i.e. a
+ * trivial straight-shot that requires zero puzzle-solving effort.
+ */
+function hasClearPath(cfg: PuzzleConfig): boolean {
+  const { gate, gridWidth: gw, gridHeight: gh } = cfg;
+  const person = cfg.pieces.find((p) => p.color === "person")!;
+  const occ = buildOccupancy(cfg.pieces);
+
+  const towardDir: Direction =
+    gate.side === "right" ? "right" :
+    gate.side === "left"  ? "left"  :
+    gate.side === "top"   ? "up"    : "down";
+
+  const dx = towardDir === "right" ? 1 : towardDir === "left" ? -1 : 0;
+  const dy = towardDir === "down"  ? 1 : towardDir === "up"   ? -1 : 0;
+
+  let r = person.row + dy;
+  let c = person.col + dx;
+
+  while (r >= 0 && r < gh && c >= 0 && c < gw) {
+    if (isGateExit(gate, gw, gh, r, c)) return true;
+    if (occ.has(ck(r, c)) && occ.get(ck(r, c)) !== "person") return false;
+    r += dy;
+    c += dx;
+  }
+  // Reached grid boundary without hitting the gate — not a clear path.
+  return false;
+}
+
+/**
  * Generate a solvable puzzle by:
  * 1. Placing pieces (person adjacent to gate, others randomly).
  * 2. Scrambling via N random valid moves (guarantees solvability by reversal).
@@ -418,26 +469,16 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
   const pieces: Piece[] = [];
   const occupied = new Set<string>();
 
-  // Place person adjacent to the gate (one step inside the grid)
+  // Place person adjacent to the gate (one step inside the grid).
+  // This creates the solved initial state required for solvability-by-reversal:
+  // the person can exit in one move, so reversing the scramble always solves the puzzle.
   let pCol = 0;
   let pRow = 0;
   switch (gate.side) {
-    case "right":
-      pCol = gw - 1;
-      pRow = gate.index;
-      break;
-    case "left":
-      pCol = 0;
-      pRow = gate.index;
-      break;
-    case "top":
-      pCol = gate.index;
-      pRow = 0;
-      break;
-    case "bottom":
-      pCol = gate.index;
-      pRow = gh - 1;
-      break;
+    case "right":  pCol = gw - 1; pRow = gate.index; break;
+    case "left":   pCol = 0;      pRow = gate.index; break;
+    case "top":    pCol = gate.index; pRow = 0;      break;
+    case "bottom": pCol = gate.index; pRow = gh - 1; break;
   }
 
   pieces.push({
@@ -469,32 +510,113 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
       for (let dr = 0; dr < def.h; dr++) occupied.add(ck(pos.row + dr, pos.col + dc));
   }
 
+  // ── Build initial sparse config: person + template pieces only ──────────
+  // Filler is intentionally NOT added yet so Phase 1 can reliably navigate
+  // the person to the far wall without a packed grid blocking the path.
   let cfg: PuzzleConfig = { gridWidth: gw, gridHeight: gh, validCells: cells, pieces, gate };
 
-  // Scramble: random valid moves (guarantees solvability)
-  const nMoves = settings.minMoves + Math.floor(rng() * settings.movesRange);
   const DIRS: Direction[] = ["up", "down", "left", "right"];
+
+  const awayDir: Direction =
+    gate.side === "right" ? "left" :
+    gate.side === "left"  ? "right" :
+    gate.side === "top"   ? "down"  : "up";
+
+  const isOnFarWall = (c: PuzzleConfig): boolean => {
+    const person = c.pieces.find((p) => p.color === "person")!;
+    switch (gate.side) {
+      case "right":  return person.col === 0;
+      case "left":   return person.col === gw - 1;
+      case "top":    return person.row === gh - 1;
+      case "bottom": return person.row === 0;
+    }
+  };
+
+  // ── Phase 1: push person to the far wall on the sparse grid ──────────────
+  // The sparse grid makes unblocking easy and reliable. Solvability guarantee:
+  // the full move sequence (Phase 1 + Phase 2) can be reversed to reach the
+  // gate, so the puzzle is always solvable.
+  for (let attempt = 0; attempt < 2000 && !isOnFarWall(cfg); attempt++) {
+    if (canMove(cfg, "person", awayDir)) {
+      cfg = applyMove(cfg, "person", awayDir);
+    } else {
+      const others = cfg.pieces.filter((p) => !p.immovable && p.color !== "person");
+      for (let sub = 0; sub < 30; sub++) {
+        const p = others[Math.floor(rng() * others.length)];
+        const d = DIRS[Math.floor(rng() * DIRS.length)];
+        if (canMove(cfg, p.id, d)) { cfg = applyMove(cfg, p.id, d); break; }
+      }
+    }
+  }
+
+  // ── Add filler AFTER person is confirmed on the far wall ─────────────────
+  // Now we pack the grid. Filler pieces will be scrambled in Phase 2 too.
+  {
+    // Rebuild occupation from post-Phase-1 piece positions.
+    const occ = new Set<string>();
+    for (const p of cfg.pieces)
+      for (let dc = 0; dc < p.width; dc++)
+        for (let dr = 0; dr < p.height; dr++)
+          occ.add(ck(p.row + dr, p.col + dc));
+
+    const minFreeCells = Math.max(5, Math.floor(cells.size * 0.20));
+    const fillerColors: PieceColor[] = ["orange", "blue", "green", "purple"];
+    let fillerColorIdx = 0;
+    const fillerSizes = [{ w: 3, h: 1 }, { w: 1, h: 3 }, { w: 2, h: 1 }, { w: 1, h: 2 }];
+    const newPieces = [...cfg.pieces];
+
+    for (const { w, h } of fillerSizes) {
+      let pos = tryPlace(cells, occ, w, h, rng);
+      while (pos !== null && cells.size - occ.size >= minFreeCells + w * h) {
+        const color = fillerColors[fillerColorIdx++ % fillerColors.length];
+        newPieces.push({
+          id: nextId(color), color, col: pos.col, row: pos.row,
+          width: w, height: h, immovable: false,
+        });
+        for (let dc = 0; dc < w; dc++)
+          for (let dr = 0; dr < h; dr++) occ.add(ck(pos.row + dr, pos.col + dc));
+        pos = tryPlace(cells, occ, w, h, rng);
+      }
+    }
+    cfg = { ...cfg, pieces: newPieces };
+  }
+
+  // ── Phase 2: scramble NON-PERSON pieces only ──────────────────────────────
+  // The person is NEVER moved in Phase 2. This gives two hard guarantees:
+  //   1. Person stays on the far wall in the final puzzle — always far from gate.
+  //   2. Solvability: reverse Phase 2 → restores Phase 1 end state →
+  //      reverse Phase 1 → person adjacent to gate → exits.
+  const nMoves = settings.minMoves + Math.floor(rng() * settings.movesRange);
   let lastId: string | null = null;
 
   for (let i = 0; i < nMoves; i++) {
-    const movable = cfg.pieces.filter((p) => !p.immovable);
+    const movable = cfg.pieces.filter((p) => !p.immovable && p.color !== "person");
+    if (movable.length === 0) break;
 
     for (let attempt = 0; attempt < MAX_MOVE_ATTEMPTS; attempt++) {
       const p = movable[Math.floor(rng() * movable.length)];
       const dir = DIRS[Math.floor(rng() * DIRS.length)];
-
       if (p.id === lastId) continue;
       if (!canMove(cfg, p.id, dir)) continue;
-
-      // Do not let the person exit through the gate during scrambling
-      if (p.color === "person") {
-        const dx = dir === "right" ? 1 : dir === "left" ? -1 : 0;
-        const dy = dir === "down" ? 1 : dir === "up" ? -1 : 0;
-        if (isGateExit(gate, gw, gh, p.row + dy, p.col + dx)) continue;
-      }
-
       cfg = applyMove(cfg, p.id, dir);
       lastId = p.id;
+      break;
+    }
+  }
+
+  // Final check: if the person has a clear straight-shot to the gate with no
+  // pieces in the way, this puzzle is trivially easy — run one more scramble
+  // pass (non-person pieces only) until the path is blocked.
+  let antiTrivialAttempts = 0;
+  while (hasClearPath(cfg) && antiTrivialAttempts < 200) {
+    antiTrivialAttempts++;
+    const movable = cfg.pieces.filter((p) => !p.immovable && p.color !== "person");
+    if (movable.length === 0) break;
+    for (let attempt = 0; attempt < MAX_MOVE_ATTEMPTS; attempt++) {
+      const p = movable[Math.floor(rng() * movable.length)];
+      const dir = DIRS[Math.floor(rng() * DIRS.length)];
+      if (!canMove(cfg, p.id, dir)) continue;
+      cfg = applyMove(cfg, p.id, dir);
       break;
     }
   }
