@@ -1,0 +1,254 @@
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem 3rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+  background: #f7f8fa;
+  color: #1a1a2e;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.title {
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: #1a1a2e;
+}
+
+.statsRow {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.statLabel {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2563eb;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.newBtn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.newBtn:hover {
+  background: #1d4ed8;
+}
+
+.newBtn:active {
+  transform: scale(0.97);
+}
+
+/* ── Status messages ────────────────────────────────────────────────────── */
+
+.winBanner {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  padding: 0.7rem 1.75rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  box-shadow: 0 3px 10px rgba(34, 197, 94, 0.4);
+}
+
+.hint {
+  color: #6b7280;
+  font-size: 0.83rem;
+  margin: 0 0 1rem;
+  text-align: center;
+  min-height: 1.4rem;
+}
+
+/* ── Board outer wrapper ────────────────────────────────────────────────── */
+
+.boardOuter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Extra padding so border segments (positioned absolutely on .board) have room */
+  padding: 48px;
+}
+
+/* ── Board ──────────────────────────────────────────────────────────────── */
+
+.board {
+  position: relative;
+  /* No CSS border — borders are rendered as child divs to allow gate gap */
+  background: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── Grid cells (background) ────────────────────────────────────────────── */
+
+.cell {
+  position: absolute;
+  background: #ededf0;
+  border: 1px solid #d4d4d8;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+/* ── Gate arrow ─────────────────────────────────────────────────────────── */
+
+.gateArrow {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  background: #22c55e;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  z-index: 30;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px #16a34a;
+}
+
+/* ── Pieces ─────────────────────────────────────────────────────────────── */
+
+.piece {
+  position: absolute;
+  border-radius: 12px;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  transition: box-shadow 0.12s, transform 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.piece:hover:not(.pieceImmovable) {
+  transform: scale(1.03);
+  z-index: 15;
+}
+
+.pieceSelected {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.45) !important;
+  z-index: 16 !important;
+  transform: scale(1.05) !important;
+}
+
+.pieceImmovable {
+  cursor: not-allowed !important;
+}
+
+.pieceImmovable:hover {
+  transform: none !important;
+}
+
+/* Piece colours */
+
+.piecePerson {
+  background: #e8e8f0;
+  border-color: #9ca3af;
+}
+
+.pieceOrange {
+  background: #f4a261;
+  border-color: #d97b3a;
+}
+
+.pieceBlue {
+  background: #7ec8e3;
+  border-color: #3fa8c8;
+}
+
+.pieceGreen {
+  background: #86c87e;
+  border-color: #4e9e4a;
+}
+
+.piecePurple {
+  background: #c9a5d6;
+  border-color: #9966bb;
+}
+
+.pieceBlack {
+  background: #2d2d2d;
+  border-color: #111;
+}
+
+/* ── Person SVG icon ────────────────────────────────────────────────────── */
+
+.personSvg {
+  width: 58%;
+  height: 58%;
+  pointer-events: none;
+}
+
+/* ── Legend ─────────────────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 1.25rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legendSwatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
