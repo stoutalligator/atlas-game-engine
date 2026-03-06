@@ -15,6 +15,12 @@ export interface Piece {
   width: number; // cells wide
   height: number; // cells tall
   immovable: boolean;
+  /**
+   * For non-rectangular pieces: relative [dc, dr] offsets of each occupied cell
+   * from the top-left corner of the bounding box. When absent, the full
+   * width×height rectangle is used.
+   */
+  cellOffsets?: Array<[number, number]>;
 }
 
 export interface Gate {
@@ -150,11 +156,19 @@ function isGateExit(gate: Gate, gw: number, gh: number, r: number, c: number): b
   }
 }
 
+/** Returns the absolute [col, row] coordinates for every cell occupied by piece p. */
+function pieceAbsCells(p: Piece): Array<[col: number, row: number]> {
+  if (p.cellOffsets) return p.cellOffsets.map(([dc, dr]) => [p.col + dc, p.row + dr]);
+  const cells: Array<[number, number]> = [];
+  for (let dc = 0; dc < p.width; dc++)
+    for (let dr = 0; dr < p.height; dr++) cells.push([p.col + dc, p.row + dr]);
+  return cells;
+}
+
 function buildOccupancy(pieces: Piece[]): Map<string, string> {
   const m = new Map<string, string>();
   for (const p of pieces)
-    for (let c = p.col; c < p.col + p.width; c++)
-      for (let r = p.row; r < p.row + p.height; r++) m.set(ck(r, c), p.id);
+    for (const [c, r] of pieceAbsCells(p)) m.set(ck(r, c), p.id);
   return m;
 }
 
@@ -169,35 +183,29 @@ function canMove(cfg: PuzzleConfig, pieceId: string, dir: Direction): boolean {
   const dx = dir === "right" ? 1 : dir === "left" ? -1 : 0;
   const dy = dir === "down" ? 1 : dir === "up" ? -1 : 0;
 
-  const nr = piece.row + dy;
-  const nc = piece.col + dx;
   const isPerson = piece.color === "person";
   const occ = buildOccupancy(cfg.pieces);
+  const currentCells = new Set(pieceAbsCells(piece).map(([c, r]) => ck(r, c)));
 
-  for (let c = nc; c < nc + piece.width; c++) {
-    for (let r = nr; r < nr + piece.height; r++) {
-      // This cell was already occupied by the current piece — OK
-      if (
-        c >= piece.col &&
-        c < piece.col + piece.width &&
-        r >= piece.row &&
-        r < piece.row + piece.height
-      )
-        continue;
+  for (const [c, r] of pieceAbsCells(piece)) {
+    const nc = c + dx;
+    const nr = r + dy;
 
-      // Gate exit cell: only the person may enter
-      if (isGateExit(cfg.gate, cfg.gridWidth, cfg.gridHeight, r, c)) {
-        if (!isPerson) return false;
-        continue;
-      }
+    // This cell would land on a position already held by this piece (overlap after slide) — OK
+    if (currentCells.has(ck(nr, nc))) continue;
 
-      // Must be a valid grid cell
-      if (!cfg.validCells.has(ck(r, c))) return false;
-
-      // Must not be occupied by another piece
-      const occupant = occ.get(ck(r, c));
-      if (occupant && occupant !== pieceId) return false;
+    // Gate exit cell: only the person may enter
+    if (isGateExit(cfg.gate, cfg.gridWidth, cfg.gridHeight, nr, nc)) {
+      if (!isPerson) return false;
+      continue;
     }
+
+    // Must be a valid grid cell
+    if (!cfg.validCells.has(ck(nr, nc))) return false;
+
+    // Must not be occupied by another piece
+    const occupant = occ.get(ck(nr, nc));
+    if (occupant && occupant !== pieceId) return false;
   }
 
   return true;
@@ -227,6 +235,8 @@ interface PieceDef {
   w: number;
   h: number;
   immovable?: boolean;
+  /** Non-rectangular piece: relative [dc, dr] cell offsets (same semantics as Piece.cellOffsets). */
+  cellOffsets?: Array<[number, number]>;
 }
 
 interface Template {
@@ -276,6 +286,9 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 1, h: 3 },
         { color: "purple", w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
+        // L-shape: ##  (missing bottom-right corner)
+        //           #·
+        { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[1,0],[0,1]] },
       ],
     },
     // ── 7×7, gate bottom col 3 ────────────────────────────────────────────
@@ -294,6 +307,9 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 1, h: 3 },
         { color: "purple", w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
+        // L-shape: ##  (missing bottom-left corner)
+        //           ·#
+        { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[1,0],[1,1]] },
       ],
     },
     // ── 6×6, gate left row 3 ──────────────────────────────────────────────
@@ -329,6 +345,9 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 1, h: 3 },
         { color: "purple", w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
+        // L-shape: #·  (missing top-right corner)
+        //           ##
+        { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[0,1],[1,1]] },
       ],
     },
     // ── 8×6, gate right row 2 ─────────────────────────────────────────────
@@ -347,6 +366,9 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 1, h: 3 },
         { color: "purple", w: 3, h: 1 },
         { color: "purple", w: 1, h: 2 },
+        // L-shape: ·#  (missing top-left corner)
+        //           ##
+        { color: "black", w: 2, h: 2, cellOffsets: [[1,0],[0,1],[1,1]] },
       ],
     },
     // ── 5×5, gate right row 2 (easy) ──────────────────────────────────────
@@ -377,14 +399,18 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
         { color: "purple", w: 1, h: 2 },
+        // L-shape: ##  (missing bottom-right corner)
+        //           #·
+        { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[1,0],[0,1]] },
       ],
     },
   ];
 }
 
 /**
- * Try to find a valid top-left position (col, row) for a piece of size w×h
- * within validCells, avoiding already-occupied cells.
+ * Try to find a valid top-left position (col, row) for a piece within validCells,
+ * avoiding already-occupied cells. If cellOffsets is provided the piece is non-rectangular
+ * and each offset cell is checked individually; otherwise the full w×h rectangle is used.
  */
 function tryPlace(
   cells: Set<string>,
@@ -392,15 +418,25 @@ function tryPlace(
   w: number,
   h: number,
   rng: Rng,
+  cellOffsets?: Array<[number, number]>,
 ): { col: number; row: number } | null {
   const candidates: { row: number; col: number }[] = [];
 
   for (const k of cells) {
     const [r, c] = k.split(",").map(Number);
     let fits = true;
-    for (let dc = 0; dc < w && fits; dc++)
-      for (let dr = 0; dr < h && fits; dr++)
-        if (!cells.has(ck(r + dr, c + dc)) || occupied.has(ck(r + dr, c + dc))) fits = false;
+    if (cellOffsets) {
+      for (const [dc, dr] of cellOffsets) {
+        if (!cells.has(ck(r + dr, c + dc)) || occupied.has(ck(r + dr, c + dc))) {
+          fits = false;
+          break;
+        }
+      }
+    } else {
+      for (let dc = 0; dc < w && fits; dc++)
+        for (let dr = 0; dr < h && fits; dr++)
+          if (!cells.has(ck(r + dr, c + dc)) || occupied.has(ck(r + dr, c + dc))) fits = false;
+    }
     if (fits) candidates.push({ row: r, col: c });
   }
 
@@ -494,10 +530,10 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
 
   // Place remaining pieces
   for (const def of defs) {
-    const pos = tryPlace(cells, occupied, def.w, def.h, rng);
+    const pos = tryPlace(cells, occupied, def.w, def.h, rng, def.cellOffsets);
     if (!pos) continue;
 
-    pieces.push({
+    const placed: Piece = {
       id: nextId(def.color),
       color: def.color,
       col: pos.col,
@@ -505,9 +541,10 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
       width: def.w,
       height: def.h,
       immovable: def.immovable ?? false,
-    });
-    for (let dc = 0; dc < def.w; dc++)
-      for (let dr = 0; dr < def.h; dr++) occupied.add(ck(pos.row + dr, pos.col + dc));
+      cellOffsets: def.cellOffsets,
+    };
+    pieces.push(placed);
+    for (const [c, r] of pieceAbsCells(placed)) occupied.add(ck(r, c));
   }
 
   // ── Build initial sparse config: person + template pieces only ──────────
@@ -555,9 +592,7 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
     // Rebuild occupation from post-Phase-1 piece positions.
     const occ = new Set<string>();
     for (const p of cfg.pieces)
-      for (let dc = 0; dc < p.width; dc++)
-        for (let dr = 0; dr < p.height; dr++)
-          occ.add(ck(p.row + dr, p.col + dc));
+      for (const [c, r] of pieceAbsCells(p)) occ.add(ck(r, c));
 
     const minFreeCells = Math.max(5, Math.floor(cells.size * 0.20));
     const fillerColors: PieceColor[] = ["orange", "blue", "green", "purple"];
@@ -629,6 +664,49 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
 function cellToXY(c: number, r: number): { left: number; top: number } {
   return { left: c * (CELL + GAP), top: r * (CELL + GAP) };
 }
+
+/**
+ * Returns the SVG path `d` string for a 3-cell L-shape piece whose bounding box is 2×2.
+ * Uses arc commands so all corners — including the concave inner notch —
+ * are smoothly rounded (r=10). The missing corner is inferred from whichever of the
+ * four (dc,dr) positions is absent.
+ *
+ * Arc convention: outer convex corners use sweep=1; the single concave notch uses sweep=0.
+ */
+function lShapePathD(cellOffsets: Array<[number, number]>): string {
+  const r = 10;
+  const C = CELL;          // 68
+  const tot = C + GAP;     // 72  — leading edge of second cell
+  const end = 2 * C + GAP; // 140 — full bounding-box span
+  const has = (dc: number, dr: number) => cellOffsets.some(([a, b]) => a === dc && b === dr);
+  const A = (sweep: 0 | 1, x: number, y: number) => `A ${r},${r} 0 0,${sweep} ${x},${y}`;
+
+  let d: string;
+  if (!has(1, 1)) {
+    // missing bottom-right — top row + bottom-left cell
+    d = `M ${r},0 L ${end-r},0 ${A(1,end,r)} L ${end},${C-r} ${A(1,end-r,C)} L ${C+r},${C} ${A(0,C,C+r)} L ${C},${end-r} ${A(1,C-r,end)} L ${r},${end} ${A(1,0,end-r)} L 0,${r} ${A(1,r,0)} Z`;
+  } else if (!has(1, 0)) {
+    // missing top-right — top-left cell + bottom row
+    d = `M ${r},0 L ${C-r},0 ${A(1,C,r)} L ${C},${tot-r} ${A(0,C+r,tot)} L ${end-r},${tot} ${A(1,end,tot+r)} L ${end},${end-r} ${A(1,end-r,end)} L ${r},${end} ${A(1,0,end-r)} L 0,${r} ${A(1,r,0)} Z`;
+  } else if (!has(0, 1)) {
+    // missing bottom-left — top row + bottom-right cell
+    d = `M ${r},0 L ${end-r},0 ${A(1,end,r)} L ${end},${end-r} ${A(1,end-r,end)} L ${tot+r},${end} ${A(1,tot,end-r)} L ${tot},${C+r} ${A(0,tot-r,C)} L ${r},${C} ${A(1,0,C-r)} L 0,${r} ${A(1,r,0)} Z`;
+  } else {
+    // missing top-left — top-right cell + bottom row
+    d = `M ${tot+r},0 L ${end-r},0 ${A(1,end,r)} L ${end},${end-r} ${A(1,end-r,end)} L ${r},${end} ${A(1,0,end-r)} L 0,${tot+r} ${A(1,r,tot)} L ${tot-r},${tot} ${A(0,tot,tot-r)} L ${tot},${r} ${A(1,tot+r,0)} Z`;
+  }
+  return d;
+}
+
+/** Fill and stroke colours for each PieceColor (default/modern theme). */
+const PIECE_SVG_COLORS: Record<PieceColor, { fill: string; stroke: string }> = {
+  person: { fill: "#e8e8f0", stroke: "#9ca3af" },
+  orange: { fill: "#f4a261", stroke: "#d97b3a" },
+  blue:   { fill: "#7ec8e3", stroke: "#3fa8c8" },
+  green:  { fill: "#86c87e", stroke: "#4e9e4a" },
+  purple: { fill: "#c9a5d6", stroke: "#9966bb" },
+  black:  { fill: "#f4a0a0", stroke: "#d96060" },
+};
 
 function pieceCSS(p: Piece): React.CSSProperties {
   return {
@@ -956,23 +1034,26 @@ export function SlidePuzzle({
               colorClass,
               isSelected ? styles.pieceSelected : "",
               p.immovable ? styles.pieceImmovable : "",
+              p.cellOffsets ? styles.pieceL : "",
             ]
               .filter(Boolean)
               .join(" ");
+
+            const divStyle: React.CSSProperties = p.cellOffsets && isSelected
+              ? { ...pieceCSS(p), filter: "drop-shadow(0 0 4px rgba(37,99,235,0.55))" }
+              : pieceCSS(p);
 
             return (
               <div
                 key={p.id}
                 className={cls}
-                style={pieceCSS(p)}
+                style={divStyle}
                 role={p.immovable ? undefined : "button"}
                 tabIndex={p.immovable ? undefined : 0}
                 aria-label={`${p.color} piece`}
                 aria-pressed={p.id === selected}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (p.immovable || won) return;
-                  setSelected((prev) => (prev === p.id ? null : p.id));
                 }}
                 onKeyDown={(e) => {
                   if (p.immovable || won) return;
@@ -985,10 +1066,28 @@ export function SlidePuzzle({
                   if (p.immovable || won) return;
                   e.preventDefault();
                   e.stopPropagation();
-                  setSelected(p.id);
+                  setSelected((prev) => (prev === p.id ? null : p.id));
                   drag.current = { id: p.id, sx: e.clientX, sy: e.clientY };
                 }}
               >
+                {p.cellOffsets && (
+                  <svg
+                    width={p.width * CELL + (p.width - 1) * GAP}
+                    height={p.height * CELL + (p.height - 1) * GAP}
+                    viewBox={`0 0 ${p.width * CELL + (p.width - 1) * GAP} ${p.height * CELL + (p.height - 1) * GAP}`}
+                    style={{ position: "absolute", top: 0, left: 0, overflow: "visible", pointerEvents: "none" }}
+                    aria-hidden="true"
+                  >
+                    <path
+                      d={lShapePathD(p.cellOffsets)}
+                      fill={PIECE_SVG_COLORS[p.color].fill}
+                      stroke={isSelected ? "#2563eb" : PIECE_SVG_COLORS[p.color].stroke}
+                      strokeWidth={isSelected ? 3 : 2.5}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
                 {p.color === "person" && (
                   <svg
                     viewBox="0 0 32 32"

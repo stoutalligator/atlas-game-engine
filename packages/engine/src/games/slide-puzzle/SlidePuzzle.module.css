@@ -186,6 +186,14 @@
   transform: none !important;
 }
 
+/* L-shaped pieces: visuals are handled entirely by an inline SVG child */
+.pieceL {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
 /* Piece colours */
 
 .piecePerson {
@@ -215,8 +223,8 @@
 }
 
 .pieceBlack {
-  background: #2d2d2d;
-  border-color: #111;
+  background: #f4a0a0;
+  border-color: #d96060;
 }
 
 /* ── Person SVG icon ────────────────────────────────────────────────────── */
@@ -383,8 +391,8 @@
 }
 
 .container[data-theme="8bit"] .pieceBlack {
-  background: #111;
-  border-color: #000;
+  background: #ee6666;
+  border-color: #cc2222;
 }
 
 /* ── Terminal theme ──────────────────────────────────────────────────────── */
@@ -508,8 +516,8 @@
 }
 
 .container[data-theme="terminal"] .pieceBlack {
-  background: #050505;
-  border-color: #333;
+  background: #3a0808;
+  border-color: #cc2222;
 }
 
 .container[data-theme="terminal"] .gateArrow {
