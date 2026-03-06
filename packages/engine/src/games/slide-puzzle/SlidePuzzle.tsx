@@ -3,7 +3,15 @@ import styles from "./SlidePuzzle.module.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type PieceColor = "person" | "orange" | "blue" | "green" | "purple" | "black" | "brown" | "teal";
+export type PieceColor =
+  | "person"
+  | "orange"
+  | "blue"
+  | "green"
+  | "purple"
+  | "black"
+  | "brown"
+  | "teal";
 export type Direction = "up" | "down" | "left" | "right";
 export type GateSide = "top" | "bottom" | "left" | "right";
 
@@ -34,7 +42,7 @@ export interface PuzzleConfig {
   gridHeight: number;
   /** Set of "row,col" strings representing valid grid cells */
   validCells: Set<string>;
-  pieces: Piece[]
+  pieces: Piece[];
   gate: Gate;
 }
 
@@ -86,7 +94,7 @@ type Rng = () => number;
 /** Mulberry32 — fast seeded PRNG, no external dependencies. */
 function mulberry32(seed: number): Rng {
   let s = seed;
-  return function () {
+  return () => {
     s = (s + 0x6d2b79f5) | 0;
     let t = Math.imul(s ^ (s >>> 15), 1 | s);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
@@ -115,9 +123,9 @@ interface DifficultySettings {
 }
 
 const DIFFICULTY_SETTINGS: Record<SlidePuzzleDifficulty, DifficultySettings> = {
-  easy:   { minMoves: 15, movesRange: 15, maxCells: 36 },
+  easy: { minMoves: 15, movesRange: 15, maxCells: 36 },
   medium: { minMoves: 40, movesRange: 30 },
-  hard:   { minMoves: 80, movesRange: 40, minCells: 40 },
+  hard: { minMoves: 80, movesRange: 40, minCells: 40 },
 };
 
 // ── Utility helpers ────────────────────────────────────────────────────────
@@ -167,8 +175,7 @@ function pieceAbsCells(p: Piece): Array<[col: number, row: number]> {
 
 function buildOccupancy(pieces: Piece[]): Map<string, string> {
   const m = new Map<string, string>();
-  for (const p of pieces)
-    for (const [c, r] of pieceAbsCells(p)) m.set(ck(r, c), p.id);
+  for (const p of pieces) for (const [c, r] of pieceAbsCells(p)) m.set(ck(r, c), p.id);
   return m;
 }
 
@@ -255,166 +262,219 @@ function makeTemplates(): Template[] {
   return [
     // ── 6×6, gate right row 2 ─────────────────────────────────────────────
     {
-      gw: 6, gh: 6,
+      gw: 6,
+      gh: 6,
       cells: makeRectGrid(6, 6),
       gate: { side: "right", index: 2 },
       pieces: [
-        { color: "blue",   w: 3, h: 1 },
-        { color: "blue",   w: 1, h: 3 },
-        { color: "blue",   w: 2, h: 1 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
+        { color: "blue", w: 2, h: 1 },
         { color: "orange", w: 3, h: 1 },
         { color: "orange", w: 1, h: 3 },
-        { color: "green",  w: 1, h: 3 },
-        { color: "green",  w: 2, h: 1 },
+        { color: "green", w: 1, h: 3 },
+        { color: "green", w: 2, h: 1 },
         { color: "purple", w: 1, h: 2 },
-        { color: "teal",   w: 2, h: 2 },
+        { color: "teal", w: 2, h: 2 },
       ],
     },
     // ── 7×7, gate right row 3 ─────────────────────────────────────────────
     {
-      gw: 7, gh: 7,
+      gw: 7,
+      gh: 7,
       cells: makeRectGrid(7, 7),
       gate: { side: "right", index: 3 },
       pieces: [
-        { color: "blue",   w: 3, h: 1 },
-        { color: "blue",   w: 1, h: 3 },
-        { color: "blue",   w: 2, h: 1 },
-        { color: "blue",   w: 1, h: 2 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
+        { color: "blue", w: 2, h: 1 },
+        { color: "blue", w: 1, h: 2 },
         { color: "orange", w: 3, h: 1 },
         { color: "orange", w: 1, h: 3 },
         { color: "orange", w: 2, h: 1 },
-        { color: "green",  w: 3, h: 1 },
-        { color: "green",  w: 1, h: 3 },
+        { color: "green", w: 3, h: 1 },
+        { color: "green", w: 1, h: 3 },
         { color: "purple", w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
-        { color: "teal",   w: 2, h: 2 },
-        { color: "brown",  w: 3, h: 3 },
+        { color: "teal", w: 2, h: 2 },
+        { color: "brown", w: 3, h: 3 },
         // L-shape: ##  (missing bottom-right corner)
         //           #·
-        { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[1,0],[0,1]] },
+        {
+          color: "black",
+          w: 2,
+          h: 2,
+          cellOffsets: [
+            [0, 0],
+            [1, 0],
+            [0, 1],
+          ],
+        },
       ],
     },
     // ── 7×7, gate bottom col 3 ────────────────────────────────────────────
     {
-      gw: 7, gh: 7,
+      gw: 7,
+      gh: 7,
       cells: makeRectGrid(7, 7),
       gate: { side: "bottom", index: 3 },
       pieces: [
-        { color: "blue",   w: 3, h: 1 },
-        { color: "blue",   w: 1, h: 3 },
-        { color: "blue",   w: 2, h: 1 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
+        { color: "blue", w: 2, h: 1 },
         { color: "orange", w: 3, h: 1 },
         { color: "orange", w: 1, h: 3 },
         { color: "orange", w: 1, h: 2 },
-        { color: "green",  w: 3, h: 1 },
-        { color: "green",  w: 1, h: 3 },
+        { color: "green", w: 3, h: 1 },
+        { color: "green", w: 1, h: 3 },
         { color: "purple", w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
-        { color: "teal",   w: 2, h: 2 },
-        { color: "brown",  w: 3, h: 3 },
+        { color: "teal", w: 2, h: 2 },
+        { color: "brown", w: 3, h: 3 },
         // L-shape: ##  (missing bottom-left corner)
         //           ·#
-        { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[1,0],[1,1]] },
+        {
+          color: "black",
+          w: 2,
+          h: 2,
+          cellOffsets: [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+          ],
+        },
       ],
     },
     // ── 6×6, gate left row 3 ──────────────────────────────────────────────
     {
-      gw: 6, gh: 6,
+      gw: 6,
+      gh: 6,
       cells: makeRectGrid(6, 6),
       gate: { side: "left", index: 3 },
       pieces: [
-        { color: "blue",   w: 3, h: 1 },
-        { color: "blue",   w: 1, h: 3 },
-        { color: "blue",   w: 1, h: 2 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
+        { color: "blue", w: 1, h: 2 },
         { color: "orange", w: 3, h: 1 },
         { color: "orange", w: 1, h: 3 },
-        { color: "green",  w: 3, h: 1 },
-        { color: "green",  w: 1, h: 2 },
+        { color: "green", w: 3, h: 1 },
+        { color: "green", w: 1, h: 2 },
         { color: "purple", w: 2, h: 1 },
-        { color: "teal",   w: 2, h: 2 },
+        { color: "teal", w: 2, h: 2 },
       ],
     },
     // ── 7×7, gate top col 3 ───────────────────────────────────────────────
     {
-      gw: 7, gh: 7,
+      gw: 7,
+      gh: 7,
       cells: makeRectGrid(7, 7),
       gate: { side: "top", index: 3 },
       pieces: [
-        { color: "blue",   w: 3, h: 1 },
-        { color: "blue",   w: 1, h: 3 },
-        { color: "blue",   w: 2, h: 1 },
-        { color: "blue",   w: 1, h: 2 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
+        { color: "blue", w: 2, h: 1 },
+        { color: "blue", w: 1, h: 2 },
         { color: "orange", w: 3, h: 1 },
         { color: "orange", w: 1, h: 3 },
         { color: "orange", w: 1, h: 2 },
-        { color: "green",  w: 3, h: 1 },
-        { color: "green",  w: 1, h: 3 },
+        { color: "green", w: 3, h: 1 },
+        { color: "green", w: 1, h: 3 },
         { color: "purple", w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
-        { color: "teal",   w: 2, h: 2 },
-        { color: "brown",  w: 3, h: 3 },
+        { color: "teal", w: 2, h: 2 },
+        { color: "brown", w: 3, h: 3 },
         // L-shape: #·  (missing top-right corner)
         //           ##
-        { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[0,1],[1,1]] },
+        {
+          color: "black",
+          w: 2,
+          h: 2,
+          cellOffsets: [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+          ],
+        },
       ],
     },
     // ── 8×6, gate right row 2 ─────────────────────────────────────────────
     {
-      gw: 8, gh: 6,
+      gw: 8,
+      gh: 6,
       cells: makeRectGrid(8, 6),
       gate: { side: "right", index: 2 },
       pieces: [
-        { color: "blue",   w: 3, h: 1 },
-        { color: "blue",   w: 1, h: 3 },
-        { color: "blue",   w: 2, h: 1 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
+        { color: "blue", w: 2, h: 1 },
         { color: "orange", w: 3, h: 1 },
         { color: "orange", w: 1, h: 3 },
         { color: "orange", w: 2, h: 1 },
-        { color: "green",  w: 3, h: 1 },
-        { color: "green",  w: 1, h: 3 },
+        { color: "green", w: 3, h: 1 },
+        { color: "green", w: 1, h: 3 },
         { color: "purple", w: 3, h: 1 },
         { color: "purple", w: 1, h: 2 },
-        { color: "teal",   w: 2, h: 2 },
-        { color: "brown",  w: 3, h: 3 },
+        { color: "teal", w: 2, h: 2 },
+        { color: "brown", w: 3, h: 3 },
         // L-shape: ·#  (missing top-left corner)
         //           ##
-        { color: "black", w: 2, h: 2, cellOffsets: [[1,0],[0,1],[1,1]] },
+        {
+          color: "black",
+          w: 2,
+          h: 2,
+          cellOffsets: [
+            [1, 0],
+            [0, 1],
+            [1, 1],
+          ],
+        },
       ],
     },
     // ── 5×5, gate right row 2 (easy) ──────────────────────────────────────
     {
-      gw: 5, gh: 5,
+      gw: 5,
+      gh: 5,
       cells: makeRectGrid(5, 5),
       gate: { side: "right", index: 2 },
       pieces: [
-        { color: "blue",   w: 3, h: 1 },
-        { color: "blue",   w: 1, h: 3 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
         { color: "orange", w: 2, h: 1 },
         { color: "orange", w: 1, h: 2 },
-        { color: "green",  w: 1, h: 3 },
+        { color: "green", w: 1, h: 3 },
         { color: "purple", w: 3, h: 1 },
-        { color: "teal",   w: 2, h: 2 },
+        { color: "teal", w: 2, h: 2 },
       ],
     },
     // ── 7×7 L-shape (cut top-right 3×3), gate right row 5 ────────────────
     {
-      gw: 7, gh: 7,
+      gw: 7,
+      gh: 7,
       cells: makeLGrid(7, 7, 3, 3),
       gate: { side: "right", index: 5 },
       pieces: [
-        { color: "blue",   w: 3, h: 1 },
-        { color: "blue",   w: 1, h: 3 },
+        { color: "blue", w: 3, h: 1 },
+        { color: "blue", w: 1, h: 3 },
         { color: "orange", w: 2, h: 1 },
         { color: "orange", w: 1, h: 2 },
-        { color: "green",  w: 3, h: 1 },
-        { color: "green",  w: 1, h: 3 },
+        { color: "green", w: 3, h: 1 },
+        { color: "green", w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
         { color: "purple", w: 1, h: 2 },
-        { color: "teal",   w: 2, h: 2 },
-        { color: "brown",  w: 3, h: 3 },
+        { color: "teal", w: 2, h: 2 },
+        { color: "brown", w: 3, h: 3 },
         // L-shape: ##  (missing bottom-right corner)
         //           #·
-        { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[1,0],[0,1]] },
+        {
+          color: "black",
+          w: 2,
+          h: 2,
+          cellOffsets: [
+            [0, 0],
+            [1, 0],
+            [0, 1],
+          ],
+        },
       ],
     },
   ];
@@ -464,16 +524,21 @@ function tryPlace(
  */
 function hasClearPath(cfg: PuzzleConfig): boolean {
   const { gate, gridWidth: gw, gridHeight: gh } = cfg;
-  const person = cfg.pieces.find((p) => p.color === "person")!;
+  const person = cfg.pieces.find((p) => p.color === "person");
+  if (!person) return false;
   const occ = buildOccupancy(cfg.pieces);
 
   const towardDir: Direction =
-    gate.side === "right" ? "right" :
-    gate.side === "left"  ? "left"  :
-    gate.side === "top"   ? "up"    : "down";
+    gate.side === "right"
+      ? "right"
+      : gate.side === "left"
+        ? "left"
+        : gate.side === "top"
+          ? "up"
+          : "down";
 
   const dx = towardDir === "right" ? 1 : towardDir === "left" ? -1 : 0;
-  const dy = towardDir === "down"  ? 1 : towardDir === "up"   ? -1 : 0;
+  const dy = towardDir === "down" ? 1 : towardDir === "up" ? -1 : 0;
 
   let r = person.row + dy;
   let c = person.col + dx;
@@ -497,19 +562,21 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
   const { date, difficulty = "medium" } = options;
   // When a date is supplied, use a deterministic seeded RNG so the same date
   // always produces an identical puzzle layout for all users.
-  const rng: Rng = date
-    ? mulberry32(hashString(`${date}:${difficulty}`))
-    : Math.random;
+  const rng: Rng = date ? mulberry32(hashString(`${date}:${difficulty}`)) : Math.random;
 
   const settings = DIFFICULTY_SETTINGS[difficulty];
   const TEMPLATES = makeTemplates();
 
   // Filter templates to those appropriate for the chosen difficulty.
   let tmplCandidates = TEMPLATES;
-  if (settings.maxCells !== undefined)
-    tmplCandidates = tmplCandidates.filter((t) => t.cells.size <= settings.maxCells!);
-  if (settings.minCells !== undefined)
-    tmplCandidates = tmplCandidates.filter((t) => t.cells.size >= settings.minCells!);
+  if (settings.maxCells !== undefined) {
+    const { maxCells } = settings;
+    tmplCandidates = tmplCandidates.filter((t) => t.cells.size <= maxCells);
+  }
+  if (settings.minCells !== undefined) {
+    const { minCells } = settings;
+    tmplCandidates = tmplCandidates.filter((t) => t.cells.size >= minCells);
+  }
   if (tmplCandidates.length === 0) tmplCandidates = TEMPLATES; // safety fallback
 
   const tmpl = tmplCandidates[Math.floor(rng() * tmplCandidates.length)];
@@ -524,10 +591,22 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
   let pCol = 0;
   let pRow = 0;
   switch (gate.side) {
-    case "right":  pCol = gw - 1; pRow = gate.index; break;
-    case "left":   pCol = 0;      pRow = gate.index; break;
-    case "top":    pCol = gate.index; pRow = 0;      break;
-    case "bottom": pCol = gate.index; pRow = gh - 1; break;
+    case "right":
+      pCol = gw - 1;
+      pRow = gate.index;
+      break;
+    case "left":
+      pCol = 0;
+      pRow = gate.index;
+      break;
+    case "top":
+      pCol = gate.index;
+      pRow = 0;
+      break;
+    case "bottom":
+      pCol = gate.index;
+      pRow = gh - 1;
+      break;
   }
 
   pieces.push({
@@ -568,17 +647,26 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
   const DIRS: Direction[] = ["up", "down", "left", "right"];
 
   const awayDir: Direction =
-    gate.side === "right" ? "left" :
-    gate.side === "left"  ? "right" :
-    gate.side === "top"   ? "down"  : "up";
+    gate.side === "right"
+      ? "left"
+      : gate.side === "left"
+        ? "right"
+        : gate.side === "top"
+          ? "down"
+          : "up";
 
   const isOnFarWall = (c: PuzzleConfig): boolean => {
-    const person = c.pieces.find((p) => p.color === "person")!;
+    const person = c.pieces.find((p) => p.color === "person");
+    if (!person) return false;
     switch (gate.side) {
-      case "right":  return person.col === 0;
-      case "left":   return person.col === gw - 1;
-      case "top":    return person.row === gh - 1;
-      case "bottom": return person.row === 0;
+      case "right":
+        return person.col === 0;
+      case "left":
+        return person.col === gw - 1;
+      case "top":
+        return person.row === gh - 1;
+      case "bottom":
+        return person.row === 0;
     }
   };
 
@@ -594,7 +682,10 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
       for (let sub = 0; sub < 30; sub++) {
         const p = others[Math.floor(rng() * others.length)];
         const d = DIRS[Math.floor(rng() * DIRS.length)];
-        if (canMove(cfg, p.id, d)) { cfg = applyMove(cfg, p.id, d); break; }
+        if (canMove(cfg, p.id, d)) {
+          cfg = applyMove(cfg, p.id, d);
+          break;
+        }
       }
     }
   }
@@ -604,13 +695,17 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
   {
     // Rebuild occupation from post-Phase-1 piece positions.
     const occ = new Set<string>();
-    for (const p of cfg.pieces)
-      for (const [c, r] of pieceAbsCells(p)) occ.add(ck(r, c));
+    for (const p of cfg.pieces) for (const [c, r] of pieceAbsCells(p)) occ.add(ck(r, c));
 
-    const minFreeCells = Math.max(5, Math.floor(cells.size * 0.20));
+    const minFreeCells = Math.max(5, Math.floor(cells.size * 0.2));
     const fillerColors: PieceColor[] = ["orange", "blue", "green", "purple", "brown", "teal"];
     let fillerColorIdx = 0;
-    const fillerSizes = [{ w: 3, h: 1 }, { w: 1, h: 3 }, { w: 2, h: 1 }, { w: 1, h: 2 }];
+    const fillerSizes = [
+      { w: 3, h: 1 },
+      { w: 1, h: 3 },
+      { w: 2, h: 1 },
+      { w: 1, h: 2 },
+    ];
     const newPieces = [...cfg.pieces];
 
     for (const { w, h } of fillerSizes) {
@@ -618,8 +713,13 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
       while (pos !== null && cells.size - occ.size >= minFreeCells + w * h) {
         const color = fillerColors[fillerColorIdx++ % fillerColors.length];
         newPieces.push({
-          id: nextId(color), color, col: pos.col, row: pos.row,
-          width: w, height: h, immovable: false,
+          id: nextId(color),
+          color,
+          col: pos.col,
+          row: pos.row,
+          width: w,
+          height: h,
+          immovable: false,
         });
         for (let dc = 0; dc < w; dc++)
           for (let dr = 0; dr < h; dr++) occ.add(ck(pos.row + dr, pos.col + dc));
@@ -688,8 +788,8 @@ function cellToXY(c: number, r: number): { left: number; top: number } {
  */
 function lShapePathD(cellOffsets: Array<[number, number]>): string {
   const r = 10;
-  const C = CELL;          // 68
-  const tot = C + GAP;     // 72  — leading edge of second cell
+  const C = CELL; // 68
+  const tot = C + GAP; // 72  — leading edge of second cell
   const end = 2 * C + GAP; // 140 — full bounding-box span
 
   // Inset outer boundary coords so the stroke (max 3px, half = 1.5) stays within the
@@ -703,16 +803,16 @@ function lShapePathD(cellOffsets: Array<[number, number]>): string {
   let d: string;
   if (!has(1, 1)) {
     // missing bottom-right
-    d = `M ${r},0 L ${ep-r},0 ${A(1,ep,r)} L ${ep},${C-r} ${A(1,ep-r,C)} L ${C+r},${C} ${A(0,C,C+r)} L ${C},${ep-r} ${A(1,C-r,ep)} L ${r},${ep} ${A(1,0,ep-r)} L 0,${r} ${A(1,r,0)} Z`;
+    d = `M ${r},0 L ${ep - r},0 ${A(1, ep, r)} L ${ep},${C - r} ${A(1, ep - r, C)} L ${C + r},${C} ${A(0, C, C + r)} L ${C},${ep - r} ${A(1, C - r, ep)} L ${r},${ep} ${A(1, 0, ep - r)} L 0,${r} ${A(1, r, 0)} Z`;
   } else if (!has(1, 0)) {
     // missing top-right
-    d = `M ${r},0 L ${C-r},0 ${A(1,C,r)} L ${C},${tot-r} ${A(0,C+r,tot)} L ${ep-r},${tot} ${A(1,ep,tot+r)} L ${ep},${ep-r} ${A(1,ep-r,ep)} L ${r},${ep} ${A(1,0,ep-r)} L 0,${r} ${A(1,r,0)} Z`;
+    d = `M ${r},0 L ${C - r},0 ${A(1, C, r)} L ${C},${tot - r} ${A(0, C + r, tot)} L ${ep - r},${tot} ${A(1, ep, tot + r)} L ${ep},${ep - r} ${A(1, ep - r, ep)} L ${r},${ep} ${A(1, 0, ep - r)} L 0,${r} ${A(1, r, 0)} Z`;
   } else if (!has(0, 1)) {
     // missing bottom-left
-    d = `M ${r},0 L ${ep-r},0 ${A(1,ep,r)} L ${ep},${ep-r} ${A(1,ep-r,ep)} L ${tot+r},${ep} ${A(1,tot,ep-r)} L ${tot},${C+r} ${A(0,tot-r,C)} L ${r},${C} ${A(1,0,C-r)} L 0,${r} ${A(1,r,0)} Z`;
+    d = `M ${r},0 L ${ep - r},0 ${A(1, ep, r)} L ${ep},${ep - r} ${A(1, ep - r, ep)} L ${tot + r},${ep} ${A(1, tot, ep - r)} L ${tot},${C + r} ${A(0, tot - r, C)} L ${r},${C} ${A(1, 0, C - r)} L 0,${r} ${A(1, r, 0)} Z`;
   } else {
     // missing top-left
-    d = `M ${tot+r},0 L ${ep-r},0 ${A(1,ep,r)} L ${ep},${ep-r} ${A(1,ep-r,ep)} L ${r},${ep} ${A(1,0,ep-r)} L 0,${tot+r} ${A(1,r,tot)} L ${tot-r},${tot} ${A(0,tot,tot-r)} L ${tot},${r} ${A(1,tot+r,0)} Z`;
+    d = `M ${tot + r},0 L ${ep - r},0 ${A(1, ep, r)} L ${ep},${ep - r} ${A(1, ep - r, ep)} L ${r},${ep} ${A(1, 0, ep - r)} L 0,${tot + r} ${A(1, r, tot)} L ${tot - r},${tot} ${A(0, tot, tot - r)} L ${tot},${r} ${A(1, tot + r, 0)} Z`;
   }
   return d;
 }
@@ -721,12 +821,12 @@ function lShapePathD(cellOffsets: Array<[number, number]>): string {
 const PIECE_SVG_COLORS: Record<PieceColor, { fill: string; stroke: string }> = {
   person: { fill: "#e8e8f0", stroke: "#9ca3af" },
   orange: { fill: "#f4a261", stroke: "#d97b3a" },
-  blue:   { fill: "#7ec8e3", stroke: "#3fa8c8" },
-  green:  { fill: "#86c87e", stroke: "#4e9e4a" },
+  blue: { fill: "#7ec8e3", stroke: "#3fa8c8" },
+  green: { fill: "#86c87e", stroke: "#4e9e4a" },
   purple: { fill: "#c9a5d6", stroke: "#9966bb" },
-  black:  { fill: "#f4a0a0", stroke: "#d96060" },
-  brown:  { fill: "#c4956a", stroke: "#8b5e3c" },
-  teal:   { fill: "#5ec4c4", stroke: "#2a8f8f" },
+  black: { fill: "#f4a0a0", stroke: "#d96060" },
+  brown: { fill: "#c4956a", stroke: "#8b5e3c" },
+  teal: { fill: "#5ec4c4", stroke: "#2a8f8f" },
 };
 
 function pieceCSS(p: Piece): React.CSSProperties {
@@ -779,7 +879,7 @@ function borderSegments(cfg: PuzzleConfig, borderColor: string): Seg[] {
       const belowValid = r < gh && isValid(r, c);
       const isBorder = aboveValid !== belowValid;
       const isGate =
-        (gate.side === "top"    && r === 0  && c === gate.index) ||
+        (gate.side === "top" && r === 0 && c === gate.index) ||
         (gate.side === "bottom" && r === gh && c === gate.index);
 
       if (isBorder && !isGate) {
@@ -808,11 +908,11 @@ function borderSegments(cfg: PuzzleConfig, borderColor: string): Seg[] {
     };
 
     for (let r = 0; r < gh; r++) {
-      const leftValid  = c > 0  && isValid(r, c - 1);
+      const leftValid = c > 0 && isValid(r, c - 1);
       const rightValid = c < gw && isValid(r, c);
       const isBorder = leftValid !== rightValid;
       const isGate =
-        (gate.side === "left"  && c === 0  && r === gate.index) ||
+        (gate.side === "left" && c === 0 && r === gate.index) ||
         (gate.side === "right" && c === gw && r === gate.index);
 
       if (isBorder && !isGate) {
@@ -981,8 +1081,7 @@ export function SlidePuzzle({
   const boardH = cfg.gridHeight * (CELL + GAP) - GAP;
   const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const ss = String(elapsed % 60).padStart(2, "0");
-  const borderColor =
-    theme === "terminal" ? "#00ff41" : theme === "8bit" ? "#000000" : "#1a1a2e";
+  const borderColor = theme === "terminal" ? "#00ff41" : theme === "8bit" ? "#000000" : "#1a1a2e";
   const segs = borderSegments(cfg, borderColor);
   const arrowSt = gateArrowStyle(cfg);
   const arrowChar = ARROW_CHAR[cfg.gate.side];
@@ -1032,14 +1131,22 @@ export function SlidePuzzle({
 
       {/* ── How-to-play modal ── */}
       {showHelp && (
-        <div
+        <dialog
           className={styles.helpOverlay}
-          role="dialog"
-          aria-modal="true"
           aria-label="How to play"
-          onClick={() => setShowHelp(false)}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowHelp(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setShowHelp(false);
+          }}
+          open
         >
-          <div className={styles.helpPanel} onClick={(e) => e.stopPropagation()}>
+          <div
+            className={styles.helpPanel}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
             <div className={styles.helpHeader}>
               <span className={styles.helpTitle}>How to Play:</span>
               <button
@@ -1053,20 +1160,24 @@ export function SlidePuzzle({
             </div>
             <ul className={styles.helpList}>
               <li>
-                <strong>Objective:</strong> slide the 👤 piece through the exit gate on the edge of the grid.
+                <strong>Objective:</strong> slide the 👤 piece through the exit gate on the edge of
+                the grid.
               </li>
               <li>
-                <strong>Select &amp; move:</strong> click any piece to select it, then use the <strong>arrow keys</strong> to slide it, or <strong>drag</strong> it directly.
+                <strong>Select &amp; move:</strong> click any piece to select it, then use the{" "}
+                <strong>arrow keys</strong> to slide it, or <strong>drag</strong> it directly.
               </li>
               <li>
-                <strong>All pieces slide freely</strong> in any direction — but only into empty cells.
+                <strong>All pieces slide freely</strong> in any direction — but only into empty
+                cells.
               </li>
               <li>
-                Use <strong>Reset Puzzle</strong> to restore the starting position, or <strong>New Puzzle</strong> to generate a fresh one.
+                Use <strong>Reset Puzzle</strong> to restore the starting position, or{" "}
+                <strong>New Puzzle</strong> to generate a fresh one.
               </li>
             </ul>
           </div>
-        </div>
+        </dialog>
       )}
 
       {/* ── Status messages ── */}
@@ -1125,9 +1236,10 @@ export function SlidePuzzle({
               .filter(Boolean)
               .join(" ");
 
-            const divStyle: React.CSSProperties = p.cellOffsets && isSelected
-              ? { ...pieceCSS(p), filter: "drop-shadow(0 0 4px rgba(37,99,235,0.55))" }
-              : pieceCSS(p);
+            const divStyle: React.CSSProperties =
+              p.cellOffsets && isSelected
+                ? { ...pieceCSS(p), filter: "drop-shadow(0 0 4px rgba(37,99,235,0.55))" }
+                : pieceCSS(p);
 
             return (
               <div
@@ -1173,7 +1285,13 @@ export function SlidePuzzle({
                     width={p.width * CELL + (p.width - 1) * GAP}
                     height={p.height * CELL + (p.height - 1) * GAP}
                     viewBox={`0 0 ${p.width * CELL + (p.width - 1) * GAP} ${p.height * CELL + (p.height - 1) * GAP}`}
-                    style={{ position: "absolute", top: 0, left: 0, overflow: "hidden", pointerEvents: "none" }}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      overflow: "hidden",
+                      pointerEvents: "none",
+                    }}
                     aria-hidden="true"
                   >
                     <g transform="translate(1.5, 1.5)">
@@ -1198,10 +1316,42 @@ export function SlidePuzzle({
                     <title>Person</title>
                     <circle cx="16" cy="9" r="6" fill="currentColor" />
                     <path d="M6 28 C6 20 26 20 26 28" fill="currentColor" />
-                    <rect x="13" y="14" width="6" height="8" rx="1" fill="currentColor" opacity="0.7" />
-                    <line x1="13" y1="16" x2="13" y2="22" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
-                    <line x1="19" y1="16" x2="19" y2="22" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
-                    <line x1="16" y1="17" x2="16" y2="19" stroke="currentColor" strokeWidth="1" opacity="0.35" />
+                    <rect
+                      x="13"
+                      y="14"
+                      width="6"
+                      height="8"
+                      rx="1"
+                      fill="currentColor"
+                      opacity="0.7"
+                    />
+                    <line
+                      x1="13"
+                      y1="16"
+                      x2="13"
+                      y2="22"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      opacity="0.5"
+                    />
+                    <line
+                      x1="19"
+                      y1="16"
+                      x2="19"
+                      y2="22"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      opacity="0.5"
+                    />
+                    <line
+                      x1="16"
+                      y1="17"
+                      x2="16"
+                      y2="19"
+                      stroke="currentColor"
+                      strokeWidth="1"
+                      opacity="0.35"
+                    />
                   </svg>
                 )}
               </div>
