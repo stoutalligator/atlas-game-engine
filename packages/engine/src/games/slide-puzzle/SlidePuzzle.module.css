@@ -340,6 +340,16 @@
   border-color: #d96060;
 }
 
+.pieceBrown {
+  background: #c4956a;
+  border-color: #8b5e3c;
+}
+
+.pieceTeal {
+  background: #5ec4c4;
+  border-color: #2a8f8f;
+}
+
 /* ── Person SVG icon ────────────────────────────────────────────────────── */
 
 .personSvg {
@@ -524,6 +534,16 @@
   border-color: #cc2222;
 }
 
+.container[data-theme="8bit"] .pieceBrown {
+  background: #996633;
+  border-color: #663300;
+}
+
+.container[data-theme="8bit"] .pieceTeal {
+  background: #008888;
+  border-color: #005555;
+}
+
 /* ── Terminal theme ──────────────────────────────────────────────────────── */
 
 .container[data-theme="terminal"] {
@@ -665,6 +685,16 @@
 .container[data-theme="terminal"] .pieceBlack {
   background: #3a0808;
   border-color: #cc2222;
+}
+
+.container[data-theme="terminal"] .pieceBrown {
+  background: #1a0a00;
+  border-color: #cc8844;
+}
+
+.container[data-theme="terminal"] .pieceTeal {
+  background: #001a1a;
+  border-color: #00cccc;
 }
 
 .container[data-theme="terminal"] .gateArrow {

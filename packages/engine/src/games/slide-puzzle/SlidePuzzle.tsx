@@ -3,7 +3,7 @@ import styles from "./SlidePuzzle.module.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type PieceColor = "person" | "orange" | "blue" | "green" | "purple" | "black";
+export type PieceColor = "person" | "orange" | "blue" | "green" | "purple" | "black" | "brown" | "teal";
 export type Direction = "up" | "down" | "left" | "right";
 export type GateSide = "top" | "bottom" | "left" | "right";
 
@@ -267,6 +267,7 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 1, h: 3 },
         { color: "green",  w: 2, h: 1 },
         { color: "purple", w: 1, h: 2 },
+        { color: "teal",   w: 2, h: 2 },
       ],
     },
     // ── 7×7, gate right row 3 ─────────────────────────────────────────────
@@ -286,6 +287,8 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 1, h: 3 },
         { color: "purple", w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
+        { color: "teal",   w: 2, h: 2 },
+        { color: "brown",  w: 3, h: 3 },
         // L-shape: ##  (missing bottom-right corner)
         //           #·
         { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[1,0],[0,1]] },
@@ -307,6 +310,8 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 1, h: 3 },
         { color: "purple", w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
+        { color: "teal",   w: 2, h: 2 },
+        { color: "brown",  w: 3, h: 3 },
         // L-shape: ##  (missing bottom-left corner)
         //           ·#
         { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[1,0],[1,1]] },
@@ -326,6 +331,7 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 3, h: 1 },
         { color: "green",  w: 1, h: 2 },
         { color: "purple", w: 2, h: 1 },
+        { color: "teal",   w: 2, h: 2 },
       ],
     },
     // ── 7×7, gate top col 3 ───────────────────────────────────────────────
@@ -345,6 +351,8 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 1, h: 3 },
         { color: "purple", w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
+        { color: "teal",   w: 2, h: 2 },
+        { color: "brown",  w: 3, h: 3 },
         // L-shape: #·  (missing top-right corner)
         //           ##
         { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[0,1],[1,1]] },
@@ -366,6 +374,8 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 1, h: 3 },
         { color: "purple", w: 3, h: 1 },
         { color: "purple", w: 1, h: 2 },
+        { color: "teal",   w: 2, h: 2 },
+        { color: "brown",  w: 3, h: 3 },
         // L-shape: ·#  (missing top-left corner)
         //           ##
         { color: "black", w: 2, h: 2, cellOffsets: [[1,0],[0,1],[1,1]] },
@@ -383,6 +393,7 @@ function makeTemplates(): Template[] {
         { color: "orange", w: 1, h: 2 },
         { color: "green",  w: 1, h: 3 },
         { color: "purple", w: 3, h: 1 },
+        { color: "teal",   w: 2, h: 2 },
       ],
     },
     // ── 7×7 L-shape (cut top-right 3×3), gate right row 5 ────────────────
@@ -399,6 +410,8 @@ function makeTemplates(): Template[] {
         { color: "green",  w: 1, h: 3 },
         { color: "purple", w: 2, h: 1 },
         { color: "purple", w: 1, h: 2 },
+        { color: "teal",   w: 2, h: 2 },
+        { color: "brown",  w: 3, h: 3 },
         // L-shape: ##  (missing bottom-right corner)
         //           #·
         { color: "black", w: 2, h: 2, cellOffsets: [[0,0],[1,0],[0,1]] },
@@ -595,7 +608,7 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
       for (const [c, r] of pieceAbsCells(p)) occ.add(ck(r, c));
 
     const minFreeCells = Math.max(5, Math.floor(cells.size * 0.20));
-    const fillerColors: PieceColor[] = ["orange", "blue", "green", "purple"];
+    const fillerColors: PieceColor[] = ["orange", "blue", "green", "purple", "brown", "teal"];
     let fillerColorIdx = 0;
     const fillerSizes = [{ w: 3, h: 1 }, { w: 1, h: 3 }, { w: 2, h: 1 }, { w: 1, h: 2 }];
     const newPieces = [...cfg.pieces];
@@ -712,6 +725,8 @@ const PIECE_SVG_COLORS: Record<PieceColor, { fill: string; stroke: string }> = {
   green:  { fill: "#86c87e", stroke: "#4e9e4a" },
   purple: { fill: "#c9a5d6", stroke: "#9966bb" },
   black:  { fill: "#f4a0a0", stroke: "#d96060" },
+  brown:  { fill: "#c4956a", stroke: "#8b5e3c" },
+  teal:   { fill: "#5ec4c4", stroke: "#2a8f8f" },
 };
 
 function pieceCSS(p: Piece): React.CSSProperties {
@@ -1124,6 +1139,12 @@ export function SlidePuzzle({
                 aria-label={`${p.color} piece`}
                 aria-pressed={p.id === selected}
                 onClick={(e) => {
+                  if (p.cellOffsets) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const dc = Math.floor((e.clientX - rect.left) / (CELL + GAP));
+                    const dr = Math.floor((e.clientY - rect.top) / (CELL + GAP));
+                    if (!p.cellOffsets.some(([a, b]) => a === dc && b === dr)) return;
+                  }
                   e.stopPropagation();
                 }}
                 onKeyDown={(e) => {
@@ -1135,6 +1156,12 @@ export function SlidePuzzle({
                 }}
                 onMouseDown={(e) => {
                   if (p.immovable || won) return;
+                  if (p.cellOffsets) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const dc = Math.floor((e.clientX - rect.left) / (CELL + GAP));
+                    const dr = Math.floor((e.clientY - rect.top) / (CELL + GAP));
+                    if (!p.cellOffsets.some(([a, b]) => a === dc && b === dr)) return;
+                  }
                   e.preventDefault();
                   e.stopPropagation();
                   setSelected((prev) => (prev === p.id ? null : p.id));
