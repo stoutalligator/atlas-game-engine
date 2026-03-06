@@ -7,7 +7,7 @@ import {
 // ── Re-implement minimal test helpers using the same logic ─────────────────
 //    (mirrors the internals without re-exporting private symbols)
 
-type PieceColor = "person" | "orange" | "blue" | "green" | "purple" | "black";
+type PieceColor = "person" | "orange" | "blue" | "green" | "purple" | "black" | "brown" | "teal";
 type Direction = "up" | "down" | "left" | "right";
 type GateSide = "top" | "bottom" | "left" | "right";
 
@@ -19,6 +19,7 @@ interface Piece {
   width: number;
   height: number;
   immovable: boolean;
+  cellOffsets?: Array<[number, number]>;
 }
 
 interface Gate {
@@ -271,12 +272,14 @@ describe("generatePuzzle", () => {
     for (let i = 0; i < 10; i++) {
       const cfg = generatePuzzle();
       for (const p of cfg.pieces) {
-        for (let c = p.col; c < p.col + p.width; c++) {
-          for (let r = p.row; r < p.row + p.height; r++) {
-            // Person may be at the gate (outside validCells) after scramble — skip that case
-            if (p.color === "person") continue;
-            expect(cfg.validCells.has(ck(r, c))).toBe(true);
-          }
+        const absCells: Array<[number, number]> = p.cellOffsets
+          ? p.cellOffsets.map(([dc, dr]) => [p.col + dc, p.row + dr])
+          : Array.from({ length: p.width }, (_, dc) =>
+              Array.from({ length: p.height }, (_, dr) => [p.col + dc, p.row + dr] as [number, number]),
+            ).flat();
+        for (const [c, r] of absCells) {
+          if (p.color === "person") continue;
+          expect(cfg.validCells.has(ck(r, c))).toBe(true);
         }
       }
     }
@@ -287,12 +290,15 @@ describe("generatePuzzle", () => {
       const cfg = generatePuzzle();
       const seen = new Map<string, string>();
       for (const p of cfg.pieces) {
-        for (let c = p.col; c < p.col + p.width; c++) {
-          for (let r = p.row; r < p.row + p.height; r++) {
-            const key = ck(r, c);
-            expect(seen.has(key)).toBe(false);
-            seen.set(key, p.id);
-          }
+        const absCells: Array<[number, number]> = p.cellOffsets
+          ? p.cellOffsets.map(([dc, dr]) => [p.col + dc, p.row + dr])
+          : Array.from({ length: p.width }, (_, dc) =>
+              Array.from({ length: p.height }, (_, dr) => [p.col + dc, p.row + dr] as [number, number]),
+            ).flat();
+        for (const [c, r] of absCells) {
+          const key = ck(r, c);
+          expect(seen.has(key)).toBe(false);
+          seen.set(key, p.id);
         }
       }
     }
