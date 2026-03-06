@@ -59,6 +59,33 @@
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
 
+.btnRow {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.resetBtn {
+  background: transparent;
+  color: #2563eb;
+  border: 2px solid #2563eb;
+  border-radius: 8px;
+  padding: 0.6rem 1.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.resetBtn:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.resetBtn:active {
+  transform: scale(0.97);
+}
+
 .newBtn {
   background: #2563eb;
   color: #fff;
@@ -189,7 +216,7 @@
 /* L-shaped pieces: visuals are handled entirely by an inline SVG child */
 .pieceL {
   background: transparent !important;
-  border-color: transparent !important;
+  border: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
 }
@@ -324,6 +351,22 @@
   font-family: "Courier New", monospace;
 }
 
+.container[data-theme="8bit"] .resetBtn {
+  border-radius: 0;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+  transition: none;
+}
+
+.container[data-theme="8bit"] .resetBtn:hover {
+  background: rgba(37, 99, 235, 0.15);
+  transform: none;
+}
+
+.container[data-theme="8bit"] .resetBtn:active {
+  transform: translate(2px, 2px);
+}
+
 .container[data-theme="8bit"] .newBtn {
   border-radius: 0;
   font-family: "Courier New", monospace;
@@ -445,6 +488,24 @@
 
 .container[data-theme="terminal"] .hint {
   color: #006b1c;
+}
+
+.container[data-theme="terminal"] .resetBtn {
+  background: transparent;
+  color: #00ff41;
+  border: 1px solid #00ff41;
+  border-radius: 0;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.container[data-theme="terminal"] .resetBtn:hover {
+  background: #001a05;
+}
+
+.container[data-theme="terminal"] .resetBtn:active {
+  transform: none;
 }
 
 .container[data-theme="terminal"] .newBtn {

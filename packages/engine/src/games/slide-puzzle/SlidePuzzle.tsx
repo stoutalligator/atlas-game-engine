@@ -678,22 +678,28 @@ function lShapePathD(cellOffsets: Array<[number, number]>): string {
   const C = CELL;          // 68
   const tot = C + GAP;     // 72  — leading edge of second cell
   const end = 2 * C + GAP; // 140 — full bounding-box span
+
+  // Inset outer boundary coords so the stroke (max 3px, half = 1.5) stays within the
+  // bounding box, matching how CSS border behaves for rectangular pieces.
+  const pad = 1.5;
+  const ep = end - 2 * pad; // path-local outer extent (translate(pad,pad) applied in JSX)
+
   const has = (dc: number, dr: number) => cellOffsets.some(([a, b]) => a === dc && b === dr);
   const A = (sweep: 0 | 1, x: number, y: number) => `A ${r},${r} 0 0,${sweep} ${x},${y}`;
 
   let d: string;
   if (!has(1, 1)) {
-    // missing bottom-right — top row + bottom-left cell
-    d = `M ${r},0 L ${end-r},0 ${A(1,end,r)} L ${end},${C-r} ${A(1,end-r,C)} L ${C+r},${C} ${A(0,C,C+r)} L ${C},${end-r} ${A(1,C-r,end)} L ${r},${end} ${A(1,0,end-r)} L 0,${r} ${A(1,r,0)} Z`;
+    // missing bottom-right
+    d = `M ${r},0 L ${ep-r},0 ${A(1,ep,r)} L ${ep},${C-r} ${A(1,ep-r,C)} L ${C+r},${C} ${A(0,C,C+r)} L ${C},${ep-r} ${A(1,C-r,ep)} L ${r},${ep} ${A(1,0,ep-r)} L 0,${r} ${A(1,r,0)} Z`;
   } else if (!has(1, 0)) {
-    // missing top-right — top-left cell + bottom row
-    d = `M ${r},0 L ${C-r},0 ${A(1,C,r)} L ${C},${tot-r} ${A(0,C+r,tot)} L ${end-r},${tot} ${A(1,end,tot+r)} L ${end},${end-r} ${A(1,end-r,end)} L ${r},${end} ${A(1,0,end-r)} L 0,${r} ${A(1,r,0)} Z`;
+    // missing top-right
+    d = `M ${r},0 L ${C-r},0 ${A(1,C,r)} L ${C},${tot-r} ${A(0,C+r,tot)} L ${ep-r},${tot} ${A(1,ep,tot+r)} L ${ep},${ep-r} ${A(1,ep-r,ep)} L ${r},${ep} ${A(1,0,ep-r)} L 0,${r} ${A(1,r,0)} Z`;
   } else if (!has(0, 1)) {
-    // missing bottom-left — top row + bottom-right cell
-    d = `M ${r},0 L ${end-r},0 ${A(1,end,r)} L ${end},${end-r} ${A(1,end-r,end)} L ${tot+r},${end} ${A(1,tot,end-r)} L ${tot},${C+r} ${A(0,tot-r,C)} L ${r},${C} ${A(1,0,C-r)} L 0,${r} ${A(1,r,0)} Z`;
+    // missing bottom-left
+    d = `M ${r},0 L ${ep-r},0 ${A(1,ep,r)} L ${ep},${ep-r} ${A(1,ep-r,ep)} L ${tot+r},${ep} ${A(1,tot,ep-r)} L ${tot},${C+r} ${A(0,tot-r,C)} L ${r},${C} ${A(1,0,C-r)} L 0,${r} ${A(1,r,0)} Z`;
   } else {
-    // missing top-left — top-right cell + bottom row
-    d = `M ${tot+r},0 L ${end-r},0 ${A(1,end,r)} L ${end},${end-r} ${A(1,end-r,end)} L ${r},${end} ${A(1,0,end-r)} L 0,${tot+r} ${A(1,r,tot)} L ${tot-r},${tot} ${A(0,tot,tot-r)} L ${tot},${r} ${A(1,tot+r,0)} Z`;
+    // missing top-left
+    d = `M ${tot+r},0 L ${ep-r},0 ${A(1,ep,r)} L ${ep},${ep-r} ${A(1,ep-r,ep)} L ${r},${ep} ${A(1,0,ep-r)} L 0,${tot+r} ${A(1,r,tot)} L ${tot-r},${tot} ${A(0,tot,tot-r)} L ${tot},${r} ${A(1,tot+r,0)} Z`;
   }
   return d;
 }
@@ -839,7 +845,8 @@ export function SlidePuzzle({
   difficulty = "medium",
   theme = "modern",
 }: SlidePuzzleProps = {}) {
-  const [cfg, setCfg] = useState<PuzzleConfig>(() => generatePuzzle({ date, difficulty }));
+  const initialCfg = useRef<PuzzleConfig>(generatePuzzle({ date, difficulty }));
+  const [cfg, setCfg] = useState<PuzzleConfig>(initialCfg.current);
   const [selected, setSelected] = useState<string | null>(null);
   const [moves, setMoves] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -935,7 +942,17 @@ export function SlidePuzzle({
 
   // ── New puzzle ────────────────────────────────────────────────────────────
   const handleNew = () => {
-    setCfg(generatePuzzle({ difficulty }));
+    const next = generatePuzzle({ difficulty });
+    initialCfg.current = next;
+    setCfg(next);
+    setSelected(null);
+    setMoves(0);
+    setElapsed(0);
+    setWon(false);
+  };
+
+  const handleReset = () => {
+    setCfg(initialCfg.current);
     setSelected(null);
     setMoves(0);
     setElapsed(0);
@@ -978,9 +995,14 @@ export function SlidePuzzle({
           </div>
         </div>
 
-        <button type="button" className={styles.newBtn} onClick={handleNew}>
-          Generate New Puzzle
-        </button>
+        <div className={styles.btnRow}>
+          <button type="button" className={styles.resetBtn} onClick={handleReset}>
+            Reset Puzzle
+          </button>
+          <button type="button" className={styles.newBtn} onClick={handleNew}>
+            New Puzzle
+          </button>
+        </div>
       </div>
 
       {/* ── Status messages ── */}
@@ -1016,14 +1038,29 @@ export function SlidePuzzle({
             {arrowChar}
           </div>
 
-          {/* Background grid cells */}
-          {[...cfg.validCells].map((k) => {
-            const [r, c] = k.split(",").map(Number);
-            const pos = cellToXY(c, r);
-            return (
-              <div key={k} className={styles.cell} style={{ ...pos, width: CELL, height: CELL }} />
-            );
-          })}
+          {/* Background grid cells — skip cells inside an L-piece's missing corner */}
+          {(() => {
+            const shadowCells = new Set<string>();
+            for (const p of cfg.pieces) {
+              if (!p.cellOffsets) continue;
+              const pieceKeys = new Set(
+                p.cellOffsets.map(([dc, dr]) => ck(p.row + dr, p.col + dc)),
+              );
+              for (let dr = 0; dr < p.height; dr++)
+                for (let dc = 0; dc < p.width; dc++) {
+                  const k = ck(p.row + dr, p.col + dc);
+                  if (!pieceKeys.has(k)) shadowCells.add(k);
+                }
+            }
+            return [...cfg.validCells].map((k) => {
+              if (shadowCells.has(k)) return null;
+              const [r, c] = k.split(",").map(Number);
+              const pos = cellToXY(c, r);
+              return (
+                <div key={k} className={styles.cell} style={{ ...pos, width: CELL, height: CELL }} />
+              );
+            });
+          })()}
 
           {/* Pieces */}
           {cfg.pieces.map((p) => {
@@ -1075,17 +1112,19 @@ export function SlidePuzzle({
                     width={p.width * CELL + (p.width - 1) * GAP}
                     height={p.height * CELL + (p.height - 1) * GAP}
                     viewBox={`0 0 ${p.width * CELL + (p.width - 1) * GAP} ${p.height * CELL + (p.height - 1) * GAP}`}
-                    style={{ position: "absolute", top: 0, left: 0, overflow: "visible", pointerEvents: "none" }}
+                    style={{ position: "absolute", top: 0, left: 0, overflow: "hidden", pointerEvents: "none" }}
                     aria-hidden="true"
                   >
-                    <path
-                      d={lShapePathD(p.cellOffsets)}
-                      fill={PIECE_SVG_COLORS[p.color].fill}
-                      stroke={isSelected ? "#2563eb" : PIECE_SVG_COLORS[p.color].stroke}
-                      strokeWidth={isSelected ? 3 : 2.5}
-                      strokeLinejoin="round"
-                      strokeLinecap="round"
-                    />
+                    <g transform="translate(1.5, 1.5)">
+                      <path
+                        d={lShapePathD(p.cellOffsets)}
+                        fill={PIECE_SVG_COLORS[p.color].fill}
+                        stroke={isSelected ? "#2563eb" : PIECE_SVG_COLORS[p.color].stroke}
+                        strokeWidth={isSelected ? 3 : 2.5}
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                      />
+                    </g>
                   </svg>
                 )}
                 {p.color === "person" && (
