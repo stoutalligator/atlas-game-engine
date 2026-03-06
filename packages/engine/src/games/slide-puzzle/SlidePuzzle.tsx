@@ -641,58 +641,88 @@ function pieceCSS(p: Piece): React.CSSProperties {
 
 type Seg = { key: string; style: React.CSSProperties };
 
-/** Render four border strips with a gap at the gate position. */
+/** Render border strips that trace the actual perimeter of validCells, with a gap at the gate.
+ *  Works for any grid shape (rectangle, L-shape, etc.) — no special-casing needed.
+ */
 function borderSegments(cfg: PuzzleConfig, borderColor: string): Seg[] {
-  const { gate, gridWidth: gw, gridHeight: gh } = cfg;
+  const { gate, gridWidth: gw, gridHeight: gh, validCells } = cfg;
   const step = CELL + GAP;
-  const totalW = gw * step - GAP;
-  const totalH = gh * step - GAP;
-  const gateStart = gate.index * step;
-  const gateEnd = gateStart + CELL;
   const B = BORDER;
-
   const base: React.CSSProperties = { position: "absolute", background: borderColor };
-
-  const seg = (key: string, style: React.CSSProperties): Seg => ({
-    key,
-    style: { ...base, ...style },
-  });
-
   const segs: Seg[] = [];
+  let idx = 0;
 
-  // Top
-  if (gate.side === "top") {
-    if (gateStart > 0) segs.push(seg("t1", { top: -B, left: -B, width: gateStart + B, height: B }));
-    if (gateEnd < totalW) segs.push(seg("t2", { top: -B, left: gateEnd, right: -B, height: B }));
-  } else {
-    segs.push(seg("t", { top: -B, left: -B, width: totalW + 2 * B, height: B }));
+  const push = (style: React.CSSProperties) =>
+    segs.push({ key: `b${idx++}`, style: { ...base, ...style } });
+
+  const isValid = (r: number, c: number) => validCells.has(ck(r, c));
+
+  // ── Horizontal boundary segments ──────────────────────────────────────────
+  // y-boundary `r` sits between row (r-1) above and row r below.
+  // A border strip is needed wherever exactly one side is a valid cell.
+  // A gate on top/bottom creates a gap by interrupting the current run.
+  for (let r = 0; r <= gh; r++) {
+    let runStart: number | null = null;
+
+    const flushH = (c: number) => {
+      if (runStart === null) return;
+      push({
+        top: r * step - B,
+        left: runStart * step - B,
+        width: (c - runStart) * step - GAP + 2 * B,
+        height: B,
+      });
+      runStart = null;
+    };
+
+    for (let c = 0; c < gw; c++) {
+      const aboveValid = r > 0 && isValid(r - 1, c);
+      const belowValid = r < gh && isValid(r, c);
+      const isBorder = aboveValid !== belowValid;
+      const isGate =
+        (gate.side === "top"    && r === 0  && c === gate.index) ||
+        (gate.side === "bottom" && r === gh && c === gate.index);
+
+      if (isBorder && !isGate) {
+        if (runStart === null) runStart = c;
+      } else {
+        flushH(c);
+      }
+    }
+    flushH(gw);
   }
 
-  // Bottom
-  if (gate.side === "bottom") {
-    if (gateStart > 0)
-      segs.push(seg("b1", { bottom: -B, left: -B, width: gateStart + B, height: B }));
-    if (gateEnd < totalW) segs.push(seg("b2", { bottom: -B, left: gateEnd, right: -B, height: B }));
-  } else {
-    segs.push(seg("b", { bottom: -B, left: -B, width: totalW + 2 * B, height: B }));
-  }
+  // ── Vertical boundary segments ────────────────────────────────────────────
+  // x-boundary `c` sits between column (c-1) on the left and column c on the right.
+  for (let c = 0; c <= gw; c++) {
+    let runStart: number | null = null;
 
-  // Left
-  if (gate.side === "left") {
-    if (gateStart > 0) segs.push(seg("l1", { top: 0, left: -B, width: B, height: gateStart }));
-    if (gateEnd < totalH)
-      segs.push(seg("l2", { top: gateEnd, left: -B, width: B, height: totalH - gateEnd }));
-  } else {
-    segs.push(seg("l", { top: 0, left: -B, width: B, height: totalH }));
-  }
+    const flushV = (r: number) => {
+      if (runStart === null) return;
+      push({
+        left: c * step - B,
+        top: runStart * step - B,
+        width: B,
+        height: (r - runStart) * step - GAP + 2 * B,
+      });
+      runStart = null;
+    };
 
-  // Right
-  if (gate.side === "right") {
-    if (gateStart > 0) segs.push(seg("r1", { top: 0, right: -B, width: B, height: gateStart }));
-    if (gateEnd < totalH)
-      segs.push(seg("r2", { top: gateEnd, right: -B, width: B, height: totalH - gateEnd }));
-  } else {
-    segs.push(seg("r", { top: 0, right: -B, width: B, height: totalH }));
+    for (let r = 0; r < gh; r++) {
+      const leftValid  = c > 0  && isValid(r, c - 1);
+      const rightValid = c < gw && isValid(r, c);
+      const isBorder = leftValid !== rightValid;
+      const isGate =
+        (gate.side === "left"  && c === 0  && r === gate.index) ||
+        (gate.side === "right" && c === gw && r === gate.index);
+
+      if (isBorder && !isGate) {
+        if (runStart === null) runStart = r;
+      } else {
+        flushV(r);
+      }
+    }
+    flushV(gh);
   }
 
   return segs;
