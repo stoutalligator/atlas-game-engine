@@ -959,6 +959,8 @@ export function SlidePuzzle({
     setWon(false);
   };
 
+  const [showHelp, setShowHelp] = useState(false);
+
   // ── Derived values ────────────────────────────────────────────────────────
   const boardW = cfg.gridWidth * (CELL + GAP) - GAP;
   const boardH = cfg.gridHeight * (CELL + GAP) - GAP;
@@ -1002,8 +1004,55 @@ export function SlidePuzzle({
           <button type="button" className={styles.newBtn} onClick={handleNew}>
             New Puzzle
           </button>
+          <button
+            type="button"
+            className={styles.helpBtn}
+            onClick={() => setShowHelp((v) => !v)}
+            aria-label="How to play"
+          >
+            ?
+          </button>
         </div>
       </div>
+
+      {/* ── How-to-play modal ── */}
+      {showHelp && (
+        <div
+          className={styles.helpOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label="How to play"
+          onClick={() => setShowHelp(false)}
+        >
+          <div className={styles.helpPanel} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.helpHeader}>
+              <span className={styles.helpTitle}>How to Play:</span>
+              <button
+                type="button"
+                className={styles.helpClose}
+                onClick={() => setShowHelp(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <ul className={styles.helpList}>
+              <li>
+                <strong>Objective:</strong> slide the 👤 piece through the exit gate on the edge of the grid.
+              </li>
+              <li>
+                <strong>Select &amp; move:</strong> click any piece to select it, then use the <strong>arrow keys</strong> to slide it, or <strong>drag</strong> it directly.
+              </li>
+              <li>
+                <strong>All pieces slide freely</strong> in any direction — but only into empty cells.
+              </li>
+              <li>
+                Use <strong>Reset Puzzle</strong> to restore the starting position, or <strong>New Puzzle</strong> to generate a fresh one.
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* ── Status messages ── */}
       {won ? (
@@ -1038,29 +1087,14 @@ export function SlidePuzzle({
             {arrowChar}
           </div>
 
-          {/* Background grid cells — skip cells inside an L-piece's missing corner */}
-          {(() => {
-            const shadowCells = new Set<string>();
-            for (const p of cfg.pieces) {
-              if (!p.cellOffsets) continue;
-              const pieceKeys = new Set(
-                p.cellOffsets.map(([dc, dr]) => ck(p.row + dr, p.col + dc)),
-              );
-              for (let dr = 0; dr < p.height; dr++)
-                for (let dc = 0; dc < p.width; dc++) {
-                  const k = ck(p.row + dr, p.col + dc);
-                  if (!pieceKeys.has(k)) shadowCells.add(k);
-                }
-            }
-            return [...cfg.validCells].map((k) => {
-              if (shadowCells.has(k)) return null;
-              const [r, c] = k.split(",").map(Number);
-              const pos = cellToXY(c, r);
-              return (
-                <div key={k} className={styles.cell} style={{ ...pos, width: CELL, height: CELL }} />
-              );
-            });
-          })()}
+          {/* Background grid cells */}
+          {[...cfg.validCells].map((k) => {
+            const [r, c] = k.split(",").map(Number);
+            const pos = cellToXY(c, r);
+            return (
+              <div key={k} className={styles.cell} style={{ ...pos, width: CELL, height: CELL }} />
+            );
+          })}
 
           {/* Pieces */}
           {cfg.pieces.map((p) => {
@@ -1148,28 +1182,6 @@ export function SlidePuzzle({
           })}
         </div>
       </div>
-
-      <p className={styles.legend}>
-        <span className={styles.legendItem}>
-          <span className={styles.legendSwatch} style={{ background: "#e8e8f0" }} />
-          Person
-        </span>
-        <span className={styles.legendItem}>
-          <span className={styles.legendSwatch} style={{ background: "#f4a261" }} />
-          Movable box
-        </span>
-        <span className={styles.legendItem}>
-          <span className={styles.legendSwatch} style={{ background: "#2d2d2d" }} />
-          Immovable
-        </span>
-        <span className={styles.legendItem}>
-          <span
-            className={styles.legendSwatch}
-            style={{ background: "#4ade80", border: "2px solid #16a34a" }}
-          />
-          Gate (exit)
-        </span>
-      </p>
     </div>
   );
 }
