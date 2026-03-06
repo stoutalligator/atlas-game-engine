@@ -570,12 +570,12 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
   // Filter templates to those appropriate for the chosen difficulty.
   let tmplCandidates = TEMPLATES;
   if (settings.maxCells !== undefined) {
-    const { maxCells } = settings;
-    tmplCandidates = tmplCandidates.filter((t) => t.cells.size <= maxCells);
+    const max = settings.maxCells;
+    tmplCandidates = tmplCandidates.filter((t) => t.cells.size <= max);
   }
   if (settings.minCells !== undefined) {
-    const { minCells } = settings;
-    tmplCandidates = tmplCandidates.filter((t) => t.cells.size >= minCells);
+    const min = settings.minCells;
+    tmplCandidates = tmplCandidates.filter((t) => t.cells.size >= min);
   }
   if (tmplCandidates.length === 0) tmplCandidates = TEMPLATES; // safety fallback
 
