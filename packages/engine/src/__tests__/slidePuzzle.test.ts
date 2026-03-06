@@ -275,7 +275,10 @@ describe("generatePuzzle", () => {
         const absCells: Array<[number, number]> = p.cellOffsets
           ? p.cellOffsets.map(([dc, dr]) => [p.col + dc, p.row + dr])
           : Array.from({ length: p.width }, (_, dc) =>
-              Array.from({ length: p.height }, (_, dr) => [p.col + dc, p.row + dr] as [number, number]),
+              Array.from(
+                { length: p.height },
+                (_, dr) => [p.col + dc, p.row + dr] as [number, number],
+              ),
             ).flat();
         for (const [c, r] of absCells) {
           if (p.color === "person") continue;
@@ -293,7 +296,10 @@ describe("generatePuzzle", () => {
         const absCells: Array<[number, number]> = p.cellOffsets
           ? p.cellOffsets.map(([dc, dr]) => [p.col + dc, p.row + dr])
           : Array.from({ length: p.width }, (_, dc) =>
-              Array.from({ length: p.height }, (_, dr) => [p.col + dc, p.row + dr] as [number, number]),
+              Array.from(
+                { length: p.height },
+                (_, dr) => [p.col + dc, p.row + dr] as [number, number],
+              ),
             ).flat();
         for (const [c, r] of absCells) {
           const key = ck(r, c);
