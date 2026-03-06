@@ -80,7 +80,7 @@ type Rng = () => number;
 /** Mulberry32 — fast seeded PRNG, no external dependencies. */
 function mulberry32(seed: number): Rng {
   let s = seed;
-  return function () {
+  return () => {
     s = (s + 0x6d2b79f5) | 0;
     let t = Math.imul(s ^ (s >>> 15), 1 | s);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
@@ -109,9 +109,9 @@ interface DifficultySettings {
 }
 
 const DIFFICULTY_SETTINGS: Record<SlidePuzzleDifficulty, DifficultySettings> = {
-  easy:   { minMoves: 15, movesRange: 15, maxCells: 36 },
+  easy: { minMoves: 15, movesRange: 15, maxCells: 36 },
   medium: { minMoves: 40, movesRange: 30 },
-  hard:   { minMoves: 80, movesRange: 40, minCells: 40 },
+  hard: { minMoves: 80, movesRange: 40, minCells: 40 },
 };
 
 // ── Utility helpers ────────────────────────────────────────────────────────
@@ -397,19 +397,21 @@ export function generatePuzzle(options: SlidePuzzleOptions = {}): PuzzleConfig {
   const { date, difficulty = "medium" } = options;
   // When a date is supplied, use a deterministic seeded RNG so the same date
   // always produces an identical puzzle layout for all users.
-  const rng: Rng = date
-    ? mulberry32(hashString(`${date}:${difficulty}`))
-    : Math.random;
+  const rng: Rng = date ? mulberry32(hashString(`${date}:${difficulty}`)) : Math.random;
 
   const settings = DIFFICULTY_SETTINGS[difficulty];
   const TEMPLATES = makeTemplates();
 
   // Filter templates to those appropriate for the chosen difficulty.
   let tmplCandidates = TEMPLATES;
-  if (settings.maxCells !== undefined)
-    tmplCandidates = tmplCandidates.filter((t) => t.cells.size <= settings.maxCells!);
-  if (settings.minCells !== undefined)
-    tmplCandidates = tmplCandidates.filter((t) => t.cells.size >= settings.minCells!);
+  if (settings.maxCells !== undefined) {
+    const max = settings.maxCells;
+    tmplCandidates = tmplCandidates.filter((t) => t.cells.size <= max);
+  }
+  if (settings.minCells !== undefined) {
+    const min = settings.minCells;
+    tmplCandidates = tmplCandidates.filter((t) => t.cells.size >= min);
+  }
   if (tmplCandidates.length === 0) tmplCandidates = TEMPLATES; // safety fallback
 
   const tmpl = tmplCandidates[Math.floor(rng() * tmplCandidates.length)];
@@ -717,8 +719,7 @@ export function SlidePuzzle({
   const boardH = cfg.gridHeight * (CELL + GAP) - GAP;
   const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const ss = String(elapsed % 60).padStart(2, "0");
-  const borderColor =
-    theme === "terminal" ? "#00ff41" : theme === "8bit" ? "#000000" : "#1a1a2e";
+  const borderColor = theme === "terminal" ? "#00ff41" : theme === "8bit" ? "#000000" : "#1a1a2e";
   const segs = borderSegments(cfg, borderColor);
   const arrowSt = gateArrowStyle(cfg);
   const arrowChar = ARROW_CHAR[cfg.gate.side];
@@ -847,10 +848,42 @@ export function SlidePuzzle({
                     <title>Person</title>
                     <circle cx="16" cy="9" r="6" fill="currentColor" />
                     <path d="M6 28 C6 20 26 20 26 28" fill="currentColor" />
-                    <rect x="13" y="14" width="6" height="8" rx="1" fill="currentColor" opacity="0.7" />
-                    <line x1="13" y1="16" x2="13" y2="22" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
-                    <line x1="19" y1="16" x2="19" y2="22" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
-                    <line x1="16" y1="17" x2="16" y2="19" stroke="currentColor" strokeWidth="1" opacity="0.35" />
+                    <rect
+                      x="13"
+                      y="14"
+                      width="6"
+                      height="8"
+                      rx="1"
+                      fill="currentColor"
+                      opacity="0.7"
+                    />
+                    <line
+                      x1="13"
+                      y1="16"
+                      x2="13"
+                      y2="22"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      opacity="0.5"
+                    />
+                    <line
+                      x1="19"
+                      y1="16"
+                      x2="19"
+                      y2="22"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      opacity="0.5"
+                    />
+                    <line
+                      x1="16"
+                      y1="17"
+                      x2="16"
+                      y2="19"
+                      stroke="currentColor"
+                      strokeWidth="1"
+                      opacity="0.35"
+                    />
                   </svg>
                 )}
               </div>
