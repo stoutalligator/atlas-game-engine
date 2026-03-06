@@ -22,9 +22,40 @@
   margin-top: 0.2rem;
 }
 
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+
+.tabBar {
+  display: flex;
+  gap: 0;
+  background: #f3f4f6;
+  border-bottom: 2px solid #e5e5e5;
+}
+
+.tab {
+  padding: 0.7rem 1.4rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -2px;
+}
+
+.tab:hover {
+  color: #7c3aed;
+}
+
+.tabActive {
+  color: #7c3aed;
+  border-bottom-color: #7c3aed;
+}
+
 .main {
   flex: 1;
-  max-width: 720px;
+  max-width: 900px;
   width: 100%;
   margin: 0 auto;
   padding: 1.5rem 1rem 3rem;
