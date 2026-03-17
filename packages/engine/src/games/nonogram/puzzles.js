@@ -1,345 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nonogram Puzzle</title>
-  <style>
-    /* ── Reset & Base ──────────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f0f2f5;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem 1rem 3rem;
-      color: #1a1a2e;
-    }
-
-    /* ── Header ────────────────────────────────────────────────────────────── */
-    .header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-    }
-
-    h1 {
-      font-size: 2rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      color: #1a1a2e;
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 0.65rem;
-      align-items: center;
-    }
-
-    .btn-reset {
-      background: #1d4ed8;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 0.55rem 1.3rem;
-      font-size: 0.92rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
-      box-shadow: 0 2px 6px rgba(29, 78, 216, 0.35);
-    }
-    .btn-reset:hover  { background: #1e40af; }
-    .btn-reset:active { transform: scale(0.97); }
-
-    .btn-help {
-      width: 2.1rem;
-      height: 2.1rem;
-      border-radius: 50%;
-      border: 2px solid #6b7280;
-      background: transparent;
-      color: #6b7280;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .btn-help:hover { background: #e5e7eb; border-color: #374151; color: #374151; }
-
-    /* ── Nonogram layout ───────────────────────────────────────────────────── */
-    /*
-      CSS grid: 11 columns × 11 rows
-        Col 0            = row-clue column (auto width)
-        Cols 1–10        = 10 puzzle columns (44 px each)
-        Row 0            = col-clue row (auto height)
-        Rows 1–10        = 10 puzzle rows (44 px each)
-    */
-    .nonogram {
-      display: inline-grid;
-      grid-template-columns: auto repeat(10, 44px);
-      grid-template-rows: auto repeat(10, 44px);
-      border: 2px solid #374151;
-      border-radius: 6px;
-      overflow: hidden;
-      background: #6b7280; /* gap color / grid-line color */
-      gap: 1px;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    /* ── Corner cell ───────────────────────────────────────────────────────── */
-    .corner {
-      background: #e2e8f0;
-      min-width: 60px;
-      min-height: 60px;
-    }
-
-    /* ── Column clue cells (top row) ───────────────────────────────────────── */
-    .col-clue {
-      background: #e2e8f0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
-      padding: 6px 2px 4px;
-      gap: 1px;
-      min-height: 60px;
-      width: 44px;
-    }
-    .col-clue span {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: #374151;
-      line-height: 1.3;
-      white-space: nowrap;
-    }
-
-    /* ── Row clue cells (left column) ─────────────────────────────────────── */
-    .row-clue {
-      background: #e2e8f0;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: flex-end;
-      padding: 2px 6px 2px 4px;
-      gap: 4px;
-      height: 44px;
-      min-width: 60px;
-    }
-    .row-clue span {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: #374151;
-      line-height: 1;
-      white-space: nowrap;
-    }
-
-    /* ── Puzzle cells ──────────────────────────────────────────────────────── */
-    .cell {
-      background: #ffffff;
-      width: 44px;
-      height: 44px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.08s;
-      position: relative;
-    }
-    .cell:hover { background: #eff6ff; }
-
-    /* Every 5th column: thicker right border via background gap hack */
-    /* We achieve bold dividers using the gap color + wider gap every 5 cells */
-    /* We use column/row "separator" elements injected by JS */
-
-    /* X-marked state */
-    .cell.state-x {
-      background: #f8fafc;
-    }
-    .cell.state-x::after {
-      content: "✕";
-      font-size: 0.85rem;
-      color: #9ca3af;
-      pointer-events: none;
-      font-weight: 600;
-    }
-    .cell.state-x:hover { background: #f1f5f9; }
-
-    /* Filled state */
-    .cell.state-filled {
-      background: #1e293b;
-    }
-    .cell.state-filled:hover { background: #334155; }
-
-    /* Bold dividers every 5 cells: achieved via an outline on specific cells */
-    .cell[data-col="4"],
-    .cell[data-col="9"] {
-      border-right: 2px solid #374151;
-    }
-    .cell[data-row="4"],
-    .cell[data-row="9"] {
-      border-bottom: 2px solid #374151;
-    }
-
-    /* ── Modal overlay ─────────────────────────────────────────────────────── */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 200;
-      padding: 1rem;
-    }
-    .modal-overlay.hidden { display: none; }
-
-    .modal-box {
-      background: #fff;
-      border-radius: 14px;
-      padding: 1.75rem;
-      max-width: 440px;
-      width: 100%;
-      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
-    }
-
-    .modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1.1rem;
-    }
-    .modal-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #111827;
-    }
-    .modal-close {
-      background: transparent;
-      border: none;
-      font-size: 1.2rem;
-      color: #6b7280;
-      cursor: pointer;
-      padding: 0.2rem 0.4rem;
-      border-radius: 4px;
-      line-height: 1;
-    }
-    .modal-close:hover { background: #f3f4f6; color: #111827; }
-
-    /* ── Help modal content ────────────────────────────────────────────────── */
-    .rules-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 0.7rem;
-      color: #374151;
-      font-size: 0.91rem;
-      line-height: 1.55;
-    }
-    .rules-list li {
-      position: relative;
-      padding-left: 1.25rem;
-    }
-    .rules-list li::before {
-      content: "▸";
-      color: #1d4ed8;
-      font-size: 0.8rem;
-      position: absolute;
-      left: 0;
-      top: 0.18rem;
-    }
-
-    /* ── Win modal content ─────────────────────────────────────────────────── */
-    .win-body {
-      text-align: center;
-      padding: 0.5rem 0 0;
-    }
-    .win-emoji {
-      font-size: 3.2rem;
-      display: block;
-      margin-bottom: 0.5rem;
-    }
-    .win-body h2 {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: #16a34a;
-      margin-bottom: 0.4rem;
-    }
-    .win-body p {
-      color: #6b7280;
-      font-size: 0.95rem;
-      margin-bottom: 1.2rem;
-    }
-    .btn-next {
-      background: #16a34a;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 0.65rem 1.6rem;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
-    }
-    .btn-next:hover { background: #15803d; }
-  </style>
-</head>
-<body>
-
-<!-- ── Header ───────────────────────────────────────────────────────────────── -->
-<div class="header">
-  <h1>Nonogram</h1>
-  <div class="btn-row">
-    <button class="btn-reset" id="resetBtn">↺ New Puzzle</button>
-    <button class="btn-help"  id="helpBtn">?</button>
-  </div>
-</div>
-
-<!-- ── Nonogram grid (built by JS) ──────────────────────────────────────────── -->
-<div class="nonogram" id="nonogram"></div>
-
-<!-- ── Help modal ───────────────────────────────────────────────────────────── -->
-<div class="modal-overlay hidden" id="helpModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <span class="modal-title">How to Play</span>
-      <button class="modal-close" id="helpClose" aria-label="Close">✕</button>
-    </div>
-    <ul class="rules-list">
-      <li>The numbers on the <strong>left</strong> of each row describe consecutive runs of filled cells in that row, in order from left to right, separated by at least one empty cell.</li>
-      <li>The numbers on <strong>top</strong> of each column describe consecutive runs of filled cells in that column, in order from top to bottom, separated by at least one empty cell.</li>
-      <li><strong>Single-click</strong> an empty cell to mark it with an X — a hint that the cell should stay empty.</li>
-      <li><strong>Double-click</strong> an empty or X-marked cell to fill it with color.</li>
-      <li><strong>Single-click</strong> a filled cell to clear it back to empty.</li>
-      <li>The puzzle is solved when all filled cells match the hidden picture exactly. X marks and empty cells are both treated as "not filled" when checking for a win.</li>
-    </ul>
-  </div>
-</div>
-
-<!-- ── Win modal ────────────────────────────────────────────────────────────── -->
-<div class="modal-overlay hidden" id="winModal">
-  <div class="modal-box">
-    <div class="win-body">
-      <span class="win-emoji">🎉</span>
-      <h2>Puzzle Solved!</h2>
-      <p>Excellent work! Ready for the next challenge?</p>
-      <button class="btn-next" id="nextPuzzleBtn">Next Puzzle</button>
-    </div>
-  </div>
-</div>
-
-<script>
 // ═══════════════════════════════════════════════════════════════════════════════
-// PUZZLE LIBRARY  — 110 puzzles defined as 10-row × 10-column grids.
+// PUZZLE LIBRARY  — puzzles defined as 10-row × 10-column grids.
 // Each row is a 10-character string: "1" = filled, "0" = empty.
 // Clues are derived at runtime from these solution grids.
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -360,14 +20,14 @@ const PUZZLES = [
   ]},
   // ── 2. Star ───────────────────────────────────────────────────────────────
   { name: "Star", rows: [
-    "0000100000",
-    "0001110000",
-    "1111111111",
+    "0000010000",
+    "1000111000",
     "0111111110",
     "0011111100",
-    "0111111110",
-    "1001001001",
-    "0000100000",
+    "1111111111",
+    "0011111100",
+    "1001010100",
+    "1000100010",
     "0000000000",
     "0000000000",
   ]},
@@ -386,15 +46,15 @@ const PUZZLES = [
   ]},
   // ── 4. Circle ─────────────────────────────────────────────────────────────
   { name: "Circle", rows: [
-    "0001111000",
+    "0011111100",
     "0110000110",
     "1100000011",
+    "1000000011",
+    "1000000011",
     "1000000001",
-    "1000000001",
-    "1000000001",
-    "1100000011",
+    "1100000001",
     "0110000110",
-    "0001111000",
+    "0011111100",
     "0000000000",
   ]},
   // ── 5. Square ─────────────────────────────────────────────────────────────
@@ -451,15 +111,15 @@ const PUZZLES = [
   ]},
   // ── 9. X Shape ────────────────────────────────────────────────────────────
   { name: "X Shape", rows: [
-    "1100000011",
-    "0110000110",
-    "0011001100",
-    "0001111000",
+    "1110000001",
+    "0110000011",
+    "0011000110",
+    "0001111100",
     "0000110000",
-    "0001111000",
-    "0011001100",
-    "0110000110",
-    "1100000011",
+    "0001111100",
+    "0011000110",
+    "0110000011",
+    "1100000001",
     "0000000000",
   ]},
   // ── 10. Arrow Right ───────────────────────────────────────────────────────
@@ -542,27 +202,27 @@ const PUZZLES = [
   ]},
   // ── 16. Smiley Face ───────────────────────────────────────────────────────
   { name: "Smiley Face", rows: [
+    "0001111000",
     "0011111100",
-    "0111111110",
     "1100000011",
-    "1101001011",
-    "1100000011",
-    "1100000011",
-    "1100110011",
-    "1101111011",
-    "0110000110",
+    "1011000011",
+    "1000000001",
+    "1000000001",
+    "1001110001",
+    "0101000010",
     "0011111100",
+    "0000000000",
   ]},
   // ── 17. Sad Face ──────────────────────────────────────────────────────────
   { name: "Sad Face", rows: [
+    "0001111000",
     "0011111100",
-    "0111111110",
     "1100000011",
-    "1101001011",
-    "1100000011",
-    "1101111011",
-    "1100110011",
-    "0110000110",
+    "1011000011",
+    "1000000011",
+    "1011110011",
+    "1000000011",
+    "0100000110",
     "0011111100",
     "0000000000",
   ]},
@@ -646,16 +306,16 @@ const PUZZLES = [
   ]},
   // ── 24. Sun ───────────────────────────────────────────────────────────────
   { name: "Sun", rows: [
-    "0000100000",
-    "1000110001",
-    "0100110010",
+    "0100100100",
     "0011111100",
+    "0111111110",
     "1111111111",
+    "1100000011",
     "1111111111",
+    "0111111110",
     "0011111100",
-    "0100110010",
-    "1000110001",
-    "0000100000",
+    "0100100100",
+    "0000000000",
   ]},
   // ── 25. Cloud ─────────────────────────────────────────────────────────────
   { name: "Cloud", rows: [
@@ -685,15 +345,15 @@ const PUZZLES = [
   ]},
   // ── 27. Snowflake ─────────────────────────────────────────────────────────
   { name: "Snowflake", rows: [
-    "0000100000",
-    "1000110001",
-    "0110110110",
+    "0100100100",
     "0011111100",
-    "1111111111",
+    "1010010010",
+    "0111111110",
+    "0010010010",
+    "0111111110",
+    "1010010010",
     "0011111100",
-    "0110110110",
-    "1000110001",
-    "0000100000",
+    "0100100100",
     "0000000000",
   ]},
   // ── 28. Mushroom ──────────────────────────────────────────────────────────
@@ -712,24 +372,24 @@ const PUZZLES = [
   // ── 29. Anchor ────────────────────────────────────────────────────────────
   { name: "Anchor", rows: [
     "0001111000",
-    "0011111100",
-    "0000100000",
-    "0000100000",
+    "0011001100",
+    "0001100000",
     "1001111001",
-    "1111111111",
-    "0111111110",
-    "0000100000",
+    "1111001111",
+    "0111001110",
+    "0001111000",
+    "0000110000",
     "0000000000",
     "0000000000",
   ]},
   // ── 30. Crown ─────────────────────────────────────────────────────────────
   { name: "Crown", rows: [
-    "1000000001",
-    "1100000011",
-    "1110000111",
+    "1000010001",
+    "1100111011",
     "1111111111",
     "1111111111",
     "1111111111",
+    "0111111110",
     "0111111110",
     "0000000000",
     "0000000000",
@@ -752,12 +412,12 @@ const PUZZLES = [
   { name: "Skull", rows: [
     "0011111100",
     "0111111110",
-    "1100000011",
     "1101001011",
-    "1100000011",
+    "1110000111",
     "1111111111",
-    "1111111111",
-    "0101011010",
+    "0111111110",
+    "0110110110",
+    "0000000000",
     "0000000000",
     "0000000000",
   ]},
@@ -770,8 +430,8 @@ const PUZZLES = [
     "1111111111",
     "1111111111",
     "1111111111",
-    "1010101011",
-    "0000000000",
+    "1010111010",
+    "1000010001",
     "0000000000",
   ]},
   // ── 34. Flame ─────────────────────────────────────────────────────────────
@@ -789,15 +449,15 @@ const PUZZLES = [
   ]},
   // ── 35. Key ───────────────────────────────────────────────────────────────
   { name: "Key", rows: [
-    "0011111100",
-    "0111111110",
-    "1100001100",
-    "1100001100",
-    "0111111110",
-    "0011111100",
+    "0001111000",
+    "0011001100",
+    "0011001100",
+    "0001111000",
     "0000110000",
-    "0000111100",
     "0000110000",
+    "0001111100",
+    "0000110000",
+    "0000000000",
     "0000000000",
   ]},
   // ── 36. Eye ───────────────────────────────────────────────────────────────
@@ -881,14 +541,14 @@ const PUZZLES = [
   // ── 42. Target / Bullseye ─────────────────────────────────────────────────
   { name: "Target", rows: [
     "0001111000",
-    "0110000110",
+    "0110001100",
     "1001111001",
-    "1010000101",
-    "1010000101",
+    "1011001001",
+    "1010001001",
+    "1011001001",
     "1001111001",
-    "0110000110",
+    "0110001100",
     "0001111000",
-    "0000000000",
     "0000000000",
   ]},
   // ── 43. Camera ────────────────────────────────────────────────────────────
@@ -984,15 +644,15 @@ const PUZZLES = [
   ]},
   // ── 50. Flower ────────────────────────────────────────────────────────────
   { name: "Flower", rows: [
-    "0100000010",
-    "0011001100",
-    "0001111000",
-    "1101111011",
+    "0010001000",
+    "0111011100",
+    "0011111100",
     "1111111111",
-    "1101111011",
-    "0001111000",
-    "0011001100",
-    "0100000010",
+    "1110111011",
+    "1111111111",
+    "0011111100",
+    "0111011100",
+    "0010001000",
     "0000000000",
   ]},
   // ── 51. Leaf ──────────────────────────────────────────────────────────────
@@ -1287,12 +947,12 @@ const PUZZLES = [
     "0111111110",
     "0110000110",
     "0110000110",
-    "0110011110",
+    "0110010110",
     "0110001110",
-    "0111111110",
-    "0011111111",
-    "0000000000",
-    "0000000000",
+    "0011001110",
+    "0001111100",
+    "0000011110",
+    "0000001100",
   ]},
   // ── 74. Letter R ──────────────────────────────────────────────────────────
   { name: "Letter R", rows: [
@@ -1348,14 +1008,14 @@ const PUZZLES = [
   ]},
   // ── 78. Letter V ──────────────────────────────────────────────────────────
   { name: "Letter V", rows: [
-    "0110000110",
+    "1100000011",
+    "1100000011",
     "0110000110",
     "0110000110",
     "0011001100",
     "0011001100",
     "0001111000",
     "0001111000",
-    "0000110000",
     "0000000000",
     "0000000000",
   ]},
@@ -1374,27 +1034,27 @@ const PUZZLES = [
   ]},
   // ── 80. Letter X ──────────────────────────────────────────────────────────
   { name: "Letter X", rows: [
-    "0110000110",
-    "0011001100",
-    "0001111000",
+    "1110000001",
+    "0110000011",
+    "0011000110",
+    "0001111100",
     "0000110000",
-    "0000110000",
-    "0001111000",
-    "0011001100",
-    "0110000110",
-    "0000000000",
+    "0001111100",
+    "0011000110",
+    "0110000011",
+    "1100000001",
     "0000000000",
   ]},
   // ── 81. Letter Y ──────────────────────────────────────────────────────────
   { name: "Letter Y", rows: [
+    "1100000011",
     "0110000110",
     "0011001100",
     "0001111000",
     "0000110000",
-    "0000110000",
-    "0000110000",
-    "0000110000",
-    "0000110000",
+    "0001111000",
+    "0011111100",
+    "0001111000",
     "0000000000",
     "0000000000",
   ]},
@@ -1543,15 +1203,15 @@ const PUZZLES = [
   ]},
   // ── 93. Bow Tie ───────────────────────────────────────────────────────────
   { name: "Bow Tie", rows: [
-    "1100000011",
-    "1110000111",
-    "0111001110",
+    "1110001100",
+    "0110001110",
     "0011111100",
     "0001111000",
+    "0011001100",
     "0011111100",
     "0111001110",
     "1110000111",
-    "1100000011",
+    "0000000000",
     "0000000000",
   ]},
   // ── 94. Glasses ───────────────────────────────────────────────────────────
@@ -1611,11 +1271,11 @@ const PUZZLES = [
     "1111111111",
     "1100000011",
     "1010000101",
-    "1001001001",
-    "1000110001",
-    "1000110001",
-    "1001001001",
+    "1001000001",
+    "1000100001",
+    "1001000001",
     "1010000101",
+    "1100000011",
     "1111111111",
     "0000000000",
   ]},
@@ -1634,15 +1294,15 @@ const PUZZLES = [
   ]},
   // ── 100. Robot Face ───────────────────────────────────────────────────────
   { name: "Robot Face", rows: [
+    "0000011100",
+    "0001111100",
+    "0111111110",
+    "1000000001",
+    "1011001101",
+    "1001001001",
+    "1000000001",
+    "0111111110",
     "0000000000",
-    "0111111110",
-    "1111111111",
-    "1101001011",
-    "1111111111",
-    "1101111011",
-    "1111111111",
-    "0111111110",
-    "0001111000",
     "0000000000",
   ]},
   // ── 101. Ladder ───────────────────────────────────────────────────────────
@@ -1660,29 +1320,29 @@ const PUZZLES = [
   ]},
   // ── 102. Zigzag ───────────────────────────────────────────────────────────
   { name: "Zigzag", rows: [
-    "1100000000",
-    "1110000000",
-    "0111000000",
-    "0011100000",
-    "0001110000",
-    "0000111000",
-    "0000011100",
-    "0000001110",
-    "0000000111",
-    "0000000011",
+    "1100001100",
+    "1100001100",
+    "1110011100",
+    "0111111100",
+    "0011111000",
+    "0011111000",
+    "0111111100",
+    "1110011100",
+    "1100001100",
+    "0000000000",
   ]},
   // ── 103. Checkerboard ─────────────────────────────────────────────────────
   { name: "Checkerboard", rows: [
-    "1010101010",
-    "0101010101",
-    "1010101010",
-    "0101010101",
-    "1010101010",
-    "0101010101",
-    "1010101010",
-    "0101010101",
-    "1010101010",
-    "0101010101",
+    "1111111111",
+    "1111111110",
+    "1111111100",
+    "1111111000",
+    "1111110000",
+    "0111100000",
+    "0111000000",
+    "0110000000",
+    "0100000000",
+    "0000000000",
   ]},
   // ── 104. Stripes Horizontal ───────────────────────────────────────────────
   { name: "Stripes H", rows: [
@@ -1776,271 +1436,3 @@ const PUZZLES = [
     "0001111000",
   ]},
 ];
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// GAME STATE
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const ROWS = 10;
-const COLS = 10;
-// Cell states
-const EMPTY  = 0;
-const MARKED = 1; // X mark
-const FILLED = 2;
-
-let currentPuzzleIndex = -1;
-let solution = [];    // 2D boolean [row][col]
-let cellState = [];   // 2D EMPTY/MARKED/FILLED [row][col]
-let rowClues = [];    // array of arrays
-let colClues = [];    // array of arrays
-
-// Double-click detection
-const DBLCLICK_MS = 280;
-let pendingClick = null; // { row, col, timer }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CLUE COMPUTATION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function computeClues(sol) {
-  const rc = [];
-  const cc = [];
-
-  for (let r = 0; r < ROWS; r++) {
-    const clue = [];
-    let run = 0;
-    for (let c = 0; c < COLS; c++) {
-      if (sol[r][c]) { run++; }
-      else if (run > 0) { clue.push(run); run = 0; }
-    }
-    if (run > 0) clue.push(run);
-    rc.push(clue.length ? clue : [0]);
-  }
-
-  for (let c = 0; c < COLS; c++) {
-    const clue = [];
-    let run = 0;
-    for (let r = 0; r < ROWS; r++) {
-      if (sol[r][c]) { run++; }
-      else if (run > 0) { clue.push(run); run = 0; }
-    }
-    if (run > 0) clue.push(run);
-    cc.push(clue.length ? clue : [0]);
-  }
-
-  return { rc, cc };
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PUZZLE LOADING
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function parsePuzzle(puzzle) {
-  return puzzle.rows.map(row => row.split("").map(ch => ch === "1"));
-}
-
-function loadPuzzle(index) {
-  currentPuzzleIndex = index;
-  solution = parsePuzzle(PUZZLES[index]);
-  const { rc, cc } = computeClues(solution);
-  rowClues = rc;
-  colClues = cc;
-  cellState = Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY));
-  renderClues();
-  renderCells();
-}
-
-function pickNextPuzzle() {
-  if (pendingClick) { clearTimeout(pendingClick.timer); pendingClick = null; }
-  const total = PUZZLES.length;
-  let next = Math.floor(Math.random() * total);
-  if (total > 1 && next === currentPuzzleIndex) {
-    next = (next + 1) % total;
-  }
-  loadPuzzle(next);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// GRID RENDERING
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const nonogramEl = document.getElementById("nonogram");
-
-function buildGrid() {
-  nonogramEl.innerHTML = "";
-
-  // Corner
-  const corner = document.createElement("div");
-  corner.className = "corner";
-  nonogramEl.appendChild(corner);
-
-  // Column clue cells (10 cells in top row)
-  for (let c = 0; c < COLS; c++) {
-    const div = document.createElement("div");
-    div.className = "col-clue";
-    div.id = `cc-${c}`;
-    nonogramEl.appendChild(div);
-  }
-
-  // Row clue + puzzle cells (10 rows)
-  for (let r = 0; r < ROWS; r++) {
-    // Row clue cell
-    const rcDiv = document.createElement("div");
-    rcDiv.className = "row-clue";
-    rcDiv.id = `rc-${r}`;
-    nonogramEl.appendChild(rcDiv);
-
-    // Puzzle cells
-    for (let c = 0; c < COLS; c++) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.dataset.row = r;
-      cell.dataset.col = c;
-      cell.id = `cell-${r}-${c}`;
-      attachCellHandlers(cell, r, c);
-      nonogramEl.appendChild(cell);
-    }
-  }
-}
-
-function renderClues() {
-  // Column clues
-  for (let c = 0; c < COLS; c++) {
-    const div = document.getElementById(`cc-${c}`);
-    div.innerHTML = "";
-    colClues[c].forEach(n => {
-      const span = document.createElement("span");
-      span.textContent = n;
-      div.appendChild(span);
-    });
-  }
-  // Row clues
-  for (let r = 0; r < ROWS; r++) {
-    const div = document.getElementById(`rc-${r}`);
-    div.innerHTML = "";
-    rowClues[r].forEach(n => {
-      const span = document.createElement("span");
-      span.textContent = n;
-      div.appendChild(span);
-    });
-  }
-}
-
-function renderCells() {
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      updateCellDOM(r, c);
-    }
-  }
-}
-
-function updateCellDOM(r, c) {
-  const cell = document.getElementById(`cell-${r}-${c}`);
-  cell.classList.remove("state-x", "state-filled");
-  const state = cellState[r][c];
-  if (state === MARKED) cell.classList.add("state-x");
-  if (state === FILLED) cell.classList.add("state-filled");
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CELL INTERACTION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function attachCellHandlers(cell, r, c) {
-  cell.addEventListener("click", () => {
-    if (pendingClick && pendingClick.row === r && pendingClick.col === c) {
-      // Second click on same cell within threshold → double-click
-      clearTimeout(pendingClick.timer);
-      pendingClick = null;
-      handleDoubleClick(r, c);
-    } else {
-      // Cancel any pending click on a different cell
-      if (pendingClick) {
-        const { row: pr, col: pc, timer } = pendingClick;
-        clearTimeout(timer);
-        pendingClick = null;
-        handleSingleClick(pr, pc);
-      }
-      // Start timer for this cell
-      const timer = setTimeout(() => {
-        pendingClick = null;
-        handleSingleClick(r, c);
-      }, DBLCLICK_MS);
-      pendingClick = { row: r, col: c, timer };
-    }
-  });
-}
-
-// Single click: empty→X, filled→empty.
-// Clicking an X cell does nothing; double-click is needed to advance from X to filled.
-function handleSingleClick(r, c) {
-  const state = cellState[r][c];
-  if (state === EMPTY)       { cellState[r][c] = MARKED; }
-  else if (state === FILLED) { cellState[r][c] = EMPTY; }
-  updateCellDOM(r, c);
-  checkWin();
-}
-
-function handleDoubleClick(r, c) {
-  const state = cellState[r][c];
-  if (state === EMPTY || state === MARKED) {
-    cellState[r][c] = FILLED;
-    updateCellDOM(r, c);
-    checkWin();
-  }
-  // Double-click on filled does nothing (prevents accidental un-fill)
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// WIN DETECTION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function checkWin() {
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const isFilled = cellState[r][c] === FILLED;
-      if (isFilled !== solution[r][c]) return; // mismatch
-    }
-  }
-  // All cells match!
-  showWinModal();
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MODALS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const helpModal    = document.getElementById("helpModal");
-const winModal     = document.getElementById("winModal");
-
-function showWinModal()  { winModal.classList.remove("hidden"); }
-function hideWinModal()  { winModal.classList.add("hidden"); }
-function showHelpModal() { helpModal.classList.remove("hidden"); }
-function hideHelpModal() { helpModal.classList.add("hidden"); }
-
-// Close modals when clicking overlay background
-helpModal.addEventListener("click", e => { if (e.target === helpModal) hideHelpModal(); });
-winModal.addEventListener("click",  e => { if (e.target === winModal)  hideWinModal(); });
-
-document.getElementById("helpClose").addEventListener("click", hideHelpModal);
-document.getElementById("helpBtn").addEventListener("click",   showHelpModal);
-
-document.getElementById("resetBtn").addEventListener("click", () => {
-  hideWinModal();
-  pickNextPuzzle();
-});
-
-document.getElementById("nextPuzzleBtn").addEventListener("click", () => {
-  hideWinModal();
-  pickNextPuzzle();
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════════════════════════
-
-buildGrid();
-pickNextPuzzle();
-</script>
-</body>
-</html>

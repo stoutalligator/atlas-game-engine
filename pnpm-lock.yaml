@@ -46,6 +46,12 @@ importers:
         specifier: ^6.0.7
         version: 6.4.1
 
+  apps/nonogram:
+    devDependencies:
+      vite:
+        specifier: ^6.0.7
+        version: 6.4.1
+
   packages/engine:
     devDependencies:
       '@types/react':

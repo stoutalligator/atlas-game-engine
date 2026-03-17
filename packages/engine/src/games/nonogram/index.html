@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nonogram Puzzle</title>
+  <style>
+    /* ── Reset & Base ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 3rem;
+      color: #1a1a2e;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #1a1a2e;
+      margin: 0;
+    }
+
+    /* ── Stats row ──────────────────────────────────────────────────────────── */
+    .stats-row {
+      display: flex;
+      gap: 2.5rem;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .stat-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #9ca3af;
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #2563eb;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+
+    .date-label {
+      font-size: 0.82rem;
+      color: #6b7280;
+      font-weight: 500;
+      margin-top: -0.25rem;
+    }
+
+    /* ── Button row ─────────────────────────────────────────────────────────── */
+    .btn-row {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn-reset {
+      background: transparent;
+      color: #2563eb;
+      border: 2px solid #2563eb;
+      border-radius: 8px;
+      padding: 0.6rem 1.4rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-reset:hover  { background: rgba(37, 99, 235, 0.08); }
+    .btn-reset:active { transform: scale(0.97); }
+
+    .btn-new {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 1.4rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+    }
+    .btn-new:hover  { background: #1d4ed8; }
+    .btn-new:active { transform: scale(0.97); }
+
+    .btn-help {
+      width: 2.2rem;
+      height: 2.2rem;
+      border-radius: 50%;
+      border: 2px solid #6b7280;
+      background: transparent;
+      color: #6b7280;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      align-self: center;
+    }
+    .btn-help:hover { background: #f3f4f6; border-color: #374151; color: #374151; }
+
+    /* ── Tool mode toggle ──────────────────────────────────────────────────── */
+    .tool-toggle {
+      display: flex;
+      border: 2px solid #374151;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .tool-btn {
+      background: transparent;
+      border: none;
+      padding: 0.35rem 0.75rem;
+      font-size: 1.05rem;
+      cursor: pointer;
+      color: #6b7280;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1;
+    }
+    .tool-btn.active {
+      background: #1e293b;
+      color: #fff;
+    }
+    .tool-btn:not(.active):hover {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    /* ── Nonogram layout ───────────────────────────────────────────────────── */
+    /*
+      CSS grid: 11 columns × 11 rows
+        Col 0            = row-clue column (auto width)
+        Cols 1–10        = 10 puzzle columns (44 px each)
+        Row 0            = col-clue row (auto height)
+        Rows 1–10        = 10 puzzle rows (44 px each)
+    */
+    .nonogram {
+      display: inline-grid;
+      grid-template-columns: auto repeat(10, 44px);
+      grid-template-rows: auto repeat(10, 44px);
+      border: 2px solid #374151;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #6b7280; /* gap color / grid-line color */
+      gap: 1px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ── Corner cell ───────────────────────────────────────────────────────── */
+    .corner {
+      background: #e2e8f0;
+      min-width: 60px;
+      min-height: 60px;
+    }
+
+    /* ── Column clue cells (top row) ───────────────────────────────────────── */
+    .col-clue {
+      background: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 6px 2px 4px;
+      gap: 1px;
+      min-height: 60px;
+      width: 44px;
+    }
+    .col-clue span {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #374151;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    /* ── Row clue cells (left column) ─────────────────────────────────────── */
+    .row-clue {
+      background: #e2e8f0;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 2px 6px 2px 4px;
+      gap: 4px;
+      height: 44px;
+      min-width: 60px;
+    }
+    .row-clue span {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #374151;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    /* ── Puzzle cells ──────────────────────────────────────────────────────── */
+    .cell {
+      background: #ffffff;
+      width: 44px;
+      height: 44px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.08s;
+      position: relative;
+    }
+    .cell:hover { background: #eff6ff; }
+
+    /* Every 5th column: thicker right border via background gap hack */
+    /* We achieve bold dividers using the gap color + wider gap every 5 cells */
+    /* We use column/row "separator" elements injected by JS */
+
+    /* X-marked state */
+    .cell.state-x {
+      background: #f8fafc;
+    }
+    .cell.state-x::after {
+      content: "✕";
+      font-size: 0.85rem;
+      color: #9ca3af;
+      pointer-events: none;
+      font-weight: 600;
+    }
+    .cell.state-x:hover { background: #f1f5f9; }
+
+    /* Filled state */
+    .cell.state-filled {
+      background: #1e293b;
+    }
+    .cell.state-filled:hover { background: #334155; }
+
+    /* Bold dividers every 5 cells: achieved via an outline on specific cells */
+    .cell[data-col="4"],
+    .cell[data-col="9"] {
+      border-right: 2px solid #374151;
+    }
+    .cell[data-row="4"],
+    .cell[data-row="9"] {
+      border-bottom: 2px solid #374151;
+    }
+
+    /* ── Modal overlay ─────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 1rem;
+    }
+    .modal-overlay.hidden { display: none; }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 1.75rem;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.1rem;
+    }
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .modal-close {
+      background: transparent;
+      border: none;
+      font-size: 1.2rem;
+      color: #6b7280;
+      cursor: pointer;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .modal-close:hover { background: #f3f4f6; color: #111827; }
+
+    /* ── Help modal content ────────────────────────────────────────────────── */
+    .rules-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      color: #374151;
+      font-size: 0.91rem;
+      line-height: 1.55;
+    }
+    .rules-list li {
+      position: relative;
+      padding-left: 1.25rem;
+    }
+    .rules-list li::before {
+      content: "▸";
+      color: #1d4ed8;
+      font-size: 0.8rem;
+      position: absolute;
+      left: 0;
+      top: 0.18rem;
+    }
+    .rules-list li.example-item {
+      padding-left: 0;
+    }
+    .rules-list li.example-item::before {
+      content: none;
+    }
+    .row-example {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem;
+    }
+    .row-example-clue {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #1d4ed8;
+      min-width: 2rem;
+      text-align: right;
+      line-height: 1;
+    }
+    .row-example-cells {
+      display: flex;
+      gap: 2px;
+    }
+    .ex-cell {
+      width: 20px;
+      height: 20px;
+      border: 1.5px solid #d1d5db;
+      background: #fff;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .ex-cell.ex-filled {
+      background: #1e293b;
+      border-color: #1e293b;
+    }
+    .row-example-caption {
+      font-size: 0.78rem;
+      color: #6b7280;
+      line-height: 1.3;
+    }
+
+    /* ── Win modal content ─────────────────────────────────────────────────── */
+    .win-body {
+      text-align: center;
+      padding: 0.5rem 0 0;
+    }
+    .win-emoji {
+      font-size: 3.2rem;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+    .win-body h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #16a34a;
+      margin-bottom: 0.4rem;
+    }
+    .win-body p {
+      color: #6b7280;
+      font-size: 0.95rem;
+      margin-bottom: 0.3rem;
+    }
+    .win-puzzle-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 1rem;
+    }
+    /* solution preview grid */
+    .win-preview {
+      display: none;
+      margin: 0 auto 1rem;
+      gap: 2px;
+      grid-template-columns: repeat(10, 1fr);
+      width: 160px;
+    }
+    .win-preview.visible { display: grid; }
+    .win-preview-cell {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: #e5e7eb;
+    }
+    .win-preview-cell.filled { background: #1e293b; }
+    .win-btn-row {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-next {
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.65rem 1.6rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
+    }
+    .btn-next:hover { background: #15803d; }
+    .btn-view-puzzle {
+      background: transparent;
+      color: #2563eb;
+      border: 2px solid #2563eb;
+      border-radius: 8px;
+      padding: 0.65rem 1.4rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-view-puzzle:hover { background: #2563eb; color: #fff; }
+    .btn-view-puzzle.active { background: #2563eb; color: #fff; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ───────────────────────────────────────────────────────────────── -->
+<div class="header">
+  <h1>Nonogram</h1>
+  <p class="date-label" id="dateLabel" style="display:none"></p>
+
+  <div class="stats-row">
+    <div class="stat">
+      <span class="stat-label">Time</span>
+      <span class="stat-value" id="timerDisplay">00:00</span>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <div class="tool-toggle" id="toolToggle">
+      <button class="tool-btn active" id="toolFill" title="Fill mode">■</button>
+      <button class="tool-btn"        id="toolMark" title="Mark mode">✕</button>
+    </div>
+    <button class="btn-reset" id="resetBtn">Reset Puzzle</button>
+    <button class="btn-new"   id="newBtn">New Puzzle</button>
+    <button class="btn-help"  id="helpBtn">?</button>
+  </div>
+</div>
+
+<!-- ── Nonogram grid (built by JS) ──────────────────────────────────────────── -->
+<div class="nonogram" id="nonogram"></div>
+
+<!-- ── Help modal ───────────────────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="helpModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">How to Play</span>
+      <button class="modal-close" id="helpClose" aria-label="Close">✕</button>
+    </div>
+    <ul class="rules-list">
+      <li>The numbers on the <strong>left</strong> of each row describe how the row's cells should be filled, from left to right.</li>
+      <li>Similarly, the numbers on the <strong>top</strong> of each column describe how the column's cells should be filled, from top to bottom.</li>
+      <li>Spaces between numbers indicate the presence of at least one empty cell between consecutive filled cells.</li>
+      <li class="example-item">
+        <div style="font-size:0.78rem;font-weight:600;color:#6b7280;margin-bottom:0.35rem;padding-left:0.1rem;">Example:</div>
+        <div class="row-example">
+          <span class="row-example-clue">3 2</span>
+          <div class="row-example-cells">
+            <div class="ex-cell"></div>
+            <div class="ex-cell"></div>
+            <div class="ex-cell ex-filled"></div>
+            <div class="ex-cell ex-filled"></div>
+            <div class="ex-cell ex-filled"></div>
+            <div class="ex-cell"></div>
+            <div class="ex-cell ex-filled"></div>
+            <div class="ex-cell ex-filled"></div>
+            <div class="ex-cell"></div>
+            <div class="ex-cell"></div>
+          </div>
+        </div>
+      </li>
+      <li>Use the <strong>■ / ✕ toggle</strong> at the top to switch between Fill mode and Mark mode.</li>
+      <li>In <strong>Fill mode (■)</strong>: click a cell to fill it; click it again to clear it.</li>
+      <li>In <strong>Mark mode (✕)</strong>: click a cell to mark it with an X as a reminder it should stay empty; click it again to clear the mark.</li>
+      <li>The puzzle is solved when all filled cells match the hidden picture exactly.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ── Win modal ────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="winModal">
+  <div class="modal-box">
+    <div class="win-body">
+      <span class="win-emoji">🎉</span>
+      <h2>Puzzle Solved!</h2>
+      <p>The pattern was</p>
+      <div class="win-puzzle-name" id="winPuzzleName"></div>
+      <div class="win-preview" id="winPreview"></div>
+      <div class="win-btn-row">
+        <button class="btn-next" id="nextPuzzleBtn">Next Puzzle</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="puzzles.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// SEEDED RNG  (Mulberry32 + FNV-1a, same algorithm as Slide Puzzle)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function mulberry32(seed) {
+  let s = seed;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hashString(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 0x01000193) | 0;
+  }
+  return h >>> 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const ROWS = 10;
+const COLS = 10;
+// Cell states
+const EMPTY  = 0;
+const MARKED = 1; // X mark
+const FILLED = 2;
+
+let currentPuzzleIndex = -1;
+let solution = [];    // 2D boolean [row][col]
+let cellState = [];   // 2D EMPTY/MARKED/FILLED [row][col]
+let rowClues = [];    // array of arrays
+let colClues = [];    // array of arrays
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STOPWATCH
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let elapsed = 0;
+let timerInterval = null;
+const timerDisplay = document.getElementById('timerDisplay');
+
+function formatTime(s) {
+  const mm = String(Math.floor(s / 60)).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  return `${mm}:${ss}`;
+}
+
+function startTimer() {
+  if (timerInterval) return;
+  timerInterval = setInterval(() => {
+    elapsed++;
+    timerDisplay.textContent = formatTime(elapsed);
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+function resetTimer() {
+  stopTimer();
+  elapsed = 0;
+  timerDisplay.textContent = formatTime(0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TOOL MODE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Tool mode: 'fill' | 'mark'
+let toolMode = 'fill';
+
+function setToolMode(mode) {
+  toolMode = mode;
+  document.getElementById('toolFill').classList.toggle('active', mode === 'fill');
+  document.getElementById('toolMark').classList.toggle('active', mode === 'mark');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CLUE COMPUTATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function computeClues(sol) {
+  const rc = [];
+  const cc = [];
+
+  for (let r = 0; r < ROWS; r++) {
+    const clue = [];
+    let run = 0;
+    for (let c = 0; c < COLS; c++) {
+      if (sol[r][c]) { run++; }
+      else if (run > 0) { clue.push(run); run = 0; }
+    }
+    if (run > 0) clue.push(run);
+    rc.push(clue.length ? clue : [0]);
+  }
+
+  for (let c = 0; c < COLS; c++) {
+    const clue = [];
+    let run = 0;
+    for (let r = 0; r < ROWS; r++) {
+      if (sol[r][c]) { run++; }
+      else if (run > 0) { clue.push(run); run = 0; }
+    }
+    if (run > 0) clue.push(run);
+    cc.push(clue.length ? clue : [0]);
+  }
+
+  return { rc, cc };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PUZZLE LOADING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function parsePuzzle(puzzle) {
+  return puzzle.rows.map(row => row.split("").map(ch => ch === "1"));
+}
+
+function loadPuzzle(index) {
+  currentPuzzleIndex = index;
+  solution = parsePuzzle(PUZZLES[index]);
+  const { rc, cc } = computeClues(solution);
+  rowClues = rc;
+  colClues = cc;
+  cellState = Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY));
+  resetTimer();
+  startTimer();
+  renderClues();
+  renderCells();
+}
+
+function resetPuzzle() {
+  cellState = Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY));
+  resetTimer();
+  startTimer();
+  renderCells();
+}
+
+function pickNextPuzzle() {
+  const total = PUZZLES.length;
+  let next = Math.floor(Math.random() * total);
+  if (total > 1 && next === currentPuzzleIndex) {
+    next = (next + 1) % total;
+  }
+  loadPuzzle(next);
+  // When picking a new random puzzle, clear the date label
+  const lbl = document.getElementById('dateLabel');
+  lbl.style.display = 'none';
+  lbl.textContent = '';
+}
+
+function pickDatePuzzle(dateStr) {
+  const rng = mulberry32(hashString('nonogram:' + dateStr));
+  const index = Math.floor(rng() * PUZZLES.length);
+  loadPuzzle(index);
+  const lbl = document.getElementById('dateLabel');
+  lbl.textContent = 'Daily Puzzle · ' + dateStr;
+  lbl.style.display = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GRID RENDERING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const nonogramEl = document.getElementById("nonogram");
+
+function buildGrid() {
+  nonogramEl.innerHTML = "";
+
+  // Corner
+  const corner = document.createElement("div");
+  corner.className = "corner";
+  nonogramEl.appendChild(corner);
+
+  // Column clue cells (10 cells in top row)
+  for (let c = 0; c < COLS; c++) {
+    const div = document.createElement("div");
+    div.className = "col-clue";
+    div.id = `cc-${c}`;
+    nonogramEl.appendChild(div);
+  }
+
+  // Row clue + puzzle cells (10 rows)
+  for (let r = 0; r < ROWS; r++) {
+    // Row clue cell
+    const rcDiv = document.createElement("div");
+    rcDiv.className = "row-clue";
+    rcDiv.id = `rc-${r}`;
+    nonogramEl.appendChild(rcDiv);
+
+    // Puzzle cells
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      cell.id = `cell-${r}-${c}`;
+      attachCellHandlers(cell, r, c);
+      nonogramEl.appendChild(cell);
+    }
+  }
+}
+
+function renderClues() {
+  // Column clues
+  for (let c = 0; c < COLS; c++) {
+    const div = document.getElementById(`cc-${c}`);
+    div.innerHTML = "";
+    colClues[c].forEach(n => {
+      const span = document.createElement("span");
+      span.textContent = n;
+      div.appendChild(span);
+    });
+  }
+  // Row clues
+  for (let r = 0; r < ROWS; r++) {
+    const div = document.getElementById(`rc-${r}`);
+    div.innerHTML = "";
+    rowClues[r].forEach(n => {
+      const span = document.createElement("span");
+      span.textContent = n;
+      div.appendChild(span);
+    });
+  }
+}
+
+function renderCells() {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      updateCellDOM(r, c);
+    }
+  }
+}
+
+function updateCellDOM(r, c) {
+  const cell = document.getElementById(`cell-${r}-${c}`);
+  cell.classList.remove("state-x", "state-filled");
+  const state = cellState[r][c];
+  if (state === MARKED) cell.classList.add("state-x");
+  if (state === FILLED) cell.classList.add("state-filled");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CELL INTERACTION  (click + click-drag painting)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// dragAction: the state to WRITE to every cell entered during a drag.
+// Determined on mousedown from the first cell's current state so the whole
+// stroke is consistent (e.g. all-fill or all-clear, never a mix).
+let dragAction = null; // null | EMPTY | FILLED | MARKED
+
+function applyDragAction(r, c) {
+  if (dragAction === null) return;
+  if (toolMode === 'fill') {
+    if (dragAction === FILLED && cellState[r][c] !== FILLED) {
+      cellState[r][c] = FILLED;
+    } else if (dragAction === EMPTY && cellState[r][c] === FILLED) {
+      cellState[r][c] = EMPTY;
+    }
+  } else {
+    // mark mode — never touch filled cells
+    if (cellState[r][c] === FILLED) return;
+    if (dragAction === MARKED && cellState[r][c] !== MARKED) {
+      cellState[r][c] = MARKED;
+    } else if (dragAction === EMPTY && cellState[r][c] === MARKED) {
+      cellState[r][c] = EMPTY;
+    }
+  }
+  updateCellDOM(r, c);
+}
+
+function attachCellHandlers(cell, r, c) {
+  cell.addEventListener("mousedown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault(); // prevent text-select while dragging
+    const state = cellState[r][c];
+    if (toolMode === 'fill') {
+      dragAction = state === FILLED ? EMPTY : FILLED;
+    } else {
+      if (state === FILLED) { dragAction = null; return; }
+      dragAction = state === MARKED ? EMPTY : MARKED;
+    }
+    cellState[r][c] = dragAction;
+    updateCellDOM(r, c);
+    checkWin();
+  });
+
+  cell.addEventListener("mouseenter", () => {
+    if (dragAction === null) return;
+    applyDragAction(r, c);
+    checkWin();
+  });
+}
+
+// End drag on mouseup anywhere
+document.addEventListener("mouseup", () => { dragAction = null; });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WIN DETECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function checkWin() {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const isFilled = cellState[r][c] === FILLED;
+      if (isFilled !== solution[r][c]) return; // mismatch
+    }
+  }
+  // All cells match!
+  showWinModal();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const helpModal    = document.getElementById("helpModal");
+const winModal     = document.getElementById("winModal");
+
+function showWinModal() {
+  stopTimer();
+  // Populate puzzle name
+  const puzzle = PUZZLES[currentPuzzleIndex];
+  document.getElementById("winPuzzleName").textContent = puzzle ? puzzle.name : "";
+  // Build preview
+  const preview = document.getElementById("winPreview");
+  preview.innerHTML = "";
+  if (puzzle) {
+    puzzle.rows.forEach(row => {
+      row.split("").forEach(ch => {
+        const cell = document.createElement("div");
+        cell.className = "win-preview-cell" + (ch === "1" ? " filled" : "");
+        preview.appendChild(cell);
+      });
+    });
+  }
+  preview.classList.add("visible");
+  winModal.classList.remove("hidden");
+}
+function hideWinModal()  { winModal.classList.add("hidden"); }
+function showHelpModal() { helpModal.classList.remove("hidden"); }
+function hideHelpModal() { helpModal.classList.add("hidden"); }
+
+// Close modals when clicking overlay background
+helpModal.addEventListener("click", e => { if (e.target === helpModal) hideHelpModal(); });
+winModal.addEventListener("click",  e => { if (e.target === winModal)  hideWinModal(); });
+
+document.getElementById("helpClose").addEventListener("click", hideHelpModal);
+document.getElementById("helpBtn").addEventListener("click",   showHelpModal);
+
+document.getElementById("toolFill").addEventListener("click", () => setToolMode('fill'));
+document.getElementById("toolMark").addEventListener("click", () => setToolMode('mark'));
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  hideWinModal();
+  resetPuzzle();
+});
+
+document.getElementById("newBtn").addEventListener("click", () => {
+  hideWinModal();
+  pickNextPuzzle();
+});
+
+document.getElementById("nextPuzzleBtn").addEventListener("click", () => {
+  hideWinModal();
+  pickNextPuzzle();
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+buildGrid();
+
+// Check for ?date=YYYY-MM-DD in URL
+const _urlDate = new URLSearchParams(window.location.search).get('date');
+if (_urlDate) {
+  pickDatePuzzle(_urlDate);
+} else {
+  pickNextPuzzle();
+}
+</script>
+</body>
+</html>

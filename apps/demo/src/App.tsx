@@ -37,7 +37,10 @@ const storage = new LocalStorageAdapter();
 // App
 // ---------------------------------------------------------------------------
 export function App() {
-  const [activeTab, setActiveTab] = useState<"assumption" | "slide">("slide");
+  const [activeTab, setActiveTab] = useState<"assumption" | "slide" | "nonogram">("slide");
+
+  // ── Nonogram controls ──
+  const [nonogramDate, setNonogramDate] = useState<string>("");
 
   // ── Slide Puzzle controls ──
   const [slideDifficulty, setSlideDifficulty] = useState<SlidePuzzleDifficulty>("medium");
@@ -97,6 +100,13 @@ export function App() {
           onClick={() => setActiveTab("assumption")}
         >
           📊 Assumption Drift
+        </button>
+        <button
+          type="button"
+          className={`${styles.tab} ${activeTab === "nonogram" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("nonogram")}
+        >
+          🟫 Nonogram
         </button>
       </nav>
 
@@ -248,6 +258,34 @@ export function App() {
                 <pre className={styles.resultPre}>{JSON.stringify(result, null, 2)}</pre>
               </section>
             )}
+          </>
+        )}
+        {/* ── Nonogram tab ── */}
+        {activeTab === "nonogram" && (
+          <>
+            <section className={styles.selector}>
+              <div className={styles.selectorRow}>
+                <div className={styles.selectorField}>
+                  <label className={styles.selectLabel} htmlFor="nonogram-date">
+                    Date (daily puzzle)
+                  </label>
+                  <input
+                    id="nonogram-date"
+                    type="date"
+                    className={styles.select}
+                    value={nonogramDate}
+                    onChange={(e) => setNonogramDate(e.target.value)}
+                    placeholder="optional"
+                  />
+                </div>
+              </div>
+            </section>
+            <iframe
+              key={nonogramDate}
+              src={nonogramDate ? `/nonogram?date=${nonogramDate}` : "/nonogram"}
+              title="Nonogram Puzzle"
+              className={styles.nonogramFrame}
+            />
           </>
         )}
       </main>
