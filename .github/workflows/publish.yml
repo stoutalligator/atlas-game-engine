@@ -24,6 +24,9 @@ jobs:
           registry-url: https://npm.pkg.github.com
           scope: "@stoutalligator"
 
+      - name: Approve build scripts
+        run: pnpm approve-builds --all
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
