@@ -23,11 +23,8 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Approve build scripts
-        run: pnpm approve-builds --all
-
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --allow-build=@biomejs/biome --allow-build=esbuild
 
       - name: Lint
         run: pnpm lint
