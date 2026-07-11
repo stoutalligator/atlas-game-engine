@@ -6,9 +6,6 @@
   "engines": {
     "node": ">=22"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild"]
-  },
   "scripts": {
     "dev": "pnpm --filter \"apps/demo\" dev",
     "build": "pnpm --filter \"@stoutalligator/engine\" build && pnpm --filter \"apps/demo\" build",
