@@ -31,8 +31,8 @@ atlas-game-engine/
 
 ## Requirements
 
-- **Node >= 20**
-- **pnpm >= 9** — install via `npm i -g pnpm` if needed
+- **Node >= 22**
+- **pnpm >= 11**
 
 ---
 
