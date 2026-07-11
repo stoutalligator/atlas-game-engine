@@ -175,6 +175,10 @@
   cursor: not-allowed;
 }
 
+.visuallyHidden {
+  visibility: hidden;
+}
+
 .feedback {
   background: var(--ad-color-bg-feedback);
   border: var(--ad-border-width-card) var(--ad-border-style) var(--ad-color-border-subtle);

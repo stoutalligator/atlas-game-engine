@@ -279,37 +279,33 @@ export function AssumptionDrift({ pack, storage, onComplete }: GameComponentProp
             })}
           </div>
 
-          {!submitted && (
-            <button
-              type="button"
-              className={styles.button}
-              onClick={handleSubmit}
-              disabled={!selectedChoiceId}
-            >
-              Submit
-            </button>
-          )}
+          <button
+            type="button"
+            className={`${styles.button} ${submitted ? styles.visuallyHidden : ""}`}
+            onClick={handleSubmit}
+            disabled={!selectedChoiceId || submitted}
+          >
+            Submit
+          </button>
 
-          {submitted && (
-            <div className={styles.feedback}>
-              <p className={selectedChoiceId === question.answer ? styles.correct : styles.incorrect}>
-                {selectedChoiceId === question.answer
-                  ? "✅ Correct!"
-                  : `❌ The answer was: ${correctChoice?.label}`}
+          <div className={`${styles.feedback} ${!submitted ? styles.visuallyHidden : ""}`}>
+            <p className={selectedChoiceId === question.answer ? styles.correct : styles.incorrect}>
+              {selectedChoiceId === question.answer
+                ? "✅ Correct!"
+                : `❌ The answer was: ${correctChoice?.label}`}
+            </p>
+            <p className={styles.solutionText}>{question.solution.text}</p>
+            {!isLast && (
+              <button type="button" className={styles.button} onClick={handleNext}>
+                Next question
+              </button>
+            )}
+            {isLast && (
+              <p className={styles.solutionText}>
+                <em>Calculating results…</em>
               </p>
-              <p className={styles.solutionText}>{question.solution.text}</p>
-              {!isLast && (
-                <button type="button" className={styles.button} onClick={handleNext}>
-                  Next question
-                </button>
-              )}
-              {isLast && (
-                <p className={styles.solutionText}>
-                  <em>Calculating results…</em>
-                </p>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
