@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "description": "Assumption Drift daily game engine monorepo",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "pnpm --filter \"apps/demo\" dev",
