@@ -171,6 +171,9 @@ export function AssumptionDrift({ pack, storage, onComplete }: GameComponentProp
             {copied ? "Copied!" : "Copy result"}
           </button>
         </div>
+        <p className={styles.completionMessage}>
+          You've completed today's puzzle! Come back tomorrow for the next one.
+        </p>
         {responses.map((r, i) => {
           const q = questions[i];
           const chosen = q?.choices.find((c) => c.id === r.choiceId);
@@ -238,73 +241,77 @@ export function AssumptionDrift({ pack, storage, onComplete }: GameComponentProp
       <h2 className={styles.title}>{typedPack.title}</h2>
       <p className={styles.instructions}>{typedPack.payload.instructions}</p>
 
-      <div className={styles.card}>
-        <p className={styles.label}>Scenario</p>
-        <p className={styles.scenario}>{question.scenario}</p>
+      <div className={styles.questionLayout}>
+        <div className={styles.card}>
+          <p className={styles.label}>Scenario</p>
+          <p className={styles.scenario}>{question.scenario}</p>
 
-        <p className={styles.label}>Drift</p>
-        <p className={styles.drift}>{question.drift}</p>
+          <p className={styles.label}>Drift</p>
+          <p className={styles.drift}>{question.drift}</p>
 
-        <p className={styles.prompt}>{question.prompt}</p>
-      </div>
+          <p className={styles.prompt}>{question.prompt}</p>
+        </div>
 
-      <div className={styles.choices}>
-        {question.choices.map((choice) => {
-          let choiceClass = styles.choice;
-          if (submitted) {
-            if (choice.id === question.answer)
-              choiceClass = `${styles.choice} ${styles.choiceCorrect}`;
-            else if (choice.id === selectedChoiceId)
-              choiceClass = `${styles.choice} ${styles.choiceWrong}`;
-          } else if (choice.id === selectedChoiceId) {
-            choiceClass = `${styles.choice} ${styles.choiceSelected}`;
-          }
+        <div className={styles.choicesPanel}>
+          <div className={styles.choices}>
+            {question.choices.map((choice) => {
+              let choiceClass = styles.choice;
+              if (submitted) {
+                if (choice.id === question.answer)
+                  choiceClass = `${styles.choice} ${styles.choiceCorrect}`;
+                else if (choice.id === selectedChoiceId)
+                  choiceClass = `${styles.choice} ${styles.choiceWrong}`;
+              } else if (choice.id === selectedChoiceId) {
+                choiceClass = `${styles.choice} ${styles.choiceSelected}`;
+              }
 
-          return (
+              return (
+                <button
+                  key={choice.id}
+                  type="button"
+                  className={choiceClass}
+                  onClick={() => !submitted && setSelectedChoiceId(choice.id)}
+                  disabled={submitted}
+                >
+                  {choice.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {!submitted && (
             <button
-              key={choice.id}
               type="button"
-              className={choiceClass}
-              onClick={() => !submitted && setSelectedChoiceId(choice.id)}
-              disabled={submitted}
+              className={styles.button}
+              onClick={handleSubmit}
+              disabled={!selectedChoiceId}
             >
-              {choice.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {!submitted && (
-        <button
-          type="button"
-          className={styles.button}
-          onClick={handleSubmit}
-          disabled={!selectedChoiceId}
-        >
-          Submit
-        </button>
-      )}
-
-      {submitted && (
-        <div className={styles.feedback}>
-          <p className={selectedChoiceId === question.answer ? styles.correct : styles.incorrect}>
-            {selectedChoiceId === question.answer
-              ? "✅ Correct!"
-              : `❌ The answer was: ${correctChoice?.label}`}
-          </p>
-          <p className={styles.solutionText}>{question.solution.text}</p>
-          {!isLast && (
-            <button type="button" className={styles.button} onClick={handleNext}>
-              Next question
+              Submit
             </button>
           )}
-          {isLast && (
-            <p className={styles.solutionText}>
-              <em>Calculating results…</em>
-            </p>
+
+          {submitted && (
+            <div className={styles.feedback}>
+              <p className={selectedChoiceId === question.answer ? styles.correct : styles.incorrect}>
+                {selectedChoiceId === question.answer
+                  ? "✅ Correct!"
+                  : `❌ The answer was: ${correctChoice?.label}`}
+              </p>
+              <p className={styles.solutionText}>{question.solution.text}</p>
+              {!isLast && (
+                <button type="button" className={styles.button} onClick={handleNext}>
+                  Next question
+                </button>
+              )}
+              {isLast && (
+                <p className={styles.solutionText}>
+                  <em>Calculating results…</em>
+                </p>
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

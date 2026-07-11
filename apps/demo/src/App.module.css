@@ -53,6 +53,13 @@
   border-bottom-color: #7c3aed;
 }
 
+.nonogramFrame {
+  width: 100%;
+  min-height: 680px;
+  border: none;
+  border-radius: 8px;
+}
+
 .main {
   flex: 1;
   max-width: 900px;

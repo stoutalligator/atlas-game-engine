@@ -1,0 +1,13 @@
+{
+  "name": "apps/nonogram",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite ../../packages/engine/src/games/nonogram --port 5174",
+    "build": "vite build ../../packages/engine/src/games/nonogram --outDir ../../../dist/nonogram"
+  },
+  "devDependencies": {
+    "vite": "^6.0.7"
+  }
+}

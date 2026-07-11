@@ -3,7 +3,7 @@
    Structural values (max-width, padding, gap) remain hardcoded. */
 
 .container {
-  max-width: 680px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 1.5rem 1rem;
   font-family: var(--ad-font-base);
@@ -36,8 +36,33 @@
   border: var(--ad-border-width-card) var(--ad-border-style) var(--ad-color-border);
   border-radius: var(--ad-radius-md);
   padding: 1.25rem;
-  margin-bottom: 1.25rem;
   box-shadow: var(--ad-shadow-card);
+  flex: 1;
+  min-width: 0;
+}
+
+.questionLayout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: stretch;
+  margin-bottom: 1.25rem;
+}
+
+.choicesPanel {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 600px) {
+  .questionLayout {
+    flex-direction: column;
+  }
+
+  .choicesPanel {
+    flex: unset;
+    width: 100%;
+  }
 }
 
 .label {
@@ -182,6 +207,15 @@
 
 .results {
   text-align: center;
+  margin-bottom: 1rem;
+}
+
+.completionMessage {
+  text-align: center;
+  color: var(--ad-color-text-muted);
+  font-size: calc(0.9rem * var(--ad-font-scale, 1));
+  font-family: var(--ad-font-content);
+  font-style: italic;
   margin-bottom: 1.5rem;
 }
 
