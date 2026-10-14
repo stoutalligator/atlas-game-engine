@@ -3,6 +3,9 @@ name: Publish
 on:
   release:
     types: [published]
+  # Pushing a vX.Y.Z tag also publishes, so a release can be cut from the CLI.
+  push:
+    tags: ["v*"]
 
 jobs:
   publish:

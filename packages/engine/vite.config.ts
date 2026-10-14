@@ -8,24 +8,26 @@ export default defineConfig({
     react(),
     dts({
       include: ["src"],
+      exclude: ["src/**/__tests__/**"],
       outDir: "dist",
     }),
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, "src/index.ts"),
-      name: "AtlasEngine",
+      entry: {
+        index: resolve(__dirname, "src/index.ts"),
+        catalog: resolve(__dirname, "src/catalog-entry.ts"),
+      },
       formats: ["es", "cjs"],
-      fileName: (format) => `index.${format === "es" ? "js" : "cjs"}`,
+      fileName: (format, entry) => `${entry}.${format === "es" ? "js" : "cjs"}`,
+      cssFileName: "styles",
     },
     rollupOptions: {
-      external: ["react", "react/jsx-runtime", "zod"],
+      external: ["react", "react/jsx-runtime", "react-dom"],
       output: {
-        globals: {
-          react: "React",
-          "react/jsx-runtime": "ReactJsxRuntime",
-          zod: "Zod",
-        },
+        // The main entry is all client components; the catalog entry stays
+        // server-safe.
+        banner: (chunk) => (chunk.isEntry && chunk.name === "index" ? '"use client";' : ""),
       },
     },
   },

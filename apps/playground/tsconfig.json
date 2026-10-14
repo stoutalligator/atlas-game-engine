@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": { "@stoutalligator/engine": ["../../packages/engine/src/index.ts"] }
+  },
+  "include": ["src", "../../packages/engine/src/css.d.ts"]
+}
