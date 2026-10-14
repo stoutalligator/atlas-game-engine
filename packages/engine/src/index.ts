@@ -13,7 +13,8 @@ export {
   type AssumptionDriftProps,
 } from "./games/assumption-drift/AssumptionDrift.js";
 export { BoxPlot } from "./games/box-plot/BoxPlot.js";
-export { CubeRush, cubeRushForDate } from "./games/cube-rush/CubeRush.js";
+export { CubeRush } from "./games/cube-rush/CubeRush.js";
+export { cubeRushForDate } from "./games/cube-rush/daily.js";
 export { RiskPool } from "./games/risk-pool/RiskPool.js";
 
 // Content + puzzle helpers

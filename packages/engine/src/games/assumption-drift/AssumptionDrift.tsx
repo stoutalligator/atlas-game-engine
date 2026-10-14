@@ -83,6 +83,8 @@ function DriftGame({
         { label: "Correct", value: `${score}/${questions.length}` },
         { label: "Time", value: formatClock(state.elapsed) },
       ],
+      score: { correct: score, total: questions.length },
+      proof: { packId: pack.packId, answers: state.answers },
       shareText: shareText("assumption-drift", date, [
         packSubtitle(pack),
         `${grid} ${score}/${questions.length}`,

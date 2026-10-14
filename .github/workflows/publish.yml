@@ -36,7 +36,7 @@ jobs:
             echo "Tag '$GITHUB_REF_NAME' does not match expected 'vX.Y.Z' format" && exit 1
           fi
           VERSION="${GITHUB_REF_NAME#v}"
-          cd packages/engine && npm version "$VERSION" --no-git-tag-version
+          cd packages/engine && npm version "$VERSION" --no-git-tag-version --allow-same-version
 
       - name: Build
         run: pnpm --filter "@stoutalligator/engine" build

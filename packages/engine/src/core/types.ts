@@ -14,7 +14,22 @@ export interface GameResult {
   solved: boolean;
   durationSec: number;
   stats: GameStat[];
+  /** Numbers for ranking (leaderboards). Which fields are set depends on the game. */
+  score: GameScore;
+  /**
+   * What the player did, so a server can re-check the result with
+   * verifyGameResult (from "@stoutalligator/engine/server") instead of
+   * trusting the client.
+   */
+  proof: unknown;
   shareText: string;
+}
+
+export interface GameScore {
+  moves?: number;
+  hints?: number;
+  correct?: number;
+  total?: number;
 }
 
 /**
