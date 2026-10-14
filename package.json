@@ -1,15 +1,18 @@
 {
   "name": "atlas-game-engine",
   "private": true,
-  "version": "0.0.1",
-  "description": "Assumption Drift daily game engine monorepo",
+  "version": "2.0.0",
+  "description": "ATLAS daily games — engine package and playground",
   "engines": {
-    "node": ">=22"
+    "node": ">=20"
   },
   "scripts": {
-    "dev": "pnpm --filter \"apps/demo\" dev",
-    "build": "pnpm --filter \"@stoutalligator/engine\" build && pnpm --filter \"apps/demo\" build",
-    "test": "pnpm --filter \"@stoutalligator/engine\" test",
+    "dev": "pnpm --filter playground dev",
+    "build": "pnpm --filter @stoutalligator/engine build",
+    "build:all": "pnpm --filter @stoutalligator/engine build && pnpm --filter playground build",
+    "build:cube-rush": "pnpm --filter @stoutalligator/engine exec tsx scripts/build-cube-rush-library.ts",
+    "test": "pnpm --filter @stoutalligator/engine test",
+    "typecheck": "pnpm -r exec tsc --noEmit",
     "lint": "biome check .",
     "format": "biome format --write ."
   },
