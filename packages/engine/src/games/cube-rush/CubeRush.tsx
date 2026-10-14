@@ -7,13 +7,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { dayIndex, formatClock, puzzleNumber, weekday } from "../../core/daily.js";
+import { formatClock, puzzleNumber } from "../../core/daily.js";
 import { useCompletion, useDailyProgress, usePuzzleDate, useTicker } from "../../core/progress.js";
-import { seededRng, shuffle } from "../../core/rng.js";
 import { shareText } from "../../core/share.js";
 import type { DailyGameProps, GameResult } from "../../core/types.js";
 import { Button, GameLoading, GameShell, ResultPanel } from "../../ui/Shell.js";
-import { CUBE_RUSH_LIBRARY } from "./library.js";
+import { type CubeStep, cubeRushForDate } from "./daily.js";
 import {
   ANALYST_ID,
   type CubeRushPuzzle,
@@ -24,8 +23,6 @@ import {
   type Positions,
   applyMove,
   canMove,
-  decodePuzzle,
-  difficultyForWeekday,
   isSolved,
   positionsOf,
   withPositions,
@@ -36,26 +33,10 @@ interface CubeState {
   moves: number;
   /** One entry per move: which piece, and where it started. */
   history: Array<{ id: string; from: [number, number] }>;
+  /** Every single-cell step, for server-side replay. */
+  steps?: CubeStep[];
   elapsed: number;
   done: boolean;
-}
-
-/** Today's puzzle: difficulty follows the weekday; the library is walked in a fixed shuffle. */
-export function cubeRushForDate(date: string): {
-  puzzle: CubeRushPuzzle;
-  par: number;
-  difficulty: Difficulty;
-} {
-  const difficulty = difficultyForWeekday(weekday(date));
-  const list = CUBE_RUSH_LIBRARY[difficulty];
-  const order = shuffle(
-    seededRng(`cube-rush:order:${difficulty}`),
-    list.map((_, i) => i),
-  );
-  const week = Math.floor(dayIndex(date) / 7);
-  const slot = (week * 7 + weekday(date)) % order.length;
-  const { puzzle, par } = decodePuzzle(list[order[slot]]);
-  return { puzzle, par, difficulty };
 }
 
 export function CubeRush({ date: dateProp, storage, onComplete }: DailyGameProps) {
@@ -77,7 +58,14 @@ function CubeRushGame({ date, storage, onComplete }: DailyGameProps & { date: st
     "cube-rush",
     date,
     storage,
-    () => ({ positions: positionsOf(base), moves: 0, history: [], elapsed: 0, done: false }),
+    () => ({
+      positions: positionsOf(base),
+      moves: 0,
+      history: [],
+      steps: [],
+      elapsed: 0,
+      done: false,
+    }),
   );
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -99,6 +87,8 @@ function CubeRushGame({ date, storage, onComplete }: DailyGameProps & { date: st
         { label: "Par", value: String(par) },
         { label: "Time", value: formatClock(state.elapsed) },
       ],
+      score: { moves: state.moves },
+      proof: { steps: state.steps ?? [] },
       shareText: shareText("cube-rush", date, [
         `${DIFF_EMOJI[difficulty]} ${difficulty[0].toUpperCase()}${difficulty.slice(1)}`,
         `${underPar ? "⭐" : "🚪"} ${state.moves} moves (par ${par}) · ⏱ ${formatClock(state.elapsed)}`,
@@ -126,6 +116,7 @@ function CubeRushGame({ date, storage, onComplete }: DailyGameProps & { date: st
         positions: positionsOf(next),
         moves: sameMove ? s.moves : s.moves + 1,
         history: sameMove ? s.history : [...s.history, { id, from: [piece.col, piece.row] }],
+        steps: [...(s.steps ?? []), [id, dir]],
         done: isSolved(next),
       };
       latest.current = nextState;
@@ -139,16 +130,22 @@ function CubeRushGame({ date, storage, onComplete }: DailyGameProps & { date: st
     setState((s) => {
       const last = s.history[s.history.length - 1];
       if (!last || s.done) return s;
+      // Drop the trailing run of steps that made up the last move.
+      const steps = [...(s.steps ?? [])];
+      while (steps.length && steps[steps.length - 1][0] === last.id) steps.pop();
       return {
         ...s,
         positions: { ...s.positions, [last.id]: last.from },
         moves: s.moves - 1,
         history: s.history.slice(0, -1),
+        steps,
       };
     });
 
   const reset = () =>
-    setState((s) => (s.done ? s : { ...s, positions: positionsOf(base), moves: 0, history: [] }));
+    setState((s) =>
+      s.done ? s : { ...s, positions: positionsOf(base), moves: 0, history: [], steps: [] },
+    );
 
   // Arrow keys move the selected piece.
   useEffect(() => {

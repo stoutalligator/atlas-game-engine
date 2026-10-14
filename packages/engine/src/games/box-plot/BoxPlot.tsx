@@ -57,6 +57,8 @@ function BoxPlotGame({ date, storage, onComplete }: DailyGameProps & { date: str
         { label: "Time", value: formatClock(state.elapsed) },
         { label: "Picture", value: puzzle.name },
       ],
+      score: {},
+      proof: { cells: state.cells },
       shareText: shareText("box-plot", date, [`🟦 Solved in ${formatClock(state.elapsed)}`]),
     };
   }, [state, date, puzzle.name]);

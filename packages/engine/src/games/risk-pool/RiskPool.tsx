@@ -68,6 +68,8 @@ function RiskPoolGame({ date, storage, onComplete }: DailyGameProps & { date: st
         { label: "Hints", value: String(state.hints) },
         { label: "Break-ups", value: String(state.breaks) },
       ],
+      score: { hints: state.hints },
+      proof: { pools: state.pools, hints: state.hints },
       shareText: shareText("risk-pool", date, [
         `${state.hints === 0 ? "🛡️" : "💡"} ${pz.size}×${pz.size} · premium ${pz.target}`,
         `⏱ ${formatClock(state.elapsed)} · ${state.hints} hint${state.hints === 1 ? "" : "s"} · ${state.breaks} break-up${state.breaks === 1 ? "" : "s"}`,

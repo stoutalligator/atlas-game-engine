@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cubeRushForDate } from "../games/cube-rush/CubeRush.js";
+import { countMoves, cubeRushForDate, replayCubeRush } from "../games/cube-rush/daily.js";
 import { CUBE_RUSH_LIBRARY } from "../games/cube-rush/library.js";
 import {
   ANALYST_ID,
@@ -72,5 +72,24 @@ describe("cube rush rules", () => {
   it("round-trips saved positions", () => {
     const { puzzle } = decodePuzzle(CUBE_RUSH_LIBRARY.medium[0]);
     expect(withPositions(puzzle, positionsOf(puzzle))).toEqual(puzzle);
+  });
+});
+
+describe("cube rush replay", () => {
+  it("counts runs of the same piece as one move", () => {
+    expect(
+      countMoves([
+        ["a", "up"],
+        ["a", "up"],
+        ["b", "left"],
+        ["a", "down"],
+      ]),
+    ).toBe(3);
+  });
+
+  it("rejects illegal or unfinished step lists", () => {
+    const { puzzle } = cubeRushForDate("2026-10-14");
+    expect(replayCubeRush(puzzle, [])).toBeNull();
+    expect(replayCubeRush(puzzle, [["nope", "up"]])).toBeNull();
   });
 });
