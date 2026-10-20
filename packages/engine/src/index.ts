@@ -12,6 +12,20 @@ export {
   AssumptionDrift,
   type AssumptionDriftProps,
 } from "./games/assumption-drift/AssumptionDrift.js";
+export {
+  BlackSwan,
+  type BlackSwanApi,
+  type BlackSwanDay,
+  type BlackSwanPrompt,
+  type BlackSwanProps,
+  type BlackSwanSlotState,
+} from "./games/black-swan/BlackSwan.js";
+export { BLACK_SWAN_TIERS } from "./games/black-swan/logic.js";
+export type {
+  BlackSwanSlotResult,
+  BlackSwanTierKey,
+  GuessMatch,
+} from "./games/black-swan/logic.js";
 export { BoxPlot } from "./games/box-plot/BoxPlot.js";
 export { CubeRush } from "./games/cube-rush/CubeRush.js";
 export { cubeRushForDate } from "./games/cube-rush/daily.js";

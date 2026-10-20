@@ -2,7 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "paths": { "@stoutalligator/engine": ["../../packages/engine/src/index.ts"] }
+    "paths": {
+      "@stoutalligator/engine": ["../../packages/engine/src/index.ts"],
+      "@stoutalligator/engine/server": ["../../packages/engine/src/server-entry.ts"]
+    },
+    "resolveJsonModule": true
   },
   "include": ["src", "../../packages/engine/src/css.d.ts"]
 }

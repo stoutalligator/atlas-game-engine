@@ -18,4 +18,18 @@ export type {
 } from "./games/assumption-drift/pack.js";
 export type { GameId } from "./core/types.js";
 export { readDailyStatus, readStreak } from "./core/storage.js";
+export {
+  BLACK_SWAN_MAX_SCORE,
+  BLACK_SWAN_PROMPTS,
+  BLACK_SWAN_SECONDS,
+  BLACK_SWAN_TIERS,
+  BlackSwanPackError,
+  parseBlackSwanQuestions,
+} from "./games/black-swan/logic.js";
+export type {
+  BlackSwanQuestion,
+  BlackSwanSlotResult,
+  BlackSwanTierKey,
+  GuessMatch,
+} from "./games/black-swan/logic.js";
 export type { DailyStatus } from "./core/storage.js";

@@ -23,6 +23,12 @@ const PATHS: Record<GameId, React.ReactNode> = {
       <path d="M5 11h14" />
     </>
   ),
+  "black-swan": (
+    <>
+      <path d="M3 18c4 0 5-3 9-3s5 3 9 3" />
+      <path d="M12 15c-1-3 0-7 3-9 1.5-1 3-.5 3 1s-1.5 2-3 2" />
+    </>
+  ),
   "cube-rush": (
     <>
       <rect x="3" y="3" width="11" height="5" rx="1" />

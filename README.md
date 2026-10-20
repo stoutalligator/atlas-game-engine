@@ -10,6 +10,7 @@ component per game, and the games' code doesn't live in the main repo.
 | **Risk Pool** | Group neighbouring policyholders into pools whose claims hit the target premium exactly. 5×5 Mon → 7×7 weekend. | Generated daily |
 | **Box Plot** | 10×10 picture logic puzzle (nonogram). 110 pictures, all solvable without guessing. | Built-in library |
 | **Cube Rush** | Slide cubicles until the analyst can reach the exit. Easy Mon → hard weekend, with par. | Built-in verified library (240 puzzles) |
+| **Black Swan** | Five prompts ("Name a loss reserving method."). Any accepted answer counts; the rarer it is among everyone's guesses, the more it scores. | Question pool + guess counts supplied by the host's server |
 
 Every player gets the same puzzle for a date. New puzzles unlock at the player's local midnight.
 Progress, streaks, and stats are saved in the browser through a swappable storage adapter.
@@ -63,7 +64,7 @@ import { GAME_CATALOG, GameIcon, isGameId, parseAssumptionDriftPack } from "@sto
 
 | Prop | Default | |
 |---|---|---|
-| `game` | — | `"assumption-drift" \| "risk-pool" \| "box-plot" \| "cube-rush"` |
+| `game` | — | `"assumption-drift" \| "risk-pool" \| "box-plot" \| "cube-rush" \| "black-swan"` |
 | `date` | player's local date | `"YYYY-MM-DD"` — pin a date for previews |
 | `storage` | `localStorageAdapter` | any `{ load, save, remove }` (e.g. API-backed, for cross-device sync) |
 | `onComplete` | — | fires with a `GameResult` (stats + share text) when today's puzzle is finished |
@@ -74,6 +75,34 @@ amber), and the components draw no outer panel, so the host wraps them in its ow
 
 `readDailyStatus(game, date)` and `readStreak(game, date)` from `/catalog` power "✓ Solved" and 🔥 badges on
 dashboards.
+
+### Black Swan
+
+Black Swan scores against everyone's answers, so the host keeps the answer lists and the
+guesses on its server and passes the component four calls:
+
+```tsx
+import { BlackSwan, type BlackSwanApi } from "@stoutalligator/engine";
+
+const api: BlackSwanApi = { load, open, check, lock }; // e.g. server actions
+<BlackSwan api={api} onComplete={…} />   // or <AtlasGame game="black-swan" blackSwanApi={api} />
+```
+
+The pure logic for the server is in `@stoutalligator/engine/server`:
+
+| Function | |
+|---|---|
+| `parseBlackSwanQuestions(raw)` | Validates a pool (rejects an alias that matches two answers) |
+| `questionsForDate(pool, schedule, date)` | The day's five prompts (planned, or a deterministic fallback) |
+| `planSchedule(pool, { start, days, cooldownDays, existing })` | Five categories a day, least-recently-used questions, cooldown |
+| `matchGuess(question, input)` | `exact` (lock in) / `suggest` (alias or typo: confirm first) / `null` |
+| `buildRarityTable(question, counts)` | Credibility blend `Z = n / (n + 200)` of priors and real counts → tiers |
+| `scoreGuess(table, label, input)` | Mode 10 · Expected 25 · Within σ 50 · Tail 100 · Black Swan 200 |
+| `summarizeDay(results)` | Day score, mean rarity (tie-break), Black Swan count |
+
+The host should freeze one rarity table per question per day, so every player that day is
+scored against the same numbers. The playground uses an in-memory stand-in
+(`apps/playground/src/blackSwanMock.ts`).
 
 ### Assumption Drift packs
 

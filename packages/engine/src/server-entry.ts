@@ -95,6 +95,10 @@ export function verifyGameResult({
         const correct = questions.filter((q) => answers[q.id] === q.answer).length;
         return { solved: correct === questions.length, correct, total: questions.length };
       }
+      case "black-swan":
+        // Scored on the host's server as each answer is locked in (see scoreGuess):
+        // there is no client proof to replay.
+        return null;
     }
   } catch {
     return null;
@@ -114,6 +118,7 @@ export function minPlausibleSeconds(game: GameId, score: VerifiedScore): number 
     case "box-plot":
       return 15;
     case "assumption-drift":
+    case "black-swan":
       return 1;
   }
 }
@@ -138,4 +143,37 @@ export function cubeRushPar(date: string): number {
 }
 
 export { isGameId };
+
+// Black Swan: matching, rarity (credibility-weighted), scoring and scheduling.
+export {
+  BLACK_SWAN_CREDIBILITY_K,
+  BLACK_SWAN_MAX_SCORE,
+  BLACK_SWAN_PROMPTS,
+  BLACK_SWAN_SECONDS,
+  BLACK_SWAN_TIERS,
+  BlackSwanPackError,
+  blackSwanShareLine,
+  buildRarityTable,
+  matchGuess,
+  normalizeGuess,
+  parseBlackSwanQuestions,
+  planSchedule,
+  questionsForDate,
+  scoreGuess,
+  summarizeDay,
+  tierFor,
+} from "./games/black-swan/logic.js";
+export type {
+  BlackSwanAnswer,
+  BlackSwanDayScore,
+  BlackSwanQuestion,
+  BlackSwanSchedule,
+  BlackSwanSlotResult,
+  BlackSwanTier,
+  BlackSwanTierKey,
+  GuessMatch,
+  PlanOptions,
+  RarityRow,
+  RarityTable,
+} from "./games/black-swan/logic.js";
 export type { GameId };

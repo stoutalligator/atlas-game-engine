@@ -8,6 +8,7 @@ import {
   localDateKey,
 } from "@stoutalligator/engine";
 import { useState } from "react";
+import { blackSwanMock, resetBlackSwanMock } from "./blackSwanMock";
 import pack1 from "./packs/sample_pack_1.json";
 import pack2 from "./packs/sample_pack_2.json";
 import pack3 from "./packs/sample_pack_3.json";
@@ -27,6 +28,7 @@ export function App() {
     for (const key of Object.keys(localStorage))
       if (key.startsWith(`atlas-games:v2:${game}:`) && !key.endsWith(":help-seen"))
         localStorage.removeItem(key);
+    if (game === "black-swan") resetBlackSwanMock(date);
     setLast(null);
     setNonce((n) => n + 1);
   };
@@ -71,6 +73,7 @@ export function App() {
           game={game}
           date={date}
           packs={PACKS}
+          blackSwanApi={blackSwanMock}
           onComplete={setLast}
         />
       </section>
