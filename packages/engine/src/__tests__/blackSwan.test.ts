@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BLACK_SWAN_PROMPTS,
   type BlackSwanQuestion,
+  blackSwanTierSizes,
   buildRarityTable,
   matchGuess,
   parseBlackSwanQuestions,
@@ -102,6 +103,26 @@ describe("rarity", () => {
       rarity: (swan.p ?? 0) / 2,
       blackSwans: 1,
     });
+  });
+});
+
+describe("tier sizes", () => {
+  it("slices the answer list 20 / 30 / 35 / 12 / 3%, at least one per tier", () => {
+    expect(blackSwanTierSizes(33)).toEqual([7, 10, 11, 4, 1]);
+    expect(blackSwanTierSizes(70)).toEqual([14, 21, 25, 8, 2]);
+    expect(blackSwanTierSizes(11)).toEqual([2, 3, 4, 1, 1]);
+    expect(blackSwanTierSizes(5)).toEqual([1, 1, 1, 1, 1]);
+    for (let n = 5; n <= 80; n++) {
+      const s = blackSwanTierSizes(n);
+      expect(s.reduce((a, b) => a + b, 0)).toBe(n);
+      expect(Math.min(...s)).toBeGreaterThanOrEqual(1);
+    }
+  });
+  it("ranks answers and keeps each tier's positions inside its band", () => {
+    const t = buildRarityTable(reserving, {});
+    expect(t.rows.map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(t.rows.filter((r) => r.tier === "swan")).toHaveLength(1);
+    for (const r of t.rows) expect(tierFor(r.p).key).toBe(r.tier);
   });
 });
 

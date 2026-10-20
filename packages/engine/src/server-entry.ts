@@ -153,6 +153,7 @@ export {
   BLACK_SWAN_TIERS,
   BlackSwanPackError,
   blackSwanShareLine,
+  blackSwanTierSizes,
   buildRarityTable,
   matchGuess,
   normalizeGuess,
