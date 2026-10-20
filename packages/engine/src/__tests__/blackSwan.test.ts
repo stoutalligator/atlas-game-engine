@@ -92,6 +92,8 @@ describe("rarity", () => {
     const swan = scoreGuess(t, "Schnieper", "schnieper");
     expect(swan.points).toBe(200);
     expect(scoreGuess(t, "Chain ladder", "chain ladder").points).toBe(10);
+    expect(swan.ranking.map((r) => r.label)).toEqual(t.rows.map((r) => r.label));
+    expect(swan.ranking[0]).toMatchObject({ label: "Chain ladder", tier: "mode" });
     const miss = scoreGuess(t, null, "obamacare");
     expect(miss.points).toBe(0);
     expect(miss.tier).toBeNull();

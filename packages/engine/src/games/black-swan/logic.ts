@@ -230,6 +230,11 @@ export interface BlackSwanSlotResult {
   z: number;
   mostCommon: { label: string; share: number };
   rarest: string;
+  /**
+   * Every accepted answer, most common first, so the player can see the whole list once
+   * they've answered. Only ever sent after the prompt is locked in.
+   */
+  ranking: Array<{ label: string; share: number; tier: BlackSwanTierKey }>;
 }
 
 /** Scores a locked-in answer (label) against the day's frozen table. */
@@ -251,6 +256,7 @@ export function scoreGuess(
     z: table.z,
     mostCommon: { label: table.rows[0].label, share: table.rows[0].share },
     rarest: table.rows[table.rows.length - 1].label,
+    ranking: table.rows.map((r) => ({ label: r.label, share: r.share, tier: r.tier })),
   };
 }
 
