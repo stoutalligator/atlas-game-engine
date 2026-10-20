@@ -91,7 +91,7 @@ export const GAME_CATALOG: readonly GameInfo[] = [
     howToPlay: [
       "Each prompt has a list of accepted answers. Type one before the 25-second timer runs out.",
       "Not on the list? It shakes and clears — try another while time remains. Typos and short forms are offered as a correction to accept.",
-      "Rarer answers land further into the tail: Mode 10, Expected 25, Within σ 50, Tail 100, Black Swan 200 points.",
+      "Answers are ranked by how often people give them. Tiers shrink toward the tail: the most common 35% are Mode (10 points), then Expected 27% (25), Within σ 20% (50), Tail 12% (100), and the rarest 6% are Black Swans (200).",
       "Rarity blends simulated players with everyone's real answers (credibility weighting), and locks in at midnight.",
     ],
     accent: "slate",

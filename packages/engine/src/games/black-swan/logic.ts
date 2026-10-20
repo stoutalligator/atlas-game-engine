@@ -25,18 +25,32 @@ export interface BlackSwanQuestion {
 
 export class BlackSwanPackError extends Error {}
 
-/** Tiers by rarity percentile p: the share of guesses more common than yours. */
+/**
+ * Tiers cut the answer list, ranked by how common each answer is, into slices
+ * that shrink toward the tail: the most common 35% of answers are Mode, the next
+ * 27% Expected, then 20% Within σ, 12% Tail, and the rarest 6% (always at least
+ * one) Black Swan.
+ * `upTo` is each tier's upper bound on the rarity position p (see RarityRow).
+ */
 export const BLACK_SWAN_TIERS = [
-  { key: "mode", name: "Mode", points: 10, upTo: 0.2, range: "Most common 20%" },
-  { key: "expected", name: "Expected", points: 25, upTo: 0.5, range: "20–50%" },
-  { key: "sigma", name: "Within σ", points: 50, upTo: 0.85, range: "50–85%" },
-  { key: "tail", name: "Tail", points: 100, upTo: 0.97, range: "85–97%" },
+  {
+    key: "mode",
+    name: "Mode",
+    points: 10,
+    upTo: 0.35,
+    fraction: 0.35,
+    range: "Most common 35% of answers",
+  },
+  { key: "expected", name: "Expected", points: 25, upTo: 0.62, fraction: 0.27, range: "Next 27%" },
+  { key: "sigma", name: "Within σ", points: 50, upTo: 0.82, fraction: 0.2, range: "Next 20%" },
+  { key: "tail", name: "Tail", points: 100, upTo: 0.94, fraction: 0.12, range: "Next 12%" },
   {
     key: "swan",
     name: "Black Swan",
     points: 200,
     upTo: Number.POSITIVE_INFINITY,
-    range: "Rarest 3%",
+    fraction: 0.06,
+    range: "Rarest 6%",
   },
 ] as const;
 
@@ -46,6 +60,26 @@ export const BLACK_SWAN_MAX_SCORE = BLACK_SWAN_PROMPTS * BLACK_SWAN_TIERS[4].poi
 
 export function tierFor(p: number): BlackSwanTier {
   return BLACK_SWAN_TIERS.find((t) => p < t.upTo) ?? BLACK_SWAN_TIERS[4];
+}
+
+/**
+ * How many of `n` ranked answers fall in each tier (Mode … Black Swan): sized to
+ * the tier fractions, at least one per tier, and never growing toward the tail.
+ * 100 answers → 35 / 27 / 20 / 12 / 6.
+ */
+export function blackSwanTierSizes(n: number): number[] {
+  const at = (i: number) => Math.max(1, Math.round(n * BLACK_SWAN_TIERS[i].fraction));
+  const sizes = [at(0), at(1), 0, at(3), at(4)];
+  sizes[2] = n - sizes[0] - sizes[1] - sizes[3] - sizes[4];
+  // Very short lists: borrow from the bigger common tiers so Within σ keeps one.
+  while (sizes[2] < 1) {
+    const from = sizes[1] >= sizes[0] && sizes[1] > 1 ? 1 : sizes[0] > 1 ? 0 : -1;
+    if (from < 0) break;
+    sizes[from]--;
+    sizes[2]++;
+  }
+  // Rounding can leave a later tier bigger than an earlier one; tiers only shrink.
+  return sizes.sort((a, b) => b - a);
 }
 
 // ── matching ────────────────────────────────────────────────────────────────
@@ -171,7 +205,13 @@ export interface RarityRow {
   label: string;
   /** Credibility-blended share of guesses. */
   share: number;
-  /** Share of guesses more common than this one ("rarer than p of guesses"): 0 for the most common. */
+  /** 1 = most common answer. */
+  rank: number;
+  /**
+   * Rarity position in [0, 1): where the answer sits in the ranked list, spread evenly
+   * within its tier so tier boundaries fall at 0.2 / 0.5 / 0.85 / 0.97. Places the
+   * player's dot on the chart and breaks leaderboard ties.
+   */
   p: number;
   tier: BlackSwanTierKey;
   points: number;
@@ -206,12 +246,16 @@ export function buildRarityTable(
       return { label: a.label, share: z * observed + (1 - z) * (a.prior / priorTotal) };
     })
     .sort((a, b) => b.share - a.share || a.label.localeCompare(b.label));
-  let cum = 0;
-  const ranked = rows.map((r): RarityRow => {
-    const p = cum;
-    cum += r.share;
-    const tier = tierFor(p);
-    return { ...r, p, tier: tier.key, points: tier.points };
+  const sizes = blackSwanTierSizes(rows.length);
+  const bounds = [0, ...BLACK_SWAN_TIERS.slice(0, 4).map((t) => t.upTo), 1];
+  const ranked: RarityRow[] = [];
+  let i = 0;
+  sizes.forEach((size, t) => {
+    const tier = BLACK_SWAN_TIERS[t];
+    for (let j = 0; j < size && i < rows.length; j++, i++) {
+      const p = bounds[t] + ((bounds[t + 1] - bounds[t]) * (j + 0.5)) / size;
+      ranked.push({ ...rows[i], rank: i + 1, p, tier: tier.key, points: tier.points });
+    }
   });
   return { questionId: question.id, realCount: n, z, rows: ranked };
 }
@@ -224,6 +268,9 @@ export interface BlackSwanSlotResult {
   label: string | null;
   tier: BlackSwanTierKey | null;
   points: number;
+  /** Rank of the answer among all accepted answers (1 = most common). */
+  rank: number | null;
+  answerCount: number;
   p: number | null;
   share: number | null;
   realCount: number;
@@ -250,6 +297,8 @@ export function scoreGuess(
     label: row?.label ?? null,
     tier: row?.tier ?? null,
     points: row?.points ?? 0,
+    rank: row?.rank ?? null,
+    answerCount: table.rows.length,
     p: row?.p ?? null,
     share: row?.share ?? null,
     realCount: table.realCount,

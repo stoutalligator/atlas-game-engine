@@ -82,8 +82,6 @@ const tierInfo = (key: BlackSwanTierKey) =>
 const pct = (v: number) => (v < 0.001 ? "<0.1%" : `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`);
 /** Upper-case for labels, keeping σ lowercase (CSS text-transform would make it Σ). */
 const caps = (s: string) => s.toUpperCase().replace("Σ", "σ");
-/** "Rarer than N% of guesses", capped below 100 so the rarest never claims all of them. */
-const rarer = (p: number) => Math.min(99, Math.floor(p * 100));
 
 function BlackSwanGame({
   api,
@@ -229,8 +227,8 @@ function BlackSwanGame({
             headline={`${summary.score} points`}
             detail={
               summary.blackSwans
-                ? `${summary.blackSwans} Black Swan${summary.blackSwans === 1 ? "" : "s"} today. Rarer than ${rarer(summary.rarity)}% of guesses on average.`
-                : `Rarer than ${rarer(summary.rarity)}% of guesses on average. Hunt the tail tomorrow.`
+                ? `${summary.blackSwans} Black Swan${summary.blackSwans === 1 ? "" : "s"} today. Average rarity ${pct(summary.rarity)}.`
+                : `Average rarity ${pct(summary.rarity)}. Hunt the tail tomorrow.`
             }
             stats={result.stats}
             shareText={result.shareText}
@@ -587,8 +585,8 @@ function Reveal({
         <div className="ag-bs__what">
           <b>{result.label ?? (result.input ? `“${result.input}”` : "No answer")}</b>
           <span>
-            {result.label && result.share !== null && result.p !== null
-              ? `${pct(result.share)} of guesses · rarer than ${rarer(result.p)}% of guesses`
+            {result.label && result.share !== null && result.rank !== null
+              ? `${pct(result.share)} of guesses · #${result.rank} of ${result.answerCount} answers`
               : result.input
                 ? "Not an accepted answer, so it scores 0."
                 : "Time ran out."}

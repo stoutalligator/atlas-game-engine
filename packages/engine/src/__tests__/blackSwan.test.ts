@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BLACK_SWAN_PROMPTS,
   type BlackSwanQuestion,
+  blackSwanTierSizes,
   buildRarityTable,
   matchGuess,
   parseBlackSwanQuestions,
@@ -80,12 +81,12 @@ describe("rarity", () => {
     expect(t.rows[0].label).toBe("Cape Cod"); // everyone said it, so now it's the common one
     expect(t.rows.find((r) => r.label === "Cape Cod")?.tier).toBe("mode");
   });
-  it("maps percentiles to tiers at 20 / 50 / 85 / 97%", () => {
+  it("maps rarity positions to tiers at 35 / 62 / 82 / 94%", () => {
     expect(tierFor(0.1).key).toBe("mode");
-    expect(tierFor(0.3).key).toBe("expected");
-    expect(tierFor(0.6).key).toBe("sigma");
+    expect(tierFor(0.4).key).toBe("expected");
+    expect(tierFor(0.7).key).toBe("sigma");
     expect(tierFor(0.9).key).toBe("tail");
-    expect(tierFor(0.99).key).toBe("swan");
+    expect(tierFor(0.97).key).toBe("swan");
   });
   it("scores fixed points per tier and zero for a miss", () => {
     const t = buildRarityTable(reserving, {});
@@ -102,6 +103,28 @@ describe("rarity", () => {
       rarity: (swan.p ?? 0) / 2,
       blackSwans: 1,
     });
+  });
+});
+
+describe("tier sizes", () => {
+  it("slices the answer list 35 / 27 / 20 / 12 / 6%, shrinking toward the tail", () => {
+    expect(blackSwanTierSizes(100)).toEqual([35, 27, 20, 12, 6]);
+    expect(blackSwanTierSizes(33)).toEqual([12, 9, 6, 4, 2]);
+    expect(blackSwanTierSizes(11)).toEqual([4, 3, 2, 1, 1]);
+    expect(blackSwanTierSizes(5)).toEqual([1, 1, 1, 1, 1]);
+    for (let n = 5; n <= 200; n++) {
+      const s = blackSwanTierSizes(n);
+      expect(s.reduce((a, b) => a + b, 0)).toBe(n);
+      expect(Math.min(...s)).toBeGreaterThanOrEqual(1);
+      for (let i = 1; i < s.length; i++) expect(s[i]).toBeLessThanOrEqual(s[i - 1]);
+    }
+  });
+  it("ranks answers and keeps each tier's positions inside its band", () => {
+    const t = buildRarityTable(reserving, {});
+    expect(t.rows.map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(t.rows.filter((r) => r.tier === "mode")).toHaveLength(2);
+    expect(t.rows.filter((r) => r.tier === "swan")).toHaveLength(1);
+    for (const r of t.rows) expect(tierFor(r.p).key).toBe(r.tier);
   });
 });
 

@@ -1,15 +1,15 @@
 // Canvas drawing for Black Swan. The chart is the same picture for every
-// prompt: a fixed long-tail density f(x) ∝ e^(−kx) on [0, 1], drawn as columns
-// of ~1000 falling dots. x is rarity; the area left of x is the share of
-// guesses more common than x, so a player's answer at percentile p lands at
-// x = F⁻¹(p). Colours come from CSS custom properties on the canvas.
+// prompt: ~1000 falling dots in columns shaped like a long tail, e^(−kx) on
+// [0, 1]. x runs along the answer list from most to least common, so each tier's
+// band is as wide as its share of answers (35 / 27 / 20 / 12 / 6%) and a player's
+// answer at rarity position p lands at x = p. Colours come from CSS variables.
 
 import { BLACK_SWAN_TIERS, type BlackSwanTierKey, tierFor } from "./logic.js";
 
 const DOTS = 1000;
 const K = 3.2;
-const Fcdf = (x: number) => (1 - Math.exp(-K * x)) / (1 - Math.exp(-K));
-export const rarityToX = (p: number) => -Math.log(1 - Math.min(0.9999, p) * (1 - Math.exp(-K))) / K;
+/** x runs along the ranked answer list, so an answer's rarity position p is its x. */
+const rarityToX = (p: number) => Math.min(0.9999, Math.max(0, p));
 
 const TIER_VAR: Record<BlackSwanTierKey, string> = {
   mode: "--ag-bs-mode",
@@ -92,7 +92,7 @@ function layout(w: number, h: number): Layout {
     const xc = (i + 0.5) / COLS;
     return {
       share: Math.exp(-K * xc),
-      tier: tierFor(Fcdf(xc)).key,
+      tier: tierFor(xc).key,
       lo: i / COLS,
       hi: (i + 1) / COLS,
     };
