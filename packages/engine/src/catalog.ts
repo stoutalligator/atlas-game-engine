@@ -1,7 +1,7 @@
 import type { GameId } from "./core/types.js";
 
 /** Accent colours map to the ATLAS Tailwind palette. */
-export type GameAccent = "violet" | "amber" | "cyan" | "emerald";
+export type GameAccent = "violet" | "amber" | "cyan" | "emerald" | "slate";
 
 export interface GameInfo {
   id: GameId;
@@ -14,7 +14,7 @@ export interface GameInfo {
   accent: GameAccent;
   /** Typical play time, for cards. */
   minutes: string;
-  /** Needs exam-specific content from the host (Assumption Drift packs). */
+  /** Needs content from the host (Assumption Drift packs, Black Swan questions). */
   needsContent: boolean;
 }
 
@@ -81,6 +81,22 @@ export const GAME_CATALOG: readonly GameInfo[] = [
     accent: "amber",
     minutes: "2–5 min",
     needsContent: false,
+  },
+  {
+    id: "black-swan",
+    title: "Black Swan",
+    tagline: "Name the answer nobody else will.",
+    description:
+      "Five prompts across actuarial, stats, SQL, Python, health and finance. Any accepted answer counts, but the rarer it is among everyone's guesses, the more it scores.",
+    howToPlay: [
+      "Each prompt has a list of accepted answers. Type one before the 25-second timer runs out.",
+      "Not on the list? It shakes and clears — try another while time remains. Typos and short forms are offered as a correction to accept.",
+      "Rarer answers land further into the tail: Mode 10, Expected 25, Within σ 50, Tail 100, Black Swan 200 points.",
+      "Rarity blends simulated players with everyone's real answers (credibility weighting), and locks in at midnight.",
+    ],
+    accent: "slate",
+    minutes: "3 min",
+    needsContent: true,
   },
 ];
 

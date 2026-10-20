@@ -138,3 +138,6 @@ body {
   border-radius: 4px;
   overflow: auto;
 }
+.pg-panel[data-accent="slate"] {
+  border-color: #475569;
+}

@@ -1,4 +1,4 @@
-export type GameId = "assumption-drift" | "cube-rush" | "box-plot" | "risk-pool";
+export type GameId = "assumption-drift" | "cube-rush" | "box-plot" | "risk-pool" | "black-swan";
 
 export interface GameStat {
   label: string;
@@ -30,6 +30,9 @@ export interface GameScore {
   hints?: number;
   correct?: number;
   total?: number;
+  /** Black Swan: points out of 1000, and mean rarity percentile (tie-break). */
+  points?: number;
+  rarity?: number;
 }
 
 /**

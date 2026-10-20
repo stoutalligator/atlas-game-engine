@@ -6,8 +6,15 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      "@stoutalligator/engine": resolve(__dirname, "../../packages/engine/src/index.ts"),
-    },
+    alias: [
+      {
+        find: /^@stoutalligator\/engine\/server$/,
+        replacement: resolve(__dirname, "../../packages/engine/src/server-entry.ts"),
+      },
+      {
+        find: /^@stoutalligator\/engine$/,
+        replacement: resolve(__dirname, "../../packages/engine/src/index.ts"),
+      },
+    ],
   },
 });
