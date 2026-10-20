@@ -26,9 +26,10 @@ export interface BlackSwanQuestion {
 export class BlackSwanPackError extends Error {}
 
 /**
- * Tiers cut the answer list, ranked by how common each answer is, into fixed
- * slices: the most common 20% of answers are Mode, the next 30% Expected, then
- * 35% Within σ, 12% Tail, and the rarest 3% (always at least one) Black Swan.
+ * Tiers cut the answer list, ranked by how common each answer is, into slices
+ * that shrink toward the tail: the most common 35% of answers are Mode, the next
+ * 27% Expected, then 20% Within σ, 12% Tail, and the rarest 6% (always at least
+ * one) Black Swan.
  * `upTo` is each tier's upper bound on the rarity position p (see RarityRow).
  */
 export const BLACK_SWAN_TIERS = [
@@ -36,20 +37,20 @@ export const BLACK_SWAN_TIERS = [
     key: "mode",
     name: "Mode",
     points: 10,
-    upTo: 0.2,
-    fraction: 0.2,
-    range: "Most common 20% of answers",
+    upTo: 0.35,
+    fraction: 0.35,
+    range: "Most common 35% of answers",
   },
-  { key: "expected", name: "Expected", points: 25, upTo: 0.5, fraction: 0.3, range: "Next 30%" },
-  { key: "sigma", name: "Within σ", points: 50, upTo: 0.85, fraction: 0.35, range: "Next 35%" },
-  { key: "tail", name: "Tail", points: 100, upTo: 0.97, fraction: 0.12, range: "Next 12%" },
+  { key: "expected", name: "Expected", points: 25, upTo: 0.62, fraction: 0.27, range: "Next 27%" },
+  { key: "sigma", name: "Within σ", points: 50, upTo: 0.82, fraction: 0.2, range: "Next 20%" },
+  { key: "tail", name: "Tail", points: 100, upTo: 0.94, fraction: 0.12, range: "Next 12%" },
   {
     key: "swan",
     name: "Black Swan",
     points: 200,
     upTo: Number.POSITIVE_INFINITY,
-    fraction: 0.03,
-    range: "Rarest 3%",
+    fraction: 0.06,
+    range: "Rarest 6%",
   },
 ] as const;
 
@@ -62,8 +63,9 @@ export function tierFor(p: number): BlackSwanTier {
 }
 
 /**
- * How many of `n` ranked answers fall in each tier (Mode … Black Swan), sized to
- * the tier fractions with at least one answer per tier. 33 answers → 7 / 10 / 11 / 4 / 1.
+ * How many of `n` ranked answers fall in each tier (Mode … Black Swan): sized to
+ * the tier fractions, at least one per tier, and never growing toward the tail.
+ * 100 answers → 35 / 27 / 20 / 12 / 6.
  */
 export function blackSwanTierSizes(n: number): number[] {
   const at = (i: number) => Math.max(1, Math.round(n * BLACK_SWAN_TIERS[i].fraction));
@@ -71,12 +73,13 @@ export function blackSwanTierSizes(n: number): number[] {
   sizes[2] = n - sizes[0] - sizes[1] - sizes[3] - sizes[4];
   // Very short lists: borrow from the bigger common tiers so Within σ keeps one.
   while (sizes[2] < 1) {
-    const from = sizes[0] >= sizes[1] && sizes[0] > 1 ? 0 : sizes[1] > 1 ? 1 : -1;
+    const from = sizes[1] >= sizes[0] && sizes[1] > 1 ? 1 : sizes[0] > 1 ? 0 : -1;
     if (from < 0) break;
     sizes[from]--;
     sizes[2]++;
   }
-  return sizes;
+  // Rounding can leave a later tier bigger than an earlier one; tiers only shrink.
+  return sizes.sort((a, b) => b - a);
 }
 
 // ── matching ────────────────────────────────────────────────────────────────
