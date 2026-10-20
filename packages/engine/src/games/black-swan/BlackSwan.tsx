@@ -610,6 +610,7 @@ function Reveal({
           </span>
         </span>
       </div>
+      {shown && <AnswerList result={result} />}
       <div className="ag-row ag-row--between">
         <span className="ag-bs__hint">
           Most common: {result.mostCommon.label} ({pct(result.mostCommon.share)}) · Rarest accepted:{" "}
@@ -658,6 +659,7 @@ function Recap({
                 <td>
                   <div className="ag-bs__q">{p.prompt}</div>
                   <div className="ag-bs__a">{r?.label ?? (r?.input ? `“${r.input}”` : "—")}</div>
+                  {r && <AnswerList result={r} />}
                 </td>
                 <td>
                   <span className="ag-bs__badge" data-tier={r?.tier ?? "miss"}>
@@ -671,5 +673,39 @@ function Recap({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Every accepted answer for a prompt the player has answered, most common first. */
+function AnswerList({ result }: { result: BlackSwanSlotResult }) {
+  const listRef = useRef<HTMLOListElement>(null);
+  const ranking = result.ranking ?? [];
+  if (!ranking.length) return null;
+  // Opening the list scrolls the player's own answer into view.
+  const onToggle = (e: React.SyntheticEvent<HTMLDetailsElement>) => {
+    const list = listRef.current;
+    const mine = list?.querySelector<HTMLElement>('[data-me="true"]');
+    if (e.currentTarget.open && list && mine)
+      list.scrollTop = mine.offsetTop - list.clientHeight / 2;
+  };
+  return (
+    <details className="ag-bs__answers" onToggle={onToggle}>
+      <summary>All {ranking.length} accepted answers</summary>
+      <ol ref={listRef}>
+        {ranking.map((a, i) => (
+          <li key={a.label} data-me={a.label === result.label}>
+            <span className="ag-bs__rank">{i + 1}</span>
+            <span className="ag-bs__alabel">
+              {a.label}
+              {a.label === result.label && <em> · you</em>}
+            </span>
+            <span className="ag-bs__chip" data-tier={a.tier}>
+              {caps(tierInfo(a.tier).name)}
+            </span>
+            <span className="ag-bs__ashare">{pct(a.share)}</span>
+          </li>
+        ))}
+      </ol>
+    </details>
   );
 }
