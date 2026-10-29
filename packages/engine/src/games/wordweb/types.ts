@@ -1,4 +1,4 @@
-// WordWeb data model. A puzzle is immutable once published: the layout, the
+// Word Web data model. A puzzle is immutable once published: the layout, the
 // unlock tree and every answer are fixed before anyone plays. Player state
 // (play.ts) only tracks what's visible, typed, hinted and solved.
 

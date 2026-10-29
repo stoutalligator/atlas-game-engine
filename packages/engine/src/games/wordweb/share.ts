@@ -22,7 +22,7 @@ export function wordWebShareText(puzzle: WordWebPuzzle, state: WordWebState, dat
   const guesses = r?.guessCount ?? state.guessCount;
   const secs = Math.round((r?.elapsedMs ?? state.elapsedMs) / 1000);
   return [
-    `ATLAS WordWeb 🕸️ #${puzzleNumber(date)}`,
+    `ATLAS Word Web 🕸️ #${puzzleNumber(date)}`,
     `${WEEKDAYS[puzzle.weekday]} · ${puzzle.difficulty}`,
     progressionSquares(state),
     `${hints} hint${hints === 1 ? "" : "s"} | ${formatClock(secs)} | ${guesses} guess${guesses === 1 ? "" : "es"}`,
