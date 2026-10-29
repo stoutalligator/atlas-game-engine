@@ -1,7 +1,7 @@
 import { createBankGenerator, generateForDate, parseBank } from "@stoutalligator/engine/server";
 import { WORDWEB_TEST_BANK } from "../../../packages/engine/src/__tests__/fixtures/wordwebBank";
 
-// Stand-in for the host: runs the real WordWeb pipeline in the browser
+// Stand-in for the host: runs the real Word Web pipeline in the browser
 // against the test bank, so any date can be previewed. ATLAS runs the same
 // pipeline in a script and serves only validated puzzles.
 

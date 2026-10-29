@@ -1,4 +1,4 @@
-// A copy of 20 categories from ATLAS's WordWeb bank (src/packs/wordweb/bank), so
+// A copy of 20 categories from ATLAS's Word Web bank (src/packs/wordweb/bank), so
 // generation tests run against real content without reading files.
 
 export const WORDWEB_TEST_BANK: unknown = [

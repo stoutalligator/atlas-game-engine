@@ -10,7 +10,7 @@ component per game, and the games' code doesn't live in the main repo.
 | **Risk Pool** | Group neighbouring policyholders into pools whose claims hit the target premium exactly. 5×5 Mon → 7×7 weekend. | Generated daily |
 | **Box Plot** | 10×10 picture logic puzzle (nonogram). 110 pictures, all solvable without guessing. | Built-in library |
 | **Cube Rush** | Slide cubicles until the analyst can reach the exit. Easy Mon → hard weekend, with par. | Built-in verified library (240 puzzles) |
-| **WordWeb** | A crossword that unfolds: one category, no clues; solving a word reveals the words that cross it. Easy Mon → hardest Sun. | Validated puzzles supplied by the host (built-in canonical fallback) |
+| **Word Web** | A crossword that unfolds: one category, no clues; solving a word reveals the words that cross it. Easy Mon → hardest Sun. | Validated puzzles supplied by the host (built-in canonical fallback) |
 | **Black Swan** | Five prompts ("Name a loss reserving method."). Any accepted answer counts; the rarer it is among everyone's guesses, the more it scores. | Question pool + guess counts supplied by the host's server |
 
 Every player gets the same puzzle for a date. New puzzles unlock at the player's local midnight.
@@ -69,7 +69,7 @@ import { GAME_CATALOG, GameIcon, isGameId, parseAssumptionDriftPack } from "@sto
 | `date` | player's local date | `"YYYY-MM-DD"` — pin a date for previews |
 | `storage` | `localStorageAdapter` | any `{ load, save, remove }` (e.g. API-backed, for cross-device sync) |
 | `onComplete` | — | fires with a `GameResult` (stats + share text) when today's puzzle is finished |
-| `packs` | `[]` | Assumption Drift: raw pack JSON in rotation order. WordWeb: validated puzzles for the days around today |
+| `packs` | `[]` | Assumption Drift: raw pack JSON in rotation order. Word Web: validated puzzles for the days around today |
 
 The games inherit the host's font. Colours follow the ATLAS Tailwind palette (slate, violet, emerald, cyan,
 amber), and the components draw no outer panel, so the host wraps them in its own.
@@ -105,7 +105,7 @@ The host should freeze one rarity table per question per day, so every player th
 scored against the same numbers. The playground uses an in-memory stand-in
 (`apps/playground/src/blackSwanMock.ts`).
 
-### WordWeb
+### Word Web
 
 A daily crossword that unfolds. The puzzle (layout, unlock tree, starting letters,
 alternates) is built and validated before anyone plays; play only changes what's
@@ -131,7 +131,7 @@ per module:
 The host passes puzzles through `packs`; with none, the canonical puzzle plays. The
 pipeline lives in `@stoutalligator/engine/server` (`generateForDate`, `planQueue`,
 `recordForDate`, validators…), and `verifyGameResult` replays a finished game's
-guess/hint log. In the playground, pick WordWeb and switch **Puzzle** to "Generated for
+guess/hint log. In the playground, pick Word Web and switch **Puzzle** to "Generated for
 the date" to run the real pipeline against the test bank.
 
 ### Assumption Drift packs

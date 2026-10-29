@@ -24,7 +24,7 @@ export function App() {
   const [nonce, setNonce] = useState(0);
   const [last, setLast] = useState<GameResult | null>(null);
   const info = getGameInfo(game);
-  // WordWeb: the canonical HOUSEHOLD PETS fixture, or a puzzle generated for the date.
+  // Word Web: the canonical HOUSEHOLD PETS fixture, or a puzzle generated for the date.
   const [wwSource, setWwSource] = useState(params.get("ww") ?? "canonical");
   const [wwPuzzles, setWwPuzzles] = useState<unknown[] | null>([]);
   useEffect(() => {
@@ -97,7 +97,7 @@ export function App() {
           <p className="pg-desc">Generating…</p>
         ) : (
           <AtlasGame
-            // WordWeb fixes its puzzle when it mounts, so a new puzzle needs a new mount.
+            // Word Web fixes its puzzle when it mounts, so a new puzzle needs a new mount.
             key={`${game}-${date}-${nonce}-${wwSource}-${(wwPuzzles ?? []).map((p) => (p as { id: string }).id).join()}`}
             game={game}
             date={date}

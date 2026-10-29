@@ -100,7 +100,7 @@ export const GAME_CATALOG: readonly GameInfo[] = [
   },
   {
     id: "wordweb",
-    title: "WordWeb",
+    title: "Word Web",
     tagline: "A crossword that unfolds as you solve it.",
     description:
       "One category, a handful of answers and no clues. Solve the first word to uncover the words that cross it, until the whole web is filled in.",
