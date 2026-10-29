@@ -648,7 +648,7 @@ describe("share text", () => {
 
   it("has the number, difficulty, squares, hints, time and guesses", () => {
     expect(wordWebShareText(PETS, finished(), "2026-02-11")).toBe(
-      ["ATLAS WordWeb 🕸️ #42", "Mon · Easy", "🟨🟩🟩🟩🟩", "1 hint | 2:18 | 6 guesses"].join("\n"),
+      ["ATLAS Word Web 🕸️ #42", "Mon · Easy", "🟨🟩🟩🟩🟩", "1 hint | 2:18 | 6 guesses"].join("\n"),
     );
   });
 

@@ -31,7 +31,7 @@ export interface VerifyInput {
   game: string;
   date: string;
   proof: unknown;
-  /** Assumption Drift packs in rotation order, or WordWeb puzzles for the date. */
+  /** Assumption Drift packs in rotation order, or Word Web puzzles for the date. */
   packs?: readonly unknown[];
 }
 
@@ -189,7 +189,7 @@ export type {
 } from "./games/black-swan/logic.js";
 export type { GameId };
 
-// WordWeb: content pipeline (generator contract, builder, validators,
+// Word Web: content pipeline (generator contract, builder, validators,
 // difficulty, safety, recurrence, queue) and the player-state rules the
 // server replays. Hosts run the pipeline in scripts or scheduled jobs.
 export * from "./games/wordweb/logic.js";

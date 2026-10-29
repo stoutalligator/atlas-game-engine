@@ -1765,7 +1765,7 @@
   color: var(--ag-bs-gold);
 }
 
-/* ── WordWeb ───────────────────────────────────────────────────────────── */
+/* ── Word Web ───────────────────────────────────────────────────────────── */
 
 .ag-sr {
   position: absolute;
@@ -1824,10 +1824,14 @@
 .ag-ww-layer {
   position: absolute;
   inset: 0;
+  /* The layer slides by a percentage of the board, so its empty box can hang
+     past the board (over the Hint and Check buttons). Only the cells take clicks. */
+  pointer-events: none;
   transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .ag-ww-cell {
   position: absolute;
+  pointer-events: auto;
   padding: 2px;
   cursor: pointer;
 }

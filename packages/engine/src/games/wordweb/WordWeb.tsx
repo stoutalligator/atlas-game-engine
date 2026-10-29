@@ -36,7 +36,7 @@ import type { WordWebAnswer, WordWebPuzzle } from "./types.js";
 
 export interface WordWebProps extends DailyGameProps {
   /**
-   * Puzzles from the host: validated WordWeb puzzles for today (and nearby
+   * Puzzles from the host: validated Word Web puzzles for today (and nearby
    * days), plus any evergreen fallbacks. Anything else is ignored. With none,
    * the built-in canonical puzzle plays.
    */

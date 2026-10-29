@@ -1,4 +1,4 @@
-// WordWeb's pure, React-free modules in one place (server entry, tests, host scripts).
+// Word Web's pure, React-free modules in one place (server entry, tests, host scripts).
 
 export * from "./types.js";
 export * from "./normalize.js";

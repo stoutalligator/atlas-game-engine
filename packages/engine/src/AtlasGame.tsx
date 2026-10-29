@@ -10,7 +10,7 @@ export interface AtlasGameProps extends DailyGameProps {
   game: GameId;
   /**
    * Host content (raw JSON): Assumption Drift packs in rotation order, or
-   * WordWeb puzzles for today and nearby days. Ignored by other games.
+   * Word Web puzzles for today and nearby days. Ignored by other games.
    */
   packs?: readonly unknown[];
   /** Black Swan only: the host's server calls (answers and rarity stay server-side). */
