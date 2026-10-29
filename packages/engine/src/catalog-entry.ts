@@ -33,3 +33,11 @@ export type {
   GuessMatch,
 } from "./games/black-swan/logic.js";
 export type { DailyStatus } from "./core/storage.js";
+export {
+  WordWebPuzzleError,
+  parseWordWebPuzzle,
+  parseWordWebQueue,
+  recordForDate,
+  wordWebForDate,
+} from "./games/wordweb/logic.js";
+export type { WordWebPuzzle, WordWebQueue, WordWebRecord } from "./games/wordweb/logic.js";

@@ -10,6 +10,7 @@ component per game, and the games' code doesn't live in the main repo.
 | **Risk Pool** | Group neighbouring policyholders into pools whose claims hit the target premium exactly. 5×5 Mon → 7×7 weekend. | Generated daily |
 | **Box Plot** | 10×10 picture logic puzzle (nonogram). 110 pictures, all solvable without guessing. | Built-in library |
 | **Cube Rush** | Slide cubicles until the analyst can reach the exit. Easy Mon → hard weekend, with par. | Built-in verified library (240 puzzles) |
+| **WordWeb** | A crossword that unfolds: one category, no clues; solving a word reveals the words that cross it. Easy Mon → hardest Sun. | Validated puzzles supplied by the host (built-in canonical fallback) |
 | **Black Swan** | Five prompts ("Name a loss reserving method."). Any accepted answer counts; the rarer it is among everyone's guesses, the more it scores. | Question pool + guess counts supplied by the host's server |
 
 Every player gets the same puzzle for a date. New puzzles unlock at the player's local midnight.
@@ -64,11 +65,11 @@ import { GAME_CATALOG, GameIcon, isGameId, parseAssumptionDriftPack } from "@sto
 
 | Prop | Default | |
 |---|---|---|
-| `game` | — | `"assumption-drift" \| "risk-pool" \| "box-plot" \| "cube-rush" \| "black-swan"` |
+| `game` | — | `"assumption-drift" \| "risk-pool" \| "box-plot" \| "cube-rush" \| "black-swan" \| "wordweb"` |
 | `date` | player's local date | `"YYYY-MM-DD"` — pin a date for previews |
 | `storage` | `localStorageAdapter` | any `{ load, save, remove }` (e.g. API-backed, for cross-device sync) |
 | `onComplete` | — | fires with a `GameResult` (stats + share text) when today's puzzle is finished |
-| `packs` | `[]` | Assumption Drift only: raw pack JSON for the exam, in rotation order |
+| `packs` | `[]` | Assumption Drift: raw pack JSON in rotation order. WordWeb: validated puzzles for the days around today |
 
 The games inherit the host's font. Colours follow the ATLAS Tailwind palette (slate, violet, emerald, cyan,
 amber), and the components draw no outer panel, so the host wraps them in its own.
@@ -103,6 +104,35 @@ The pure logic for the server is in `@stoutalligator/engine/server`:
 The host should freeze one rarity table per question per day, so every player that day is
 scored against the same numbers. The playground uses an in-memory stand-in
 (`apps/playground/src/blackSwanMock.ts`).
+
+### WordWeb
+
+A daily crossword that unfolds. The puzzle (layout, unlock tree, starting letters,
+alternates) is built and validated before anyone plays; play only changes what's
+visible, typed, hinted and solved. Everything is in `src/games/wordweb/`, one concern
+per module:
+
+| Module | |
+|---|---|
+| `types.ts` | Puzzle, record (puzzle + audit report) and queue shapes |
+| `normalize.ts` | One normalization for answers and guesses (A–Z only; accents fold; spaces and hyphens drop) |
+| `grid.ts`, `construct.ts` | Geometry, and the deterministic seeded builder that proposes layouts |
+| `validate.ts` | Every hard rule: matching crossings, one answer per direction per cell, every run of letters is an answer, connected, in bounds; unlock tree single-start, acyclic, reachable, parent crosses child, no hidden word showing early, always completable |
+| `graph.ts` | Unlock tree from a layout (wide or deep) and its stats |
+| `difficulty.ts` | 15 weighted components → 0–100, weekday bands (`DIFFICULTY_WEIGHTS`, `WEEKDAY_TARGETS`) |
+| `safety.ts`, `recurrence.ts` | Deny-lists, brand/proper-noun/abbreviation policy; repeat rules |
+| `generator.ts` | The `WordWebGenerator` contract and the local bank generator |
+| `pipeline.ts`, `queue.ts` | Generate one date; fill a queue idempotently; serve with fallbacks |
+| `schema.ts` | Runtime parsing at every ingestion point |
+| `play.ts`, `clock.ts`, `share.ts` | Player state (guesses, hints, cooldowns, restore, replay), active-play clock, share text |
+| `fixture.ts` | The canonical HOUSEHOLD PETS puzzle (coordinates adjusted to be legal; see the comment) |
+| `WordWeb.tsx` | The component |
+
+The host passes puzzles through `packs`; with none, the canonical puzzle plays. The
+pipeline lives in `@stoutalligator/engine/server` (`generateForDate`, `planQueue`,
+`recordForDate`, validators…), and `verifyGameResult` replays a finished game's
+guess/hint log. In the playground, pick WordWeb and switch **Puzzle** to "Generated for
+the date" to run the real pipeline against the test bank.
 
 ### Assumption Drift packs
 
