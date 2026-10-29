@@ -27,6 +27,9 @@ body {
 .pg-panel[data-accent="amber"] {
   border-color: #fcd34d;
 }
+.pg-panel[data-accent="rose"] {
+  border-color: #fda4af;
+}
 .pg-panel[data-accent="cyan"] {
   border-color: #22d3ee;
 }
@@ -119,6 +122,9 @@ body {
 }
 .pg-game[data-accent="amber"] svg {
   color: #d97706;
+}
+.pg-game[data-accent="rose"] svg {
+  color: #e11d48;
 }
 .pg-game[data-accent="cyan"] svg {
   color: #0891b2;

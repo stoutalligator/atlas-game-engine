@@ -4,10 +4,14 @@ import { BlackSwan, type BlackSwanApi } from "./games/black-swan/BlackSwan.js";
 import { BoxPlot } from "./games/box-plot/BoxPlot.js";
 import { CubeRush } from "./games/cube-rush/CubeRush.js";
 import { RiskPool } from "./games/risk-pool/RiskPool.js";
+import { WordWeb } from "./games/wordweb/WordWeb.js";
 
 export interface AtlasGameProps extends DailyGameProps {
   game: GameId;
-  /** Assumption Drift packs (raw JSON) for the current exam. Ignored by other games. */
+  /**
+   * Host content (raw JSON): Assumption Drift packs in rotation order, or
+   * WordWeb puzzles for today and nearby days. Ignored by other games.
+   */
   packs?: readonly unknown[];
   /** Black Swan only: the host's server calls (answers and rarity stay server-side). */
   blackSwanApi?: BlackSwanApi;
@@ -24,6 +28,8 @@ export function AtlasGame({ game, packs = [], blackSwanApi, ...props }: AtlasGam
       return <CubeRush {...props} />;
     case "risk-pool":
       return <RiskPool {...props} />;
+    case "wordweb":
+      return <WordWeb puzzles={packs} {...props} />;
     case "black-swan":
       return blackSwanApi ? (
         <BlackSwan api={blackSwanApi} {...props} />

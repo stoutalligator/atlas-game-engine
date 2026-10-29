@@ -15,6 +15,7 @@ import {
 } from "./games/box-plot/logic.js";
 import { type CubeStep, cubeRushForDate, replayCubeRush } from "./games/cube-rush/daily.js";
 import { generateRiskPool, isComplete } from "./games/risk-pool/logic.js";
+import { replayLog, wordWebForDate } from "./games/wordweb/logic.js";
 
 export interface VerifiedScore {
   solved: boolean;
@@ -30,7 +31,7 @@ export interface VerifyInput {
   game: string;
   date: string;
   proof: unknown;
-  /** Assumption Drift packs for the exam, in rotation order. */
+  /** Assumption Drift packs in rotation order, or WordWeb puzzles for the date. */
   packs?: readonly unknown[];
 }
 
@@ -95,6 +96,12 @@ export function verifyGameResult({
         const correct = questions.filter((q) => answers[q.id] === q.answer).length;
         return { solved: correct === questions.length, correct, total: questions.length };
       }
+      case "wordweb": {
+        const { puzzle } = wordWebForDate(packs, date);
+        if (proof.puzzleId !== puzzle.id) return null;
+        const replay = replayLog(puzzle, proof.log);
+        return replay ? { solved: true, hints: replay.hintsUsed, moves: replay.guessCount } : null;
+      }
       case "black-swan":
         // Scored on the host's server as each answer is locked in (see scoreGuess):
         // there is no client proof to replay.
@@ -117,6 +124,9 @@ export function minPlausibleSeconds(game: GameId, score: VerifiedScore): number 
       return 10;
     case "box-plot":
       return 15;
+    case "wordweb":
+      // A few seconds per answer, at the very least.
+      return 8;
     case "assumption-drift":
     case "black-swan":
       return 1;
@@ -178,3 +188,8 @@ export type {
   RarityTable,
 } from "./games/black-swan/logic.js";
 export type { GameId };
+
+// WordWeb: content pipeline (generator contract, builder, validators,
+// difficulty, safety, recurrence, queue) and the player-state rules the
+// server replays. Hosts run the pipeline in scripts or scheduled jobs.
+export * from "./games/wordweb/logic.js";
