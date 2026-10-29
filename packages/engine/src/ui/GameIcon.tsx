@@ -37,6 +37,16 @@ const PATHS: Record<GameId, React.ReactNode> = {
       <path d="M17 14h4M19 12l2 2-2 2" />
     </>
   ),
+  wordweb: (
+    <>
+      <rect x="3" y="9" width="5" height="5" rx="1" />
+      <rect x="8" y="9" width="5" height="5" rx="1" />
+      <rect x="13" y="9" width="5" height="5" rx="1" />
+      <rect x="8" y="4" width="5" height="5" rx="1" opacity="0.5" />
+      <rect x="8" y="14" width="5" height="5" rx="1" opacity="0.5" />
+      <path d="M18 11.5h3M10.5 19v2" strokeDasharray="1 2" />
+    </>
+  ),
 };
 
 /** Line icons in the same 24px / 2px-stroke style as the ATLAS dashboard tiles. */

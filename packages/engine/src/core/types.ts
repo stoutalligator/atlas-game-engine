@@ -1,4 +1,10 @@
-export type GameId = "assumption-drift" | "cube-rush" | "box-plot" | "risk-pool" | "black-swan";
+export type GameId =
+  | "assumption-drift"
+  | "cube-rush"
+  | "box-plot"
+  | "risk-pool"
+  | "black-swan"
+  | "wordweb";
 
 export interface GameStat {
   label: string;

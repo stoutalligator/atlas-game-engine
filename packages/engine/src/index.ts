@@ -30,6 +30,9 @@ export { BoxPlot } from "./games/box-plot/BoxPlot.js";
 export { CubeRush } from "./games/cube-rush/CubeRush.js";
 export { cubeRushForDate } from "./games/cube-rush/daily.js";
 export { RiskPool } from "./games/risk-pool/RiskPool.js";
+export { WordWeb, type WordWebProps } from "./games/wordweb/WordWeb.js";
+export { HOUSEHOLD_PETS, wordWebForDate, wordWebShareText } from "./games/wordweb/logic.js";
+export type { WordWebPuzzle, WordWebState } from "./games/wordweb/logic.js";
 
 // Content + puzzle helpers
 export {

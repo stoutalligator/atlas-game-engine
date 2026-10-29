@@ -98,6 +98,23 @@ export const GAME_CATALOG: readonly GameInfo[] = [
     minutes: "3 min",
     needsContent: true,
   },
+  {
+    id: "wordweb",
+    title: "WordWeb",
+    tagline: "A crossword that unfolds as you solve it.",
+    description:
+      "One category, a handful of answers and no clues. Solve the first word to uncover the words that cross it, until the whole web is filled in.",
+    howToPlay: [
+      "Every answer fits today's category. The only clues are the category, each word's length and the letters already showing.",
+      "Type into the highlighted word and press Enter. A correct word turns green and reveals the words that cross it.",
+      "Tap or click any open word to switch to it; your letters stay put. “Close!” means the right category, but not today's answer.",
+      "Stuck? Hint unlocks after 10 seconds on a word and fills its next letter. The last letter is always yours to find.",
+      "Monday is easy; the weekend is hard. Your time counts only while the puzzle is open.",
+    ],
+    accent: "amber",
+    minutes: "3–6 min",
+    needsContent: true,
+  },
 ];
 
 export const GAME_IDS: readonly GameId[] = GAME_CATALOG.map((g) => g.id);
