@@ -1,7 +1,7 @@
 import type { GameId } from "./core/types.js";
 
 /** Accent colours map to the ATLAS Tailwind palette. */
-export type GameAccent = "violet" | "amber" | "cyan" | "emerald" | "slate";
+export type GameAccent = "violet" | "amber" | "cyan" | "emerald" | "slate" | "rose";
 
 export interface GameInfo {
   id: GameId;
@@ -111,7 +111,7 @@ export const GAME_CATALOG: readonly GameInfo[] = [
       "Stuck? Hint unlocks after 10 seconds on a word and fills its next letter. The last letter is always yours to find.",
       "Monday is easy; the weekend is hard. Your time counts only while the puzzle is open.",
     ],
-    accent: "amber",
+    accent: "rose",
     minutes: "3–6 min",
     needsContent: true,
   },

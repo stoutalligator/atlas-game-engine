@@ -73,6 +73,15 @@
   --ag-accent-ink: #064e3b;
 }
 
+.ag-root[data-accent="rose"] {
+  --ag-accent: #e11d48;
+  --ag-accent-strong: #be123c;
+  --ag-accent-line: #fb7185;
+  --ag-accent-soft: #fff1f2;
+  --ag-accent-tint: #ffe4e6;
+  --ag-accent-ink: #881337;
+}
+
 /* ── Buttons ───────────────────────────────────────────────────────────── */
 
 .ag-btn {
@@ -1880,7 +1889,8 @@
 .ag-ww-cell[data-flash="repeat"] .ag-ww-cell__box {
   border-color: var(--ag-bad);
   border-style: dashed;
-  background: var(--ag-bad-soft);
+  /* Stronger than the active word's fill, which is pale rose on the rose accent. */
+  background: #fecdd3;
   animation: ag-shake 360ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 .ag-ww .ag-ww-cell[data-flash="bad"] .ag-ww-cell__box,

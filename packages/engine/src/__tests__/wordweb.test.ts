@@ -437,12 +437,12 @@ describe("construction", () => {
 describe("hints", () => {
   const ready = (s: WordWebState) => ({
     ...s,
-    cooldowns: { ...s.cooldowns, [s.active as string]: 0 },
+    hintCooldownMs: 0,
   });
 
   it("waits ten seconds on the active word", () => {
     let s = fresh();
-    expect(s.cooldowns[id("HAMSTER")]).toBe(HINT_COOLDOWN_MS);
+    expect(s.hintCooldownMs).toBe(HINT_COOLDOWN_MS);
     s = tick(s, 9_000);
     expect(hintStatus(PETS, s)).toMatchObject({
       available: false,
@@ -453,15 +453,21 @@ describe("hints", () => {
     expect(hintStatus(PETS, s).available).toBe(true);
   });
 
-  it("pauses when switching words and resumes on return", () => {
+  it("is one timer for the whole puzzle: switching words doesn't pause or reset it", () => {
     let s = solve(solve(fresh(), "HAMSTER"), "RABBIT");
+    // Solving words doesn't restart it either: 0 ms of play so far, so it's still 10 s.
+    expect(s.hintCooldownMs).toBe(HINT_COOLDOWN_MS);
     s = tick(s, 4_000); // BIRD active
     s = selectAnswer(PETS, s, id("CAT"));
-    s = tick(s, 3_000);
-    expect(s.cooldowns[id("BIRD")]).toBe(6_000);
-    expect(s.cooldowns[id("CAT")]).toBe(7_000);
-    s = selectAnswer(PETS, s, id("BIRD"));
     expect(hintStatus(PETS, s).remainingMs).toBe(6_000);
+    s = tick(s, 3_000);
+    s = selectAnswer(PETS, s, id("BIRD"));
+    expect(hintStatus(PETS, s).remainingMs).toBe(3_000);
+    s = tick(s, 3_000);
+    expect(hintStatus(PETS, s).available).toBe(true);
+    s = takeHint(PETS, s).state;
+    s = selectAnswer(PETS, s, id("CAT"));
+    expect(hintStatus(PETS, s).remainingMs).toBe(HINT_COOLDOWN_MS);
   });
 
   it("reveals left to right across and top to bottom down, never the final letter", () => {
@@ -488,7 +494,7 @@ describe("hints", () => {
     const res = takeHint(PETS, ready(fresh()));
     expect(res.state.hintsUsed).toBe(1);
     expect(res.state.guessCount).toBe(0);
-    expect(res.state.cooldowns[id("HAMSTER")]).toBe(HINT_COOLDOWN_MS);
+    expect(res.state.hintCooldownMs).toBe(HINT_COOLDOWN_MS);
   });
 
   it("ignores a second click before the cooldown restarts", () => {
@@ -634,7 +640,7 @@ describe("persistence", () => {
 describe("share text", () => {
   const finished = () => {
     let s = tick(fresh(), 138_000);
-    s = takeHint(PETS, { ...s, cooldowns: { [id("HAMSTER")]: 0 } }).state;
+    s = takeHint(PETS, { ...s, hintCooldownMs: 0 }).state;
     s = submitGuess(PETS, s, id("HAMSTER"), "HAMPTER").state;
     for (const g of ["HAMSTER", "RABBIT", "CAT", "BIRD", "DOG"]) s = solve(s, g);
     return s;
@@ -908,7 +914,7 @@ describe("daily dates across daylight saving", () => {
 
 describe("proof replay", () => {
   it("recomputes hints and guesses from the log", () => {
-    let s = takeHint(PETS, { ...fresh(), cooldowns: { [id("HAMSTER")]: 0 } }).state;
+    let s = takeHint(PETS, { ...fresh(), hintCooldownMs: 0 }).state;
     s = submitGuess(PETS, s, id("HAMSTER"), "HAMPTER").state;
     for (const g of ["HAMSTER", "RABBIT", "CAT", "BIRD", "DOG"]) s = solve(s, g);
     expect(replayLog(PETS, s.log)).toEqual({ hintsUsed: 1, guessCount: 6 });

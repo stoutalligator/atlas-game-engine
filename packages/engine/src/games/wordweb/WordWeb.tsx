@@ -145,17 +145,13 @@ function WordWebGame({
   const hint = state ? hintStatus(puzzle, state) : null;
   const hintSeconds = hint ? Math.ceil(hint.remainingMs / 1000) : 0;
 
-  // Announce "hint available" once per word when its cooldown runs out.
-  const hintAnnounced = useRef<string | null>(null);
+  // The hint timer is shared by the whole puzzle: announce once each time it runs out.
+  const hintReady = !!state && !state.done && state.hintCooldownMs <= 0;
+  const wasReady = useRef(hintReady);
   useEffect(() => {
-    if (!active || !hint) return;
-    if (hint.available && hintAnnounced.current !== active.id) {
-      hintAnnounced.current = active.id;
-      announce("Hint available.");
-    }
-    if (!hint.available && hint.reason === "cooldown" && hintAnnounced.current === active.id)
-      hintAnnounced.current = null;
-  }, [active, hint, announce]);
+    if (hintReady && !wasReady.current) announce("Hint available.");
+    wasReady.current = hintReady;
+  }, [hintReady, announce]);
 
   const result = useMemo<GameResult | null>(() => {
     if (!state?.done || !state.result) return null;

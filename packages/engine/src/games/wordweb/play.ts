@@ -37,8 +37,11 @@ export interface WordWebState {
   guesses: Record<string, string[]>;
   guessCount: number;
   active: string | null;
-  /** Hint cooldown left per answer, ms. Runs only while that answer is active. */
-  cooldowns: Record<string, number>;
+  /**
+   * Hint cooldown left, ms. One timer for the whole puzzle: it runs during
+   * active play whichever word is selected, and restarts after each hint.
+   */
+  hintCooldownMs: number;
   elapsedMs: number;
   log: ProofStep[];
   done: boolean;
@@ -79,7 +82,7 @@ export function initialState(puzzle: WordWebPuzzle, date: string): WordWebState 
     guesses: {},
     guessCount: 0,
     active: puzzle.start,
-    cooldowns: { [puzzle.start]: HINT_COOLDOWN_MS },
+    hintCooldownMs: HINT_COOLDOWN_MS,
     elapsedMs: 0,
     log: [],
     done: false,
@@ -127,11 +130,7 @@ export function currentLetters(puzzle: WordWebPuzzle, state: WordWebState, id: s
 export function selectAnswer(puzzle: WordWebPuzzle, state: WordWebState, id: string): WordWebState {
   if (state.done || state.active === id) return state;
   if (!openAnswers(puzzle, state).some((a) => a.id === id)) return state;
-  return {
-    ...state,
-    active: id,
-    cooldowns: { ...state.cooldowns, [id]: state.cooldowns[id] ?? HINT_COOLDOWN_MS },
-  };
+  return { ...state, active: id };
 }
 
 /** Types into the active answer's next empty, unfixed cell. Grades automatically when it spells the answer. */
@@ -258,12 +257,6 @@ export function submitGuess(
     state: {
       ...solvedState,
       active: done ? null : nextActive,
-      cooldowns: nextActive
-        ? {
-            ...solvedState.cooldowns,
-            [nextActive]: solvedState.cooldowns[nextActive] ?? HINT_COOLDOWN_MS,
-          }
-        : solvedState.cooldowns,
       done,
       result: done
         ? {
@@ -301,7 +294,7 @@ export function hintStatus(puzzle: WordWebPuzzle, state: WordWebState): HintStat
   // The last unknown letter is always the player's to find.
   if (unknown.length <= 1)
     return { available: false, reason: "final-letter", remainingMs: 0, nextIndex: null };
-  const remainingMs = Math.max(0, state.cooldowns[a.id] ?? HINT_COOLDOWN_MS);
+  const remainingMs = Math.max(0, state.hintCooldownMs);
   if (remainingMs > 0)
     return { available: false, reason: "cooldown", remainingMs, nextIndex: unknown[0] };
   return { available: true, reason: "ready", remainingMs: 0, nextIndex: unknown[0] };
@@ -324,21 +317,21 @@ export function takeHint(
       typed,
       hinted: [...state.hinted, k],
       hintsUsed: state.hintsUsed + 1,
-      cooldowns: { ...state.cooldowns, [a.id]: HINT_COOLDOWN_MS },
+      hintCooldownMs: HINT_COOLDOWN_MS,
       log: [...state.log, ["h", a.id] as ProofStep].slice(-MAX_LOG),
     },
     index: status.nextIndex,
   };
 }
 
-/** Active play time passing: the clock, and the active answer's hint cooldown. */
+/** Active play time passing: the clock, and the puzzle's hint cooldown. */
 export function tick(state: WordWebState, deltaMs: number): WordWebState {
   if (state.done || !(deltaMs > 0)) return state;
-  const cooldowns =
-    state.active && (state.cooldowns[state.active] ?? 0) > 0
-      ? { ...state.cooldowns, [state.active]: Math.max(0, state.cooldowns[state.active] - deltaMs) }
-      : state.cooldowns;
-  return { ...state, elapsedMs: state.elapsedMs + deltaMs, cooldowns };
+  return {
+    ...state,
+    elapsedMs: state.elapsedMs + deltaMs,
+    hintCooldownMs: Math.max(0, state.hintCooldownMs - deltaMs),
+  };
 }
 
 const isRec = (v: unknown): v is Record<string, unknown> =>
@@ -374,10 +367,10 @@ export function restoreState(saved: unknown, puzzle: WordWebPuzzle, date: string
     for (const [id, list] of Object.entries(saved.guesses))
       if (ids.has(id) && Array.isArray(list))
         guesses[id] = list.filter((g): g is string => typeof g === "string");
-  const cooldowns: Record<string, number> = {};
-  if (isRec(saved.cooldowns))
-    for (const [id, ms] of Object.entries(saved.cooldowns))
-      if (ids.has(id)) cooldowns[id] = Math.min(HINT_COOLDOWN_MS, nonNeg(ms));
+  const hintCooldownMs =
+    typeof saved.hintCooldownMs === "number"
+      ? Math.min(HINT_COOLDOWN_MS, nonNeg(saved.hintCooldownMs))
+      : HINT_COOLDOWN_MS;
   const log = (Array.isArray(saved.log) ? saved.log : []).filter(
     (s): s is ProofStep =>
       Array.isArray(s) && ((s[0] === "g" && s.length === 3) || (s[0] === "h" && s.length === 2)),
@@ -391,7 +384,7 @@ export function restoreState(saved: unknown, puzzle: WordWebPuzzle, date: string
     hintsUsed: Math.max(hinted.length, Math.floor(nonNeg(saved.hintsUsed))),
     guesses,
     guessCount: Math.floor(nonNeg(saved.guessCount)),
-    cooldowns: { ...fresh.cooldowns, ...cooldowns },
+    hintCooldownMs,
     elapsedMs: nonNeg(saved.elapsedMs),
     log: log.slice(-MAX_LOG),
   };
@@ -407,9 +400,6 @@ export function restoreState(saved: unknown, puzzle: WordWebPuzzle, date: string
   return {
     ...state,
     active: done ? null : active,
-    cooldowns: active
-      ? { ...state.cooldowns, [active]: state.cooldowns[active] ?? HINT_COOLDOWN_MS }
-      : state.cooldowns,
     done,
     // The official result is whatever was recorded at completion.
     result: done
@@ -448,7 +438,7 @@ export function replayLog(
     } else if (step[0] === "h") {
       s = selectAnswer(puzzle, s, step[1]);
       if (s.active !== step[1]) return null;
-      const res = takeHint(puzzle, { ...s, cooldowns: { ...s.cooldowns, [step[1]]: 0 } });
+      const res = takeHint(puzzle, { ...s, hintCooldownMs: 0 });
       if (res.index === null) return null;
       s = res.state;
     } else return null;
