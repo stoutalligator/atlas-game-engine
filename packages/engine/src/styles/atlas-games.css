@@ -1800,6 +1800,14 @@
   font-weight: 700;
 }
 .ag-ww {
+  /* The selected word is amber whatever the game accent: on rose, a red-ish
+     outline would read as a wrong answer before anything is submitted. */
+  --ag-ww-select: #d97706;
+  --ag-ww-select-strong: #b45309;
+  --ag-ww-select-line: #fbbf24;
+  --ag-ww-select-soft: #fffbeb;
+  --ag-ww-select-tint: #fef3c7;
+  --ag-ww-select-ink: #78350f;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1841,20 +1849,20 @@
   transition: background-color 260ms ease, border-color 260ms ease, box-shadow 260ms ease;
 }
 .ag-ww-cell[data-active="true"] .ag-ww-cell__box {
-  border-color: var(--ag-accent);
-  background: var(--ag-accent-soft);
-  box-shadow: 0 0 0 2px var(--ag-accent-line), 0 2px 0 0 var(--ag-shadow);
+  border-color: var(--ag-ww-select);
+  background: var(--ag-ww-select-soft);
+  box-shadow: 0 0 0 2px var(--ag-ww-select-line), 0 2px 0 0 var(--ag-shadow);
 }
 .ag-ww-cell[data-typed="true"] .ag-ww-cell__letter {
-  color: var(--ag-accent-ink);
+  color: var(--ag-ww-select-ink);
   font-weight: 800;
 }
 .ag-ww-cell[data-given="true"] .ag-ww-cell__box,
 .ag-ww-cell[data-hinted="true"] .ag-ww-cell__box {
-  background-image: linear-gradient(135deg, transparent 0 78%, var(--ag-accent-line) 78% 100%);
+  background-image: linear-gradient(135deg, transparent 0 78%, var(--ag-ww-select-line) 78% 100%);
 }
 .ag-ww-cell[data-hinted="true"] .ag-ww-cell__letter {
-  text-decoration: underline dotted var(--ag-accent);
+  text-decoration: underline dotted var(--ag-ww-select);
   text-underline-offset: 3px;
 }
 .ag-ww-cell[data-solved="true"] .ag-ww-cell__box {
@@ -1864,7 +1872,7 @@
   color: #065f46;
 }
 .ag-ww-cell[data-solved="true"][data-active="true"] .ag-ww-cell__box {
-  border-color: var(--ag-accent);
+  border-color: var(--ag-ww-select);
 }
 .ag-ww-cell__badge {
   position: absolute;
@@ -1889,8 +1897,7 @@
 .ag-ww-cell[data-flash="repeat"] .ag-ww-cell__box {
   border-color: var(--ag-bad);
   border-style: dashed;
-  /* Stronger than the active word's fill, which is pale rose on the rose accent. */
-  background: #fecdd3;
+  background: var(--ag-bad-soft);
   animation: ag-shake 360ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 .ag-ww .ag-ww-cell[data-flash="bad"] .ag-ww-cell__box,
@@ -1899,12 +1906,12 @@
   outline-color: var(--ag-bad) !important;
 }
 .ag-ww .ag-ww-cell[data-flash="close"] .ag-ww-cell__box {
-  outline-color: var(--ag-accent-ink) !important;
+  outline-color: var(--ag-ww-select-ink) !important;
 }
 .ag-ww-cell[data-flash="close"] .ag-ww-cell__box {
-  border-color: var(--ag-accent-strong);
+  border-color: var(--ag-ww-select-strong);
   border-style: dashed;
-  background: var(--ag-accent-tint);
+  background: var(--ag-ww-select-tint);
   animation: ag-shake 300ms ease;
 }
 .ag-ww-cell[data-flash="incomplete"] .ag-ww-cell__box {
@@ -1929,7 +1936,7 @@
 }
 @keyframes ag-ww-pulse {
   50% {
-    box-shadow: 0 0 0 4px var(--ag-accent-line), 0 2px 0 0 var(--ag-shadow);
+    box-shadow: 0 0 0 4px var(--ag-ww-select-line), 0 2px 0 0 var(--ag-shadow);
   }
 }
 .ag-ww-input {
@@ -1941,7 +1948,7 @@
   font-size: 16px; /* stops iOS zooming in on focus */
 }
 .ag-ww:has(.ag-ww-input:focus-visible) .ag-ww-cell[data-active="true"] .ag-ww-cell__box {
-  outline: 3px solid var(--ag-accent-strong);
+  outline: 3px solid var(--ag-ww-select-strong);
   outline-offset: 1px;
 }
 .ag-ww-controls {
@@ -1959,7 +1966,7 @@
   text-align: center;
 }
 .ag-ww-message[data-tone="close"] {
-  color: var(--ag-accent-ink);
+  color: var(--ag-ww-select-ink);
   font-weight: 800;
   animation: ag-rise 240ms ease both;
 }
@@ -1972,6 +1979,15 @@
 }
 .ag-ww-hint {
   min-width: 72px;
+}
+/* Amber like the selected word: a red button would read as an error on the rose accent. */
+.ag-ww .ag-ww-hint.ag-btn--accent {
+  border-color: var(--ag-ww-select-strong);
+  background: var(--ag-ww-select);
+  box-shadow: 0 3px 0 0 var(--ag-ww-select-ink);
+}
+.ag-ww .ag-ww-hint.ag-btn--accent:hover:not(:disabled) {
+  background: var(--ag-ww-select-strong);
 }
 .ag-ww-hint-status {
   min-width: 9ch;
@@ -2005,16 +2021,16 @@
   cursor: pointer;
 }
 .ag-ww-word:hover:not(:disabled) {
-  border-color: var(--ag-accent-line);
+  border-color: var(--ag-ww-select-line);
 }
 .ag-ww-word:focus-visible {
-  outline: 3px solid var(--ag-accent-strong);
+  outline: 3px solid var(--ag-ww-select-strong);
   outline-offset: 2px;
 }
 .ag-ww-word[data-active="true"] {
-  border-color: var(--ag-accent);
-  background: var(--ag-accent-soft);
-  color: var(--ag-accent-ink);
+  border-color: var(--ag-ww-select);
+  background: var(--ag-ww-select-soft);
+  color: var(--ag-ww-select-ink);
 }
 .ag-ww-word[data-solved="true"] {
   border-color: var(--ag-good-line);
