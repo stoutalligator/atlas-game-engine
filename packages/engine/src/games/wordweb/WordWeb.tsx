@@ -19,6 +19,7 @@ import {
   backspace,
   currentLetters,
   fixedCells,
+  givenCells,
   hintStatus,
   initialState,
   openAnswers,
@@ -347,8 +348,7 @@ function WordWebGame({
   const solvedSet = new Set(state.solved);
   const activeCells = new Set(active ? cellsOf(active).map(([r, c]) => cellKey(r, c)) : []);
   const hinted = new Set(state.hinted);
-  const startCells = cellsOf(puzzle.answers.find((a) => a.id === puzzle.start) as WordWebAnswer);
-  const given = new Set(puzzle.revealed.map((i) => cellKey(...startCells[i])));
+  const given = new Set(givenCells(puzzle, state).keys());
   const flashCells = new Set(
     flash
       ? cellsOf(puzzle.answers.find((a) => a.id === flash.id) as WordWebAnswer).map(([r, c]) =>

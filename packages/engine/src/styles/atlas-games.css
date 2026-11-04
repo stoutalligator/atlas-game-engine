@@ -384,6 +384,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.ag-stat__note {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .ag-stat__label,
 .ag-streak__label,
 .ag-next__label {
@@ -748,10 +754,97 @@
 .ag-nono[data-done="true"] .ag-nono__cell {
   cursor: default;
 }
+/* Solved: each filled cell flips like a split-flap display through a few of
+   the picture's colours (set per cell by BoxPlot.tsx) to its own colour. */
 .ag-nono[data-done="true"] .ag-nono__cell[data-state="filled"] {
-  background: var(--ag-accent);
-  box-shadow: inset 0 -3px 0 0 var(--ag-accent-strong);
-  animation: ag-pop 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  background: var(--ag-flap-c, var(--ag-accent));
+  box-shadow: inset 0 -3px 0 0 rgba(0, 0, 0, 0.18);
+  transform-origin: 50% 50%;
+  animation: ag-flap 1000ms linear both;
+}
+/* The flap's hinge: a thin seam across the middle while it flips. */
+.ag-nono[data-done="true"] .ag-nono__cell[data-state="filled"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(15, 23, 42, 0.35);
+  animation: ag-flap-seam 1000ms linear both;
+  animation-delay: inherit;
+}
+@keyframes ag-flap {
+  0% {
+    background: #1e293b;
+    transform: perspective(160px) rotateX(0deg);
+  }
+  11% {
+    background: #1e293b;
+    transform: perspective(160px) rotateX(-90deg);
+  }
+  11.01% {
+    background: var(--ag-flap-1);
+    transform: perspective(160px) rotateX(90deg);
+  }
+  22% {
+    background: var(--ag-flap-1);
+    transform: perspective(160px) rotateX(0deg);
+  }
+  33% {
+    background: var(--ag-flap-1);
+    transform: perspective(160px) rotateX(-90deg);
+  }
+  33.01% {
+    background: var(--ag-flap-2);
+    transform: perspective(160px) rotateX(90deg);
+  }
+  44% {
+    background: var(--ag-flap-2);
+    transform: perspective(160px) rotateX(0deg);
+  }
+  55% {
+    background: var(--ag-flap-2);
+    transform: perspective(160px) rotateX(-90deg);
+  }
+  55.01% {
+    background: var(--ag-flap-3);
+    transform: perspective(160px) rotateX(90deg);
+  }
+  66% {
+    background: var(--ag-flap-3);
+    transform: perspective(160px) rotateX(0deg);
+  }
+  77% {
+    background: var(--ag-flap-3);
+    transform: perspective(160px) rotateX(-90deg);
+  }
+  77.01% {
+    background: var(--ag-flap-c);
+    transform: perspective(160px) rotateX(90deg);
+  }
+  100% {
+    background: var(--ag-flap-c);
+    transform: perspective(160px) rotateX(0deg);
+  }
+}
+@keyframes ag-flap-seam {
+  0%,
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ag-nono[data-done="true"] .ag-nono__cell[data-state="filled"],
+  .ag-nono[data-done="true"] .ag-nono__cell[data-state="filled"]::before {
+    animation: none;
+  }
+  .ag-nono[data-done="true"] .ag-nono__cell[data-state="filled"]::before {
+    opacity: 0;
+  }
 }
 .ag-nono[data-done="true"] .ag-nono__cell[data-state="empty"] {
   background: #fff;
@@ -2057,5 +2150,90 @@
 @media (prefers-reduced-motion: reduce) {
   .ag-ww-layer {
     transition: none;
+  }
+}
+
+/* Box Plot: Check. Wrong cells get a red outline until the player changes them. */
+.ag-nono__cell[data-wrong="true"] {
+  outline: 3px solid #e11d48;
+  outline-offset: -3px;
+  z-index: 1;
+  animation: ag-nono-wrong 360ms ease-out;
+}
+@keyframes ag-nono-wrong {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+.ag-nono-check {
+  min-width: 11ch;
+  font-variant-numeric: tabular-nums;
+}
+.ag-nono-check-msg {
+  display: block;
+  min-height: 1.4em;
+  margin: 4px 0 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #be123c;
+}
+.ag-nono-check-msg span {
+  animation: ag-pop 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.ag-nono-check-msg span[data-ok="true"] {
+  color: #047857;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ag-nono__cell[data-wrong="true"],
+  .ag-nono-check-msg span {
+    animation: none;
+  }
+}
+
+/* Result panel tags: the host's achievements for this finish. */
+.ag-result__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ag-result__tag {
+  border: 1.5px solid #7dd3fc;
+  border-radius: 999px;
+  background: #f0f9ff;
+  color: #075985;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  animation: ag-pop 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.ag-result__tag[data-kind="best"] {
+  border-color: #fbbf24;
+  background: #fffbeb;
+  color: #92400e;
+}
+.ag-result__tag[data-kind="clean"] {
+  border-color: #6ee7b7;
+  background: #ecfdf5;
+  color: #065f46;
+}
+.ag-result__tag[data-kind="streak"] {
+  border-color: #fdba74;
+  background: #fff7ed;
+  color: #9a3412;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ag-result__tag {
+    animation: none;
   }
 }

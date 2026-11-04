@@ -1,15 +1,25 @@
 import { describe, expect, it } from "vitest";
+import { addDays, weekday } from "../core/daily.js";
+import {
+  BOX_PLOT_DAYS,
+  BOX_PLOT_SIZES,
+  LIBRARY,
+  choppiness,
+  pictureForDate,
+  poolFor,
+} from "../games/box-plot/library.js";
 import {
   type CellState,
   EMPTY,
   FILLED,
+  MARKED,
   boxPlotForDate,
   buildPuzzle,
+  findMistakes,
   isSolved,
   lineSolve,
   runsOf,
 } from "../games/box-plot/logic.js";
-import { PICTURES } from "../games/box-plot/pictures.js";
 
 describe("box plot", () => {
   it("computes runs", () => {
@@ -17,19 +27,45 @@ describe("box plot", () => {
     expect(runsOf([false, false])).toEqual([]);
   });
 
-  it("every picture is 10×10 and solvable by line logic alone", () => {
-    const unsolvable: string[] = [];
-    for (const pic of PICTURES) {
-      expect(pic.rows).toHaveLength(10);
-      const p = buildPuzzle(pic);
-      if (!lineSolve(p.rowClues, p.colClues)) unsolvable.push(pic.name);
+  it("every picture is a square of a supported size, coloured from its palette", () => {
+    const bad: string[] = [];
+    for (const pic of LIBRARY) {
+      const n = pic.rows.length;
+      if (!(BOX_PLOT_SIZES as readonly number[]).includes(n)) bad.push(`${pic.name}: size ${n}`);
+      if (pic.rows.some((r) => r.length !== n)) bad.push(`${pic.name}: not square`);
+      for (const ch of pic.rows.join(""))
+        if (ch !== "." && !pic.palette[ch]) bad.push(`${pic.name}: no colour for "${ch}"`);
+      if (Object.keys(pic.palette).some((k) => k.length !== 1 || k === "."))
+        bad.push(`${pic.name}: bad palette key`);
+      if (!pic.rows.join("").replaceAll(".", "")) bad.push(`${pic.name}: empty`);
     }
+    expect([...new Set(bad)]).toEqual([]);
+  });
+
+  it("every picture is solvable by line logic alone", () => {
+    const unsolvable = LIBRARY.filter((pic) => {
+      const p = buildPuzzle(pic);
+      return !lineSolve(p.rowClues, p.colClues);
+    }).map((p) => p.name);
     expect(unsolvable).toEqual([]);
   });
 
-  it("picture names are unique", () => {
-    const names = PICTURES.map((p) => p.name);
-    expect(new Set(names).size).toBe(names.length);
+  it("picture names are unique within a size", () => {
+    for (const size of BOX_PLOT_SIZES) {
+      const names = LIBRARY.filter((p) => p.rows.length === size).map((p) => p.name);
+      expect(new Set(names).size).toBe(names.length);
+    }
+  });
+
+  it("colours follow the picture; empty cells have none", () => {
+    const p = buildPuzzle({
+      name: "t",
+      palette: { R: "#f00", B: "#00f" },
+      rows: ["R.B..", ".....", ".....", ".....", "....."],
+    });
+    expect(p.colors[0]).toEqual(["#f00", null, "#00f", null, null]);
+    expect(p.solution[0]).toEqual([true, false, true, false, false]);
+    expect(p.palette).toEqual(["#f00", "#00f"]);
   });
 
   it("accepts the solution and rejects an empty board", () => {
@@ -40,13 +76,65 @@ describe("box plot", () => {
     expect(isSolved(p, empty)).toBe(false);
   });
 
-  it("is deterministic and does not repeat within a cycle", () => {
-    expect(boxPlotForDate("2026-10-14").name).toBe(boxPlotForDate("2026-10-14").name);
-    const seen = new Set<string>();
-    for (let i = 0; i < PICTURES.length; i++) {
-      const d = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10);
-      seen.add(boxPlotForDate(d).name);
+  it("check flags wrong fills and wrong marks, never blanks", () => {
+    const p = boxPlotForDate("2026-10-14");
+    const want = p.solution.flat();
+    const filled = want.indexOf(true);
+    const empty = want.indexOf(false);
+    const cells: CellState[] = want.map(() => EMPTY);
+    expect(findMistakes(p, cells)).toEqual([]); // blank board: no mistakes
+    cells[filled] = FILLED;
+    expect(findMistakes(p, cells)).toEqual([]); // right fill
+    cells[empty] = FILLED;
+    expect(findMistakes(p, cells)).toEqual([empty]); // wrong fill
+    cells[empty] = MARKED;
+    cells[filled] = MARKED;
+    expect(findMistakes(p, cells)).toEqual([filled]); // wrong ✕
+  });
+
+  it("each weekday gets its size: 5×5 Monday up to 12×12 Sunday", () => {
+    // 2026-11-02 is a Monday.
+    const sizes = Array.from(
+      { length: 7 },
+      (_, i) => boxPlotForDate(addDays("2026-11-02", i)).size,
+    );
+    expect(sizes).toEqual([5, 7, 8, 10, 10, 12, 12]);
+  });
+
+  it("days sharing a size split it: the harder day gets the choppier half", () => {
+    for (const [easy, hard] of [
+      [4, 5],
+      [6, 0],
+    ]) {
+      expect(BOX_PLOT_DAYS[easy].size).toBe(BOX_PLOT_DAYS[hard].size);
+      const a = poolFor(easy);
+      const b = poolFor(hard);
+      expect(a.length + b.length).toBe(
+        LIBRARY.filter((p) => p.rows.length === BOX_PLOT_DAYS[easy].size).length,
+      );
+      expect(a.some((p) => b.includes(p))).toBe(false);
+      if (a.length && b.length)
+        expect(Math.max(...a.map((p) => choppiness(p.rows)))).toBeLessThanOrEqual(
+          Math.min(...b.map((p) => choppiness(p.rows))),
+        );
     }
-    expect(seen.size).toBe(PICTURES.length);
+  });
+
+  it("choppiness counts runs per line", () => {
+    expect(choppiness(["RRRRR", "RRRRR", "RRRRR", "RRRRR", "RRRRR"])).toBe(1);
+    expect(choppiness(["R.R.R", ".....", "R.R.R", ".....", "R.R.R"])).toBe(1.8);
+  });
+
+  it("is deterministic, and a weekday doesn't repeat until its pool is used up", () => {
+    expect(boxPlotForDate("2026-10-14").name).toBe(boxPlotForDate("2026-10-14").name);
+    for (let wd = 0; wd < 7; wd++) {
+      const pool = poolFor(wd);
+      // The first date on or after 2026-01-01 with this weekday.
+      let d = "2026-01-01";
+      while (weekday(d) !== wd) d = addDays(d, 1);
+      const seen = new Set<string>();
+      for (let w = 0; w < pool.length; w++) seen.add(pictureForDate(addDays(d, w * 7)).name);
+      expect(seen.size).toBe(pool.length);
+    }
   });
 });

@@ -48,7 +48,10 @@ export interface ContentProposal {
   actuarial: boolean;
   breadth: number;
   ambiguity: number;
-  /** Candidate answers (more than the puzzle needs is fine: the pipeline picks). */
+  /**
+   * Candidate answers (more than the puzzle needs is fine: the pipeline
+   * picks), most generic first: easy days draw from the top of this list.
+   */
   answers: ProposedAnswer[];
   /** Other recognized category members, used as "Close!" alternates only. */
   alsoValid: string[];
@@ -72,6 +75,7 @@ export interface BankCategory {
   actuarial?: boolean;
   breadth: number;
   ambiguity: number;
+  /** Most generic first ("Cow, Pig, Chicken" before "Llama"): easy days use the top. */
   answers: ProposedAnswer[];
   alsoValid?: string[];
 }

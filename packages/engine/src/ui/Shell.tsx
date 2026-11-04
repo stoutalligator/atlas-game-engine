@@ -1,4 +1,11 @@
-import { type ButtonHTMLAttributes, type ReactNode, useEffect, useState } from "react";
+import {
+  type ButtonHTMLAttributes,
+  type ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { getGameInfo } from "../catalog.js";
 import { formatClock, formatDateLabel, msUntilLocalMidnight, puzzleNumber } from "../core/daily.js";
 import type { GameId, GameStat, GameStats } from "../core/types.js";
@@ -118,6 +125,23 @@ export function Countdown() {
   );
 }
 
+/**
+ * Tags the host gives a finished game ("Personal best!", "No hints!",
+ * "🔥 5-day streak"), shown in the result panel. Set by AtlasGame's
+ * `resultTags`; empty by default.
+ */
+export const ResultTagsContext = createContext<readonly string[]>([]);
+
+/** Pill colours by tag kind. */
+const tagKind = (tag: string) =>
+  tag.startsWith("Personal best")
+    ? "best"
+    : tag.startsWith("No ")
+      ? "clean"
+      : tag.includes("streak")
+        ? "streak"
+        : "other";
+
 interface ResultPanelProps {
   solved: boolean;
   headline: string;
@@ -138,6 +162,7 @@ export function ResultPanel({
   children,
 }: ResultPanelProps) {
   const [copied, setCopied] = useState(false);
+  const tags = useContext(ResultTagsContext);
 
   const share = async () => {
     try {
@@ -162,11 +187,27 @@ export function ResultPanel({
         </Button>
       </div>
 
+      {tags.length > 0 && (
+        <ul className="ag-result__tags" aria-label="Achievements">
+          {tags.map((tag, i) => (
+            <li
+              key={tag}
+              className="ag-result__tag"
+              data-kind={tagKind(tag)}
+              style={{ animationDelay: `${160 + i * 90}ms` }}
+            >
+              {tag}
+            </li>
+          ))}
+        </ul>
+      )}
+
       {stats.length > 0 && (
         <div className="ag-result__stats">
           {stats.map((s) => (
             <div key={s.label} className="ag-stat">
               <div className="ag-stat__value">{s.value}</div>
+              {s.note && <div className="ag-stat__note">{s.note}</div>}
               <div className="ag-stat__label">{s.label}</div>
             </div>
           ))}
