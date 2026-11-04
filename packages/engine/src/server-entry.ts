@@ -25,6 +25,8 @@ export interface VerifiedScore {
   total?: number;
   /** Cube Rush par, for display. */
   par?: number;
+  /** Box Plot grid size (5–12), which bounds the fastest plausible time. */
+  size?: number;
 }
 
 export interface VerifyInput {
@@ -83,7 +85,9 @@ export function verifyGameResult({
             .slice(r * pz.size, r * pz.size + pz.size)
             .map((c): CellState => (c === FILLED ? FILLED : EMPTY)),
         );
-        return boxPlotSolved(pz, grid) ? { solved: true } : null;
+        // Checks are the board's hints; like Risk Pool's, the count is the client's.
+        const hints = isInt(proof.hints) && proof.hints >= 0 ? proof.hints : 0;
+        return boxPlotSolved(pz, grid) ? { solved: true, hints, size: pz.size } : null;
       }
       case "assumption-drift": {
         const raw = packForDate(packs, date);
@@ -123,7 +127,8 @@ export function minPlausibleSeconds(game: GameId, score: VerifiedScore): number 
     case "risk-pool":
       return 10;
     case "box-plot":
-      return 15;
+      // About an eighth of a second per cell: 3 s for 5×5, 18 s for 12×12.
+      return Math.max(3, Math.round((score.size ?? 10) ** 2 / 8));
     case "wordweb":
       // A few seconds per answer, at the very least.
       return 8;

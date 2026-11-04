@@ -1,4 +1,12 @@
-import { type PointerEvent, useCallback, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type PointerEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { formatClock, puzzleNumber } from "../../core/daily.js";
 import { useCompletion, useDailyProgress, usePuzzleDate, useTicker } from "../../core/progress.js";
 import { shareText } from "../../core/share.js";
@@ -6,11 +14,13 @@ import type { DailyGameProps, GameResult } from "../../core/types.js";
 import { Button, GameLoading, GameShell, ResultPanel } from "../../ui/Shell.js";
 import {
   type BoxPlotPuzzle,
+  CHECK_COOLDOWN_SEC,
   type CellState,
   EMPTY,
   FILLED,
   MARKED,
   boxPlotForDate,
+  findMistakes,
   isSolved,
   lineMatches,
 } from "./logic.js";
@@ -20,6 +30,10 @@ interface BoxPlotState {
   cells: CellState[];
   elapsed: number;
   done: boolean;
+  /** Checks used (the board's "hints"). Absent in saves from before Check. */
+  checks?: number;
+  /** Seconds of play until Check is ready again. */
+  checkCooldown?: number;
 }
 
 type Tool = "fill" | "mark";
@@ -37,16 +51,43 @@ function BoxPlotGame({ date, storage, onComplete }: DailyGameProps & { date: str
     "box-plot",
     date,
     storage,
-    () => ({ cells: new Array(n * n).fill(EMPTY), elapsed: 0, done: false }),
+    () => ({
+      cells: new Array(n * n).fill(EMPTY),
+      elapsed: 0,
+      done: false,
+      checks: 0,
+      checkCooldown: CHECK_COOLDOWN_SEC,
+    }),
   );
+  // A save from a different picture size (the schedule changed) starts over.
+  useEffect(() => {
+    if (state && state.cells.length !== n * n)
+      setState({
+        cells: new Array(n * n).fill(EMPTY),
+        elapsed: 0,
+        done: false,
+        checks: 0,
+        checkCooldown: CHECK_COOLDOWN_SEC,
+      });
+  }, [state, n, setState]);
+  /** Cells the last check flagged, shown until the player changes them. */
+  const [flagged, setFlagged] = useState<Set<number>>(new Set());
+  const [checkMsg, setCheckMsg] = useState<{ text: string; n: number } | null>(null);
   const [tool, setTool] = useState<Tool>("fill");
   const [undoStack, setUndoStack] = useState<CellState[][]>([]);
   const [hover, setHover] = useState<number | null>(null);
 
-  useTicker(!!state && !state.done, () => setState((s) => ({ ...s, elapsed: s.elapsed + 1 })));
+  useTicker(!!state && !state.done, () =>
+    setState((s) => ({
+      ...s,
+      elapsed: s.elapsed + 1,
+      checkCooldown: Math.max(0, (s.checkCooldown ?? CHECK_COOLDOWN_SEC) - 1),
+    })),
+  );
 
   const result = useMemo<GameResult | null>(() => {
     if (!state?.done) return null;
+    const checks = state.checks ?? 0;
     return {
       gameId: "box-plot",
       date,
@@ -55,11 +96,14 @@ function BoxPlotGame({ date, storage, onComplete }: DailyGameProps & { date: str
       durationSec: state.elapsed,
       stats: [
         { label: "Time", value: formatClock(state.elapsed) },
+        { label: "Checks", value: String(checks) },
         { label: "Picture", value: puzzle.name },
       ],
-      score: {},
-      proof: { cells: state.cells },
-      shareText: shareText("box-plot", date, [`🟦 Solved in ${formatClock(state.elapsed)}`]),
+      score: { hints: checks },
+      proof: { cells: state.cells, hints: checks },
+      shareText: shareText("box-plot", date, [
+        `🟦 Solved in ${formatClock(state.elapsed)} · ${checks === 0 ? "no checks" : `${checks} check${checks === 1 ? "" : "s"}`}`,
+      ]),
     };
   }, [state, date, puzzle.name]);
   useCompletion(result, onComplete, recordHistory);
@@ -98,6 +142,10 @@ function BoxPlotGame({ date, storage, onComplete }: DailyGameProps & { date: str
       if (dir === 0) run.push(target);
       s.last = target;
 
+      // A flagged cell stops being flagged once the player touches it.
+      setFlagged((f) =>
+        run.some((k) => f.has(k)) ? new Set([...f].filter((k) => !run.includes(k))) : f,
+      );
       setState((prev) => {
         let cells: CellState[] | null = null;
         for (const k of run) {
@@ -159,7 +207,21 @@ function BoxPlotGame({ date, storage, onComplete }: DailyGameProps & { date: str
     });
   };
 
-  if (!state) return <GameLoading />;
+  if (!state || state.cells.length !== n * n) return <GameLoading />;
+
+  const cooldown = state.checkCooldown ?? CHECK_COOLDOWN_SEC;
+  const onCheck = () => {
+    if (state.done || cooldown > 0) return;
+    const mistakes = findMistakes(puzzle, state.cells);
+    setFlagged(new Set(mistakes));
+    setCheckMsg((m) => ({
+      text: mistakes.length
+        ? `${mistakes.length} mistake${mistakes.length === 1 ? "" : "s"} outlined in red.`
+        : "No mistakes!",
+      n: (m?.n ?? 0) + 1,
+    }));
+    setState((s) => ({ ...s, checks: (s.checks ?? 0) + 1, checkCooldown: CHECK_COOLDOWN_SEC }));
+  };
 
   const grid = toGrid(state.cells, n);
   const rowDone = puzzle.rowClues.map((clue, r) => lineMatches(grid[r], clue));
@@ -180,10 +242,20 @@ function BoxPlotGame({ date, storage, onComplete }: DailyGameProps & { date: str
       chips={[
         { label: "Time", value: formatClock(state.elapsed) },
         { label: "Filled", value: String(filled) },
+        { label: "Checks", value: String(state.checks ?? 0) },
       ]}
       actions={
         !state.done && (
           <>
+            <Button
+              variant="accent"
+              className="ag-nono-check"
+              disabled={cooldown > 0}
+              aria-describedby="ag-nono-check-status"
+              onClick={onCheck}
+            >
+              {cooldown > 0 ? `Check in ${cooldown}s` : "Check"}
+            </Button>
             <Button
               disabled={undoStack.length === 0}
               onClick={() => {
@@ -217,6 +289,16 @@ function BoxPlotGame({ date, storage, onComplete }: DailyGameProps & { date: str
             <span className="ag-swatch ag-swatch--mark">✕</span> Mark empty
           </ToolButton>
         </div>
+      )}
+
+      {!state.done && (
+        <output id="ag-nono-check-status" className="ag-nono-check-msg">
+          {checkMsg && (
+            <span key={checkMsg.n} data-ok={checkMsg.text === "No mistakes!"}>
+              {checkMsg.text}
+            </span>
+          )}
+        </output>
       )}
 
       <div className="ag-nono-wrap">
@@ -258,6 +340,9 @@ function BoxPlotGame({ date, storage, onComplete }: DailyGameProps & { date: str
               hotRow={r === hr}
               hotCol={hc}
               solution={state.done ? puzzle.solution[r] : null}
+              colors={puzzle.colors[r]}
+              palette={puzzle.palette}
+              flagged={state.done ? null : flagged}
             />
           ))}
         </div>
@@ -286,6 +371,9 @@ function Row({
   hotRow,
   hotCol,
   solution,
+  flagged,
+  colors,
+  palette,
 }: {
   r: number;
   n: number;
@@ -295,6 +383,9 @@ function Row({
   hotRow: boolean;
   hotCol: number;
   solution: boolean[] | null;
+  flagged: Set<number> | null;
+  colors: (string | null)[];
+  palette: string[];
 }) {
   return (
     <>
@@ -313,9 +404,10 @@ function Row({
             className="ag-nono__cell"
             data-state={solution ? (solution[c] ? "filled" : "empty") : STATE_NAMES[cell]}
             data-hot={hotRow || c === hotCol}
+            data-wrong={flagged?.has(i) || undefined}
             data-edge-r={c === n - 1 ? "end" : c % 5 === 4}
             data-edge-b={r === n - 1 ? "end" : r % 5 === 4}
-            style={solution ? { animationDelay: `${(r + c) * 18}ms` } : undefined}
+            style={solution ? flapStyle(r, c, colors[c], palette) : undefined}
           />
         );
       })}
@@ -324,6 +416,23 @@ function Row({
 }
 
 const STATE_NAMES = ["empty", "filled", "marked"] as const;
+
+/**
+ * The solved reveal, like a split-flap departure board: each filled cell
+ * flips through three of the picture's colours and lands on its own,
+ * sweeping across the rows. The flicker colours are fixed per cell.
+ */
+function flapStyle(r: number, c: number, color: string | null, palette: string[]): CSSProperties {
+  if (!color) return {};
+  const pick = (k: number) => palette[(r * 7 + c * 13 + k * 5) % palette.length] ?? color;
+  return {
+    ["--ag-flap-c" as string]: color,
+    ["--ag-flap-1" as string]: pick(1),
+    ["--ag-flap-2" as string]: pick(2),
+    ["--ag-flap-3" as string]: pick(3),
+    animationDelay: `${r * 55 + c * 30}ms`,
+  };
+}
 
 function ToolButton({
   active,

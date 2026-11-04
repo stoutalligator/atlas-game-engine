@@ -64,7 +64,15 @@ describe("verifyGameResult", () => {
   it("checks the Box Plot grid", () => {
     const pz = boxPlotForDate(DATE);
     const cells = pz.solution.flat().map((v) => (v ? 1 : 2));
-    expect(verifyGameResult({ game: "box-plot", date: DATE, proof: { cells } })?.solved).toBe(true);
+    expect(verifyGameResult({ game: "box-plot", date: DATE, proof: { cells } })).toEqual({
+      solved: true,
+      hints: 0,
+      size: pz.size,
+    });
+    // Checks are reported as the board's hints.
+    expect(
+      verifyGameResult({ game: "box-plot", date: DATE, proof: { cells, hints: 2 } })?.hints,
+    ).toBe(2);
     const blank = { cells: cells.map(() => 0) };
     expect(verifyGameResult({ game: "box-plot", date: DATE, proof: blank })).toBeNull();
   });

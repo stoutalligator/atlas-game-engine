@@ -24,7 +24,8 @@ export function App() {
   const [nonce, setNonce] = useState(0);
   const [last, setLast] = useState<GameResult | null>(null);
   const info = getGameInfo(game);
-  // Word Web: the canonical HOUSEHOLD PETS fixture, or a puzzle generated for the date.
+  // Word Web: the canonical HOUSEHOLD PETS fixture, a puzzle generated for the
+  // date, or a sandbox file of host puzzles (public/wordweb-sandbox.json).
   const [wwSource, setWwSource] = useState(params.get("ww") ?? "canonical");
   const [wwPuzzles, setWwPuzzles] = useState<unknown[] | null>([]);
   useEffect(() => {
@@ -34,7 +35,13 @@ export function App() {
     }
     setWwPuzzles(null);
     let live = true;
-    generatedWordWeb(date).then((p) => live && setWwPuzzles(p));
+    const load =
+      wwSource === "sandbox"
+        ? fetch("/wordweb-sandbox.json")
+            .then((r) => (r.ok ? (r.json() as Promise<unknown[]>) : []))
+            .catch(() => [])
+        : generatedWordWeb(date);
+    load.then((p) => live && setWwPuzzles(p));
     return () => {
       live = false;
     };
@@ -57,12 +64,19 @@ export function App() {
           <label>
             Date <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </label>
+          <button type="button" className="pg-btn" onClick={() => setDate((d) => shiftDate(d, -1))}>
+            ◀ Day
+          </button>
+          <button type="button" className="pg-btn" onClick={() => setDate((d) => shiftDate(d, 1))}>
+            Day ▶
+          </button>
           {game === "wordweb" && (
             <label>
               Puzzle{" "}
               <select value={wwSource} onChange={(e) => setWwSource(e.target.value)}>
                 <option value="canonical">Canonical (Household pets)</option>
                 <option value="generated">Generated for the date</option>
+                <option value="sandbox">Sandbox file (host puzzles)</option>
               </select>
             </label>
           )}
@@ -101,6 +115,8 @@ export function App() {
             key={`${game}-${date}-${nonce}-${wwSource}-${(wwPuzzles ?? []).map((p) => (p as { id: string }).id).join()}`}
             game={game}
             date={date}
+            // Sample host tags, so the result panel shows how ATLAS's look.
+            resultTags={SAMPLE_TAGS}
             packs={game === "wordweb" ? (wwPuzzles ?? []) : PACKS}
             blackSwanApi={blackSwanMock}
             onComplete={setLast}
@@ -112,3 +128,10 @@ export function App() {
     </main>
   );
 }
+
+function shiftDate(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** Stand-ins for the tags ATLAS computes from a player's saved plays. */
+const SAMPLE_TAGS = ["Personal best!", "No hints!", "🔥 5-day streak"];

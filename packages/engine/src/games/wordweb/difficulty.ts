@@ -1,4 +1,4 @@
-import { crossingIndexes, treeStats } from "./graph.js";
+import { crossingIndexes, treeStats, unfurlIndex } from "./graph.js";
 import { type Placed, boundsOf, cellsOf } from "./grid.js";
 import type { DifficultyBreakdown, DifficultyLabel, Weekday } from "./types.js";
 import type { UnlockNode } from "./validate.js";
@@ -50,6 +50,13 @@ export interface WeekdayTarget {
   minFamiliarity: number;
   /** Preferred unlock shape; the pipeline tries the other too. */
   shape: "wide" | "deep";
+  /**
+   * Easy days: draw answers from only the first N of the category's list,
+   * which is ordered most generic first ("Cow, Pig, Chicken…" before
+   * "Llama"). The pipeline widens the pool only if no puzzle fits. Omitted =
+   * any answer.
+   */
+  genericPool?: number;
 }
 
 /** Index = weekday (0 Sunday … 6 Saturday). Bands overlap so a day rarely goes unfilled. */
@@ -61,6 +68,7 @@ export const WEEKDAY_TARGETS: Record<Weekday, WeekdayTarget> = {
     revealed: 2,
     minFamiliarity: 4,
     shape: "wide",
+    genericPool: 6,
   },
   2: {
     label: "Easy–Moderate",
@@ -69,6 +77,7 @@ export const WEEKDAY_TARGETS: Record<Weekday, WeekdayTarget> = {
     revealed: 2,
     minFamiliarity: 4,
     shape: "wide",
+    genericPool: 9,
   },
   3: {
     label: "Moderate",
@@ -138,13 +147,17 @@ export function difficultyComponents(
   const b = boundsOf(cells);
   const start = answers.find((a) => a.id === input.start) as Placed;
 
-  // Letters the player gets for free: the starting reveal, plus every
-  // crossing (supplied by a solved neighbour).
+  // Letters the player gets for free: the starting reveal, every crossing
+  // (supplied by a solved neighbour), and each word's unfurl letter.
   const given = [
     ...input.revealed.map((i) => start.grid[i]),
-    ...answers.flatMap((a) =>
-      a.id === input.start ? [] : crossingIndexes(a, answers).map((i) => a.grid[i]),
-    ),
+    ...answers.flatMap((a) => {
+      if (a.id === input.start) return [];
+      const extra = unfurlIndex(answers, a.id);
+      return [...crossingIndexes(a, answers), ...(extra === null ? [] : [extra])].map(
+        (i) => a.grid[i],
+      );
+    }),
   ];
   const info = given.length
     ? given.reduce((t, ch) => t + letterInformation(ch), 0) / given.length

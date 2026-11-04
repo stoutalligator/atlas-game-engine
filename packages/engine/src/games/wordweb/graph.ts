@@ -120,3 +120,30 @@ export function crossingIndexes(a: Placed, others: Placed[]): number[] {
   for (const b of others) if (b.id !== a.id) for (const x of crossingsBetween(a, b)) idx.add(x.ia);
   return [...idx].sort((x, y) => x - y);
 }
+
+/**
+ * The free letter a word shows when it unfurls, on top of the one it shares
+ * with the word that revealed it (its parent): the letter farthest from that
+ * crossing (the later one on a tie), skipping cells another answer will fill
+ * anyway. null for the starting answer and for 3-letter words (two of three
+ * letters would show, leaving nothing to hint). Fixed per puzzle, so every player —
+ * and the server's replay — sees the same letter.
+ */
+export function unfurlIndex(
+  nodes: readonly (Placed & { parent: string | null })[],
+  id: string,
+): number | null {
+  const a = nodes.find((n) => n.id === id);
+  const parent = a?.parent ? nodes.find((n) => n.id === a.parent) : undefined;
+  if (!a || !parent || a.grid.length <= 3) return null;
+  const shared = crossingsBetween(a, parent)[0];
+  if (!shared) return null;
+  const crossed = new Set(crossingIndexes(a, [...nodes]));
+  const all = Array.from(a.grid, (_, i) => i).filter((i) => i !== shared.ia);
+  const fresh = all.filter((i) => !crossed.has(i));
+  const pool = fresh.length ? fresh : all;
+  if (!pool.length) return null;
+  return pool.reduce((best, i) =>
+    Math.abs(i - shared.ia) >= Math.abs(best - shared.ia) ? i : best,
+  );
+}

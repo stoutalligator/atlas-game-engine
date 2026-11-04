@@ -21,12 +21,17 @@ import {
   checkRecurrence,
   constructLayouts,
   createBankGenerator,
+  crossingCount,
   currentLetters,
   difficultyComponents,
   emptyQueue,
   evaluateGuess,
+  extraCrossings,
+  failures,
   fixedCells,
   generateForDate,
+  genericPools,
+  givenCells,
   hintStatus,
   historyFromQueue,
   inTarget,
@@ -50,6 +55,7 @@ import {
   toEvergreen,
   treeStats,
   typeLetter,
+  unfurlIndex,
   validateLayout,
   validateUnlockGraph,
   visibleAnswers,
@@ -186,9 +192,16 @@ describe("guess evaluation", () => {
   });
 
   it("a plausible alternate gets the Close! outcome", () => {
+    // RABBIT unfurls as ?A??I?; MAGPIE fits those letters.
+    const puzzle = {
+      ...PETS,
+      answers: PETS.answers.map((a) =>
+        a.grid === "RABBIT" ? { ...a, alternates: ["MAGPIE"] } : a,
+      ),
+    };
     const s = solve(fresh(), "HAMSTER");
-    const res = submitGuess(PETS, s, id("RABBIT"), "parrot");
-    expect(submitGuess(PETS, s, id("RABBIT"), "ferret").outcome).toBe("mismatch");
+    const res = submitGuess(puzzle, s, id("RABBIT"), "magpie");
+    expect(submitGuess(puzzle, s, id("RABBIT"), "parrot").outcome).toBe("mismatch");
     expect(res.outcome).toBe("alternate");
     expect(res.state.solved).toEqual([id("HAMSTER")]);
     expect(res.revealed).toEqual([]);
@@ -288,7 +301,8 @@ describe("unlock progression", () => {
     s = selectAnswer(PETS, s, id("CAT"));
     s = typeLetter(PETS, s, "C")?.state as WordWebState;
     s = selectAnswer(PETS, s, id("BIRD"));
-    expect(currentLetters(PETS, s, id("BIRD"))).toEqual(["B", "I", "", ""]);
+    // BIRD unfurled as B?R?; CAT, a 3-letter word, shows only its crossing T.
+    expect(currentLetters(PETS, s, id("BIRD"))).toEqual(["B", "I", "R", ""]);
     expect(currentLetters(PETS, s, id("CAT"))).toEqual(["C", "", "T"]);
     expect(backspace(PETS, s).typed).not.toHaveProperty("3,3");
   });
@@ -430,6 +444,38 @@ describe("construction", () => {
       expect(allPass(validateUnlockGraph(tree, "HAMSTER"))).toBe(true);
     }
   });
+
+  // CAMEL across the top, COBRA and LLAMA down its ends, ALPHA across their
+  // last letters: a closed square, the shape a tree-only builder never makes.
+  //   C A M E L
+  //   O . . . L
+  //   B . . . A
+  //   R . . . M
+  //   A L P H A
+  const square = ["CAMEL", "COBRA", "LLAMA", "ALPHA"].map((g) => ({ id: g, grid: g }));
+
+  it("builds crossword-style: interlocking layouts come first", () => {
+    const { layouts } = constructLayouts(square, { seed: 1, start: "CAMEL" });
+    expect(extraCrossings(layouts[0])).toBe(1);
+    expect(crossingCount(layouts[0])).toBe(4);
+    const counts = layouts.map(crossingCount);
+    expect(counts).toEqual([...counts].sort((a, b) => b - a));
+  });
+
+  it("never trades legality for crossings", () => {
+    for (let seed = 0; seed < 20; seed++)
+      for (const set of [square, words, [...square, { id: "HONEY", grid: "HONEY" }]])
+        for (const l of constructLayouts(set, { seed, start: set[0].id }).layouts)
+          expect(failures(validateLayout(l))).toEqual([]);
+  });
+
+  it("a looped layout still gets a valid unlock tree", () => {
+    const [layout] = constructLayouts(square, { seed: 1, start: "CAMEL" }).layouts;
+    for (const shape of ["wide", "deep"] as const) {
+      const tree = buildUnlockTree(layout, "CAMEL", shape, mulberry32(2));
+      expect(failures(validateUnlockGraph(tree, "CAMEL"))).toEqual([]);
+    }
+  });
 });
 
 // ── Hints ────────────────────────────────────────────────────────────────
@@ -512,8 +558,13 @@ describe("hints", () => {
   });
 
   it("never hints a word with only one unknown letter (crossings count as known)", () => {
-    let s = solve(solve(solve(fresh(), "HAMSTER"), "RABBIT"), "BIRD");
-    s = selectAnswer(PETS, s, id("CAT")); // T fixed by RABBIT; C, A unknown
+    let s = solve(solve(fresh(), "HAMSTER"), "RABBIT"); // BIRD active: B crossing, R unfurled
+    expect(hintStatus(PETS, ready(s)).available).toBe(true);
+    s = takeHint(PETS, ready(s)).state;
+    expect(fixedCells(PETS, s).get("3,3")).toBe("I");
+    expect(hintStatus(PETS, ready(s)).reason).toBe("final-letter");
+    // CAT (3 letters, no unfurl letter): T from RABBIT, then one hint for C.
+    s = selectAnswer(PETS, s, id("CAT"));
     expect(hintStatus(PETS, ready(s)).available).toBe(true);
     s = takeHint(PETS, ready(s)).state;
     expect(hintStatus(PETS, ready(s)).reason).toBe("final-letter");
@@ -523,7 +574,39 @@ describe("hints", () => {
   it("starting letters and crossings aren't counted as hints", () => {
     const s = solve(fresh(), "HAMSTER");
     expect(s.hintsUsed).toBe(0);
-    expect(currentLetters(PETS, s, id("RABBIT"))).toEqual(["", "A", "", "", "", ""]);
+    expect(currentLetters(PETS, s, id("RABBIT"))).toEqual(["", "A", "", "", "I", ""]);
+  });
+});
+
+// ── Unfurl letter ────────────────────────────────────────────────────────
+
+describe("unfurl letter", () => {
+  it("is the letter farthest from the parent crossing, skipping other crossings", () => {
+    const at = (grid: string) => unfurlIndex(PETS.answers, id(grid));
+    expect(at("HAMSTER")).toBeNull(); // the start has its own starting letters
+    expect(at("RABBIT")).toBe(4); // crosses HAMSTER at 1; 3 and 5 are crossings
+    expect(at("BIRD")).toBe(2); // crosses RABBIT at 0; 3 is DOG's
+    expect(at("DOG")).toBeNull(); // 3-letter words get no extra letter
+    expect(at("CAT")).toBeNull();
+  });
+
+  it("shows only once the word unfurls, as a given letter, not a hint", () => {
+    const s0 = fresh();
+    expect(fixedCells(PETS, s0).has("4,2")).toBe(false); // RABBIT's I, still hidden
+    expect(givenCells(PETS, s0).has("4,2")).toBe(false);
+    const s1 = solve(s0, "HAMSTER");
+    expect(givenCells(PETS, s1).get("4,2")).toBe("I");
+    expect(s1.hintsUsed).toBe(0);
+    expect(hintStatus(PETS, { ...s1, hintCooldownMs: 0 }).nextIndex).toBe(0);
+  });
+
+  it("typing skips it, and replay still verifies a finished game", () => {
+    let s = solve(fresh(), "HAMSTER");
+    s = type(s, "RBBT").state; // R, B, B, T around the shown A and I
+    expect(s.solved).toContain(id("RABBIT"));
+    s = solve(solve(solve(s, "BIRD"), "DOG"), "CAT");
+    expect(s.done).toBe(true);
+    expect(replayLog(PETS, s.log)).toEqual({ hintsUsed: 0, guessCount: 5 });
   });
 });
 
@@ -768,6 +851,32 @@ describe("generation pipeline and queue", () => {
     }
   });
 
+  it("easy days use the category's most generic answers (top of the list)", async () => {
+    // Every Monday and Tuesday in a month: each answer comes from the
+    // category's first few entries unless no puzzle fit, then the next few.
+    const byCategory = new Map(bank.map((c) => [c.category, c]));
+    for (let d = 0; d < 28; d++) {
+      const date = addDays("2026-11-02", d);
+      const wd = weekday(date) as 0;
+      const pool = WEEKDAY_TARGETS[wd].genericPool;
+      if (!pool) continue;
+      const { record } = await generateForDate({ date, generator: gen, history: [], now: NOW });
+      const r = record as NonNullable<typeof record>;
+      const list = (byCategory.get(r.puzzle.category) as BankCategory).answers
+        .filter((a) => a.familiarity >= WEEKDAY_TARGETS[wd].minFamiliarity)
+        .map((a) => normalizeWord(a.display));
+      const ranks = r.puzzle.answers.map((a) => list.indexOf(a.grid));
+      expect(Math.max(...ranks)).toBeLessThan(pool + 3);
+    }
+  });
+
+  it("generic pools widen from the top of the list, then everything", () => {
+    const xs = Array.from({ length: 15 }, (_, i) => i);
+    expect(genericPools(xs, WEEKDAY_TARGETS[1]).map((p) => p.length)).toEqual([6, 9, 15]);
+    expect(genericPools(xs, WEEKDAY_TARGETS[2]).map((p) => p.length)).toEqual([9, 12, 15]);
+    expect(genericPools(xs, WEEKDAY_TARGETS[3])).toEqual([xs]);
+  });
+
   it("is deterministic for a date", async () => {
     const a = await generateForDate({ date: "2026-11-04", generator: gen, history: [], now: NOW });
     const b = await generateForDate({ date: "2026-11-04", generator: gen, history: [], now: NOW });
@@ -783,6 +892,11 @@ describe("generation pipeline and queue", () => {
       now: NOW,
     });
     expect(first.added).toHaveLength(14);
+    // Crossword-style: some days interlock beyond a simple tree, and every
+    // day is still a legal grid.
+    const days = Object.values(first.queue.days);
+    expect(days.filter((r) => extraCrossings(r.puzzle.answers) > 0).length).toBeGreaterThan(3);
+    for (const r of days) expect(allPass(r.validation.layout)).toBe(true);
     const history = historyFromQueue(first.queue);
     for (const h of history) {
       const others = history.filter((o) => o.date !== h.date);

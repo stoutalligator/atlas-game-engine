@@ -1,6 +1,4 @@
-import { dayIndex } from "../../core/daily.js";
-import { seededRng, shuffle } from "../../core/rng.js";
-import { PICTURES, type PicturePuzzle } from "./pictures.js";
+import { type ColorPicture, LIBRARY, isFilledChar, pictureForDate } from "./library.js";
 
 export const EMPTY = 0;
 export const FILLED = 1;
@@ -11,6 +9,10 @@ export interface BoxPlotPuzzle {
   name: string;
   size: number;
   solution: boolean[][];
+  /** Each filled cell's colour once solved; null for empty cells. */
+  colors: (string | null)[][];
+  /** The picture's palette colours, for the reveal's flicker. */
+  palette: string[];
   rowClues: number[][];
   colClues: number[][];
 }
@@ -34,13 +36,17 @@ function column<T>(grid: readonly (readonly T[])[], c: number): T[] {
   return grid.map((row) => row[c]);
 }
 
-export function buildPuzzle(picture: PicturePuzzle): BoxPlotPuzzle {
-  const solution = picture.rows.map((r) => [...r].map((ch) => ch === "1"));
+export function buildPuzzle(picture: ColorPicture): BoxPlotPuzzle {
+  const solution = picture.rows.map((r) => [...r].map(isFilledChar));
   const size = solution.length;
   return {
     name: picture.name,
     size,
     solution,
+    colors: picture.rows.map((r) =>
+      [...r].map((ch) => (isFilledChar(ch) ? picture.palette[ch] : null)),
+    ),
+    palette: [...new Set(Object.values(picture.palette))],
     rowClues: solution.map(runsOf),
     colClues: Array.from({ length: size }, (_, c) => runsOf(column(solution, c))),
   };
@@ -60,6 +66,24 @@ export function isSolved(puzzle: BoxPlotPuzzle, cells: readonly (readonly CellSt
   for (let c = 0; c < puzzle.size; c++)
     if (!lineMatches(column(cells, c), puzzle.colClues[c])) return false;
   return true;
+}
+
+// ── Check ──────────────────────────────────────────────────────────────
+
+/** Seconds between checks, counted in active play (like Word Web's hint timer). */
+export const CHECK_COOLDOWN_SEC = 10;
+
+/**
+ * Row-major indexes of the player's mistakes: a fill where the picture is
+ * empty, or a ✕ where it's filled. Blank cells are never mistakes.
+ */
+export function findMistakes(puzzle: BoxPlotPuzzle, cells: readonly CellState[]): number[] {
+  const out: number[] = [];
+  cells.forEach((cell, i) => {
+    const want = puzzle.solution[Math.floor(i / puzzle.size)][i % puzzle.size];
+    if ((cell === FILLED && !want) || (cell === MARKED && want)) out.push(i);
+  });
+  return out;
 }
 
 // ── Line solver (used by tests to guarantee no guessing is needed) ─────────
@@ -148,14 +172,9 @@ export function lineSolve(rowClues: number[][], colClues: number[][]): boolean[]
 // ── Daily selection ────────────────────────────────────────────────────────
 
 /**
- * Walks a fixed shuffle of the library so pictures don't repeat until all
- * have been used.
+ * Today's puzzle: the weekday sets the size and difficulty (library.ts
+ * BOX_PLOT_DAYS), and each weekday walks its own pool without repeats.
  */
-export function boxPlotForDate(date: string, pictures: PicturePuzzle[] = PICTURES): BoxPlotPuzzle {
-  const order = shuffle(
-    seededRng("box-plot:order"),
-    pictures.map((_, i) => i),
-  );
-  const idx = order[((dayIndex(date) % order.length) + order.length) % order.length];
-  return buildPuzzle(pictures[idx]);
+export function boxPlotForDate(date: string, library: ColorPicture[] = LIBRARY): BoxPlotPuzzle {
+  return buildPuzzle(pictureForDate(date, library));
 }

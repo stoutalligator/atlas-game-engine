@@ -1,4 +1,4 @@
-import { orderForSelection } from "./graph.js";
+import { orderForSelection, unfurlIndex } from "./graph.js";
 import { cellKey, cellsOf } from "./grid.js";
 import { normalizeLetter, normalizeWord } from "./normalize.js";
 import type { WordWebAnswer, WordWebPuzzle } from "./types.js";
@@ -102,12 +102,27 @@ export function openAnswers(puzzle: WordWebPuzzle, state: WordWebState): WordWeb
   return visibleAnswers(puzzle, state).filter((a) => !solved.has(a.id));
 }
 
-/** Letters the player can't change: starting reveal, solved answers, hints. */
-export function fixedCells(puzzle: WordWebPuzzle, state: WordWebState): Map<string, string> {
-  const fixed = new Map<string, string>();
+/**
+ * Cells shown for free: the starting letters, plus the extra letter each
+ * visible word gets when it unfurls (unfurlIndex). Not hints.
+ */
+export function givenCells(puzzle: WordWebPuzzle, state: WordWebState): Map<string, string> {
+  const given = new Map<string, string>();
   const start = byId(puzzle, puzzle.start) as WordWebAnswer;
   const startCells = cellsOf(start);
-  for (const i of puzzle.revealed) fixed.set(cellKey(...startCells[i]), start.grid[i]);
+  for (const i of puzzle.revealed) given.set(cellKey(...startCells[i]), start.grid[i]);
+  const visible = visibleIds(puzzle.answers, new Set(state.solved));
+  for (const a of puzzle.answers) {
+    if (a.id === puzzle.start || !visible.has(a.id)) continue;
+    const i = unfurlIndex(puzzle.answers, a.id);
+    if (i !== null) given.set(cellKey(...cellsOf(a)[i]), a.grid[i]);
+  }
+  return given;
+}
+
+/** Letters the player can't change: free letters (givenCells), solved answers, hints. */
+export function fixedCells(puzzle: WordWebPuzzle, state: WordWebState): Map<string, string> {
+  const fixed = givenCells(puzzle, state);
   const hinted = new Set(state.hinted);
   for (const a of puzzle.answers) {
     const solved = state.solved.includes(a.id);
