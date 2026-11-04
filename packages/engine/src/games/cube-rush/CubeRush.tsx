@@ -75,23 +75,24 @@ function CubeRushGame({ date, storage, onComplete }: DailyGameProps & { date: st
 
   const result = useMemo<GameResult | null>(() => {
     if (!state?.done) return null;
-    const underPar = state.moves <= par;
+    const optimal = state.moves <= par;
+    const moves = `${state.moves} move${state.moves === 1 ? "" : "s"}`; // share text
     return {
       gameId: "cube-rush",
       date,
       puzzleNumber: puzzleNumber(date),
       solved: true,
       durationSec: state.elapsed,
+      // The score is the time; moves get their own box, with the optimal under them.
       stats: [
-        { label: "Moves", value: String(state.moves) },
-        { label: "Par", value: String(par) },
         { label: "Time", value: formatClock(state.elapsed) },
+        { label: "Moves", value: String(state.moves), note: `Optimal: ${par}` },
       ],
       score: { moves: state.moves },
       proof: { steps: state.steps ?? [] },
       shareText: shareText("cube-rush", date, [
         `${DIFF_EMOJI[difficulty]} ${difficulty[0].toUpperCase()}${difficulty.slice(1)}`,
-        `${underPar ? "⭐" : "🚪"} ${state.moves} moves (par ${par}) · ⏱ ${formatClock(state.elapsed)}`,
+        `⏱ ${formatClock(state.elapsed)} · ${optimal ? "⭐" : "🚪"} ${moves} (optimal ${par})`,
       ]),
     };
   }, [state, par, date, difficulty]);
@@ -222,9 +223,9 @@ function CubeRushGame({ date, storage, onComplete }: DailyGameProps & { date: st
       game="cube-rush"
       date={date}
       chips={[
-        { label: "Moves", value: String(state.moves) },
-        { label: "Par", value: String(par) },
         { label: "Time", value: formatClock(state.elapsed) },
+        { label: "Moves", value: String(state.moves) },
+        { label: "Optimal", value: String(par) },
       ]}
       banner={
         <span>
@@ -309,11 +310,11 @@ function CubeRushGame({ date, storage, onComplete }: DailyGameProps & { date: st
       {result && (
         <ResultPanel
           solved
-          headline={state.moves <= par ? "Out the door — at par!" : "Out the door."}
+          headline={state.moves <= par ? "Out the door — optimal solve!" : "Out the door."}
           detail={
             state.moves <= par
-              ? "You matched the fewest possible moves."
-              : `The fewest possible was ${par}. Tomorrow's floor plan unlocks at midnight.`
+              ? `${par} moves is the fewest possible, and you matched it.`
+              : `The optimal solution takes ${par} moves. Tomorrow's floor plan unlocks at midnight.`
           }
           stats={result.stats}
           shareText={result.shareText}

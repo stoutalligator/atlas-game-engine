@@ -358,6 +358,26 @@ export const WORDWEB_TEST_BANK: unknown = [
     ambiguity: 0.4,
     answers: [
       {
+        display: "Dog",
+        fit: "The most common household pet.",
+        familiarity: 5,
+      },
+      {
+        display: "Cat",
+        fit: "One of the two most popular household pets.",
+        familiarity: 5,
+      },
+      {
+        display: "Goldfish",
+        fit: "The classic first pet, kept in a bowl or tank.",
+        familiarity: 5,
+      },
+      {
+        display: "Bird",
+        fit: "Parakeets and canaries are kept as house pets.",
+        familiarity: 5,
+      },
+      {
         display: "Hamster",
         fit: "A small rodent kept in a cage at home.",
         familiarity: 5,
@@ -368,23 +388,8 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Cat",
-        fit: "One of the two most popular household pets.",
-        familiarity: 5,
-      },
-      {
-        display: "Dog",
-        fit: "The most common household pet.",
-        familiarity: 5,
-      },
-      {
-        display: "Bird",
-        fit: "Parakeets and canaries are kept as house pets.",
-        familiarity: 5,
-      },
-      {
-        display: "Goldfish",
-        fit: "The classic first pet, kept in a bowl or tank.",
+        display: "Turtle",
+        fit: "A shelled reptile kept in a home tank.",
         familiarity: 5,
       },
       {
@@ -393,25 +398,20 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
+        display: "Guinea pig",
+        fit: "A gentle rodent popular as a family pet.",
+        familiarity: 5,
+        kind: "multiword",
+      },
+      {
         display: "Gerbil",
         fit: "A small desert rodent often kept in a tank.",
         familiarity: 4,
       },
       {
-        display: "Turtle",
-        fit: "A shelled reptile kept in a home tank.",
-        familiarity: 5,
-      },
-      {
         display: "Ferret",
         fit: "A playful weasel relative kept as a house pet.",
         familiarity: 4,
-      },
-      {
-        display: "Guinea pig",
-        fit: "A gentle rodent popular as a family pet.",
-        familiarity: 5,
-        kind: "multiword",
       },
       {
         display: "Canary",
@@ -477,6 +477,16 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
+        display: "Chicken",
+        fit: "Farm birds kept for eggs.",
+        familiarity: 5,
+      },
+      {
+        display: "Horse",
+        fit: "Worked and ridden on farms.",
+        familiarity: 5,
+      },
+      {
         display: "Sheep",
         fit: "Raised on farms for wool.",
         familiarity: 5,
@@ -487,24 +497,9 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Horse",
-        fit: "Worked and ridden on farms.",
-        familiarity: 5,
-      },
-      {
-        display: "Chicken",
-        fit: "Farm birds kept for eggs.",
-        familiarity: 5,
-      },
-      {
         display: "Duck",
         fit: "Waterfowl kept in farm ponds.",
         familiarity: 5,
-      },
-      {
-        display: "Goose",
-        fit: "A large farm bird kept for eggs and down.",
-        familiarity: 4,
       },
       {
         display: "Turkey",
@@ -515,6 +510,11 @@ export const WORDWEB_TEST_BANK: unknown = [
         display: "Donkey",
         fit: "A sturdy working animal on many farms.",
         familiarity: 5,
+      },
+      {
+        display: "Goose",
+        fit: "A large farm bird kept for eggs and down.",
+        familiarity: 4,
       },
       {
         display: "Rooster",
@@ -572,28 +572,8 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Jacket",
-        fit: "A light outer layer.",
-        familiarity: 5,
-      },
-      {
-        display: "Sweater",
-        fit: "A warm knit top.",
-        familiarity: 5,
-      },
-      {
-        display: "Scarf",
-        fit: "Wrapped around the neck for warmth.",
-        familiarity: 5,
-      },
-      {
         display: "Hat",
         fit: "Worn on the head.",
-        familiarity: 5,
-      },
-      {
-        display: "Gloves",
-        fit: "Keep hands warm.",
         familiarity: 5,
       },
       {
@@ -607,8 +587,8 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Boots",
-        fit: "Sturdy footwear for weather.",
+        display: "Jacket",
+        fit: "A light outer layer.",
         familiarity: 5,
       },
       {
@@ -617,13 +597,33 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Skirt",
-        fit: "Hangs from the waist.",
+        display: "Coat",
+        fit: "A heavy outer layer for cold days.",
         familiarity: 5,
       },
       {
-        display: "Coat",
-        fit: "A heavy outer layer for cold days.",
+        display: "Sweater",
+        fit: "A warm knit top.",
+        familiarity: 5,
+      },
+      {
+        display: "Scarf",
+        fit: "Wrapped around the neck for warmth.",
+        familiarity: 5,
+      },
+      {
+        display: "Gloves",
+        fit: "Keep hands warm.",
+        familiarity: 5,
+      },
+      {
+        display: "Boots",
+        fit: "Sturdy footwear for weather.",
+        familiarity: 5,
+      },
+      {
+        display: "Skirt",
+        fit: "Hangs from the waist.",
         familiarity: 5,
       },
       {
@@ -709,6 +709,11 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
+        display: "Strawberry",
+        fit: "A red berry with seeds on the outside.",
+        familiarity: 5,
+      },
+      {
         display: "Pear",
         fit: "A sweet orchard fruit with a narrow top.",
         familiarity: 5,
@@ -724,13 +729,13 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Mango",
-        fit: "A sweet tropical fruit.",
+        display: "Lemon",
+        fit: "A sour yellow citrus fruit.",
         familiarity: 5,
       },
       {
-        display: "Lemon",
-        fit: "A sour yellow citrus fruit.",
+        display: "Mango",
+        fit: "A sweet tropical fruit.",
         familiarity: 5,
       },
       {
@@ -762,11 +767,6 @@ export const WORDWEB_TEST_BANK: unknown = [
         display: "Apricot",
         fit: "A small orange stone fruit.",
         familiarity: 4,
-      },
-      {
-        display: "Strawberry",
-        fit: "A red berry with seeds on the outside.",
-        familiarity: 5,
       },
       {
         display: "Pineapple",
@@ -819,13 +819,13 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Onion",
-        fit: "A layered bulb used in cooking.",
+        display: "Broccoli",
+        fit: "A green vegetable with tree-like florets.",
         familiarity: 5,
       },
       {
-        display: "Celery",
-        fit: "A crunchy stalk vegetable.",
+        display: "Corn",
+        fit: "A vegetable eaten off the cob.",
         familiarity: 5,
       },
       {
@@ -834,8 +834,18 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Broccoli",
-        fit: "A green vegetable with tree-like florets.",
+        display: "Onion",
+        fit: "A layered bulb used in cooking.",
+        familiarity: 5,
+      },
+      {
+        display: "Pea",
+        fit: "A small round green vegetable from a pod.",
+        familiarity: 5,
+      },
+      {
+        display: "Celery",
+        fit: "A crunchy stalk vegetable.",
         familiarity: 5,
       },
       {
@@ -846,16 +856,6 @@ export const WORDWEB_TEST_BANK: unknown = [
       {
         display: "Cabbage",
         fit: "A round head of tightly packed leaves.",
-        familiarity: 5,
-      },
-      {
-        display: "Pea",
-        fit: "A small round green vegetable from a pod.",
-        familiarity: 5,
-      },
-      {
-        display: "Corn",
-        fit: "A vegetable eaten off the cob.",
         familiarity: 5,
       },
       {
@@ -944,9 +944,19 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Ladle",
-        fit: "A deep spoon for serving soup.",
-        familiarity: 4,
+        display: "Bowl",
+        fit: "Holds soup, cereal and salad.",
+        familiarity: 5,
+      },
+      {
+        display: "Plate",
+        fit: "What a meal is served on.",
+        familiarity: 5,
+      },
+      {
+        display: "Mug",
+        fit: "A handled cup for hot drinks.",
+        familiarity: 5,
       },
       {
         display: "Whisk",
@@ -964,6 +974,11 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
+        display: "Ladle",
+        fit: "A deep spoon for serving soup.",
+        familiarity: 4,
+      },
+      {
         display: "Toaster",
         fit: "Browns slices of bread.",
         familiarity: 5,
@@ -976,21 +991,6 @@ export const WORDWEB_TEST_BANK: unknown = [
       {
         display: "Oven",
         fit: "Bakes and roasts food.",
-        familiarity: 5,
-      },
-      {
-        display: "Bowl",
-        fit: "Holds soup, cereal and salad.",
-        familiarity: 5,
-      },
-      {
-        display: "Plate",
-        fit: "What a meal is served on.",
-        familiarity: 5,
-      },
-      {
-        display: "Mug",
-        fit: "A handled cup for hot drinks.",
         familiarity: 5,
       },
       {
@@ -1283,23 +1283,13 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Sleet",
-        fit: "A mix of rain and ice pellets.",
-        familiarity: 4,
-      },
-      {
-        display: "Hail",
-        fit: "Balls of ice falling in a storm.",
-        familiarity: 4,
-      },
-      {
-        display: "Fog",
-        fit: "A low cloud at ground level.",
+        display: "Wind",
+        fit: "Moving air.",
         familiarity: 5,
       },
       {
-        display: "Wind",
-        fit: "Moving air.",
+        display: "Cloud",
+        fit: "Water droplets floating in the sky.",
         familiarity: 5,
       },
       {
@@ -1308,8 +1298,8 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Cloud",
-        fit: "Water droplets floating in the sky.",
+        display: "Fog",
+        fit: "A low cloud at ground level.",
         familiarity: 5,
       },
       {
@@ -1321,6 +1311,16 @@ export const WORDWEB_TEST_BANK: unknown = [
         display: "Lightning",
         fit: "An electric flash in a storm.",
         familiarity: 5,
+      },
+      {
+        display: "Hail",
+        fit: "Balls of ice falling in a storm.",
+        familiarity: 4,
+      },
+      {
+        display: "Sleet",
+        fit: "A mix of rain and ice pellets.",
+        familiarity: 4,
       },
       {
         display: "Drizzle",
@@ -1392,29 +1392,29 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
+        display: "Pine",
+        fit: "An evergreen with needles and cones.",
+        familiarity: 5,
+      },
+      {
         display: "Maple",
         fit: "A tree with syrup-yielding sap.",
         familiarity: 5,
       },
       {
-        display: "Pine",
-        fit: "An evergreen with needles and cones.",
+        display: "Palm",
+        fit: "A tropical tree with fronds.",
+        familiarity: 5,
+      },
+      {
+        display: "Willow",
+        fit: "A tree with drooping branches.",
         familiarity: 5,
       },
       {
         display: "Birch",
         fit: "A tree with papery white bark.",
         familiarity: 4,
-      },
-      {
-        display: "Elm",
-        fit: "A tall shade tree.",
-        familiarity: 4,
-      },
-      {
-        display: "Willow",
-        fit: "A tree with drooping branches.",
-        familiarity: 5,
       },
       {
         display: "Cedar",
@@ -1427,9 +1427,9 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 4,
       },
       {
-        display: "Palm",
-        fit: "A tropical tree with fronds.",
-        familiarity: 5,
+        display: "Elm",
+        fit: "A tall shade tree.",
+        familiarity: 4,
       },
       {
         display: "Redwood",
@@ -1716,21 +1716,6 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Tennis",
-        fit: "Played with rackets over a net.",
-        familiarity: 5,
-      },
-      {
-        display: "Golf",
-        fit: "Played by hitting a ball into holes.",
-        familiarity: 5,
-      },
-      {
-        display: "Hockey",
-        fit: "Played with sticks and a puck.",
-        familiarity: 5,
-      },
-      {
         display: "Baseball",
         fit: "Played with bats, bases and a diamond.",
         familiarity: 5,
@@ -1746,8 +1731,28 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
+        display: "Tennis",
+        fit: "Played with rackets over a net.",
+        familiarity: 5,
+      },
+      {
+        display: "Golf",
+        fit: "Played by hitting a ball into holes.",
+        familiarity: 5,
+      },
+      {
+        display: "Hockey",
+        fit: "Played with sticks and a puck.",
+        familiarity: 5,
+      },
+      {
         display: "Volleyball",
         fit: "Played by hitting a ball over a high net.",
+        familiarity: 5,
+      },
+      {
+        display: "Swimming",
+        fit: "Racing through water.",
         familiarity: 5,
       },
       {
@@ -1759,11 +1764,6 @@ export const WORDWEB_TEST_BANK: unknown = [
         display: "Cricket",
         fit: "Played with bats, wickets and overs.",
         familiarity: 4,
-      },
-      {
-        display: "Swimming",
-        fit: "Racing through water.",
-        familiarity: 5,
       },
       {
         display: "Rowing",
@@ -2158,11 +2158,6 @@ export const WORDWEB_TEST_BANK: unknown = [
     ambiguity: 0.5,
     answers: [
       {
-        display: "Stapler",
-        fit: "Fastens papers together.",
-        familiarity: 5,
-      },
-      {
         display: "Pen",
         fit: "Writes in ink.",
         familiarity: 5,
@@ -2173,8 +2168,28 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
+        display: "Stapler",
+        fit: "Fastens papers together.",
+        familiarity: 5,
+      },
+      {
+        display: "Paperclip",
+        fit: "Holds a few pages together.",
+        familiarity: 5,
+      },
+      {
         display: "Folder",
         fit: "Holds loose papers.",
+        familiarity: 5,
+      },
+      {
+        display: "Scissors",
+        fit: "Cut paper.",
+        familiarity: 5,
+      },
+      {
+        display: "Eraser",
+        fit: "Rubs out pencil marks.",
         familiarity: 5,
       },
       {
@@ -2183,8 +2198,8 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Eraser",
-        fit: "Rubs out pencil marks.",
+        display: "Calendar",
+        fit: "Tracks meetings and dates.",
         familiarity: 5,
       },
       {
@@ -2203,23 +2218,8 @@ export const WORDWEB_TEST_BANK: unknown = [
         familiarity: 5,
       },
       {
-        display: "Calendar",
-        fit: "Tracks meetings and dates.",
-        familiarity: 5,
-      },
-      {
         display: "Notepad",
         fit: "Paper for quick notes.",
-        familiarity: 5,
-      },
-      {
-        display: "Scissors",
-        fit: "Cut paper.",
-        familiarity: 5,
-      },
-      {
-        display: "Paperclip",
-        fit: "Holds a few pages together.",
         familiarity: 5,
       },
       {

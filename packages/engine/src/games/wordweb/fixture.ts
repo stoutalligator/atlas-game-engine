@@ -19,8 +19,9 @@ import { validateLayout, validateStart, validateUnlockGraph } from "./validate.j
 // RABBIT's T. BIRD (second B, across) and DOG (down from D) are unchanged.
 // HAMSTER's fifth letter, T, is still the one revealed at the start.
 // Alternates are the pets that also fit each space once it appears (same
-// length, same letter where it crosses its parent): CANARY/PARROT for
-// ?A????, RAT for ??T.
+// length, same letters where it crosses its parent and at its unfurl
+// letter; 3-letter words get no unfurl letter): none for RABBIT, which shows
+// ?A??I?; RAT for CAT's ??T.
 //
 //   . . R . . . . .
 //   . H A M S T E R
@@ -63,7 +64,7 @@ const base: WordWebRecord = {
         col: 2,
         direction: "down",
         parent: "a1",
-        alternates: ["CANARY", "PARROT"],
+        alternates: [],
         familiarity: 5,
       },
       {

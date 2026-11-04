@@ -1,6 +1,6 @@
 import { weekday as weekdayOf } from "../../core/daily.js";
 import { type Rng, hashString, mulberry32, shuffle } from "../../core/rng.js";
-import { constructLayouts } from "./construct.js";
+import { constructLayouts, extraCrossings } from "./construct.js";
 import {
   DIFFICULTY_WEIGHTS,
   type DifficultyWeights,
@@ -11,7 +11,13 @@ import {
   scoreDifficulty,
 } from "./difficulty.js";
 import type { ContentProposal, ProposedAnswer, WordWebGenerator } from "./generator.js";
-import { type TreeShape, buildUnlockTree, crossingIndexes, orderForSelection } from "./graph.js";
+import {
+  type TreeShape,
+  buildUnlockTree,
+  crossingIndexes,
+  orderForSelection,
+  unfurlIndex,
+} from "./graph.js";
 import { normalizeWord } from "./normalize.js";
 import {
   type HistoryItem,
@@ -120,7 +126,7 @@ function cleanAnswers(
 /**
  * Step 7: other category members that fit the same space — same length and
  * the same letters wherever the player will already see one when the space
- * appears (the parent crossing, or the starting reveal).
+ * appears (the parent crossing and the unfurl letter, or the starting reveal).
  */
 export function alternatesFor(grid: string, members: string[], known: number[]): string[] {
   return members
@@ -149,6 +155,19 @@ export function chooseRevealed(
   const first = ranked[0];
   const second = ranked.find((i) => Math.abs(i - first) > 1) ?? ranked[1];
   return [first, second].sort((a, b) => a - b);
+}
+
+/**
+ * Answer pools to try in order. With `genericPool`, the first N answers (the
+ * most generic), then a few more, then all; otherwise just all.
+ */
+export function genericPools<T>(answers: T[], target: WeekdayTarget): T[][] {
+  const n = target.genericPool;
+  if (!n) return [answers];
+  const sizes = [Math.max(n, target.answers[1]), n + 3]
+    .filter((k) => k < answers.length)
+    .filter((k, i, all) => all.indexOf(k) === i);
+  return [...sizes.map((k) => answers.slice(0, k)), answers];
 }
 
 function subsets(
@@ -224,7 +243,10 @@ function buildCandidate(
     );
     for (const n of nodes) {
       const parent = nodes.find((p) => p.id === n.parent);
-      const known = parent ? crossingIndexes(n, [parent]) : revealed;
+      const extra = unfurlIndex(nodes, n.id);
+      const known = parent
+        ? [...crossingIndexes(n, [parent]), ...(extra === null ? [] : [extra])]
+        : revealed;
       n.alternates = alternatesFor(n.grid, members, known);
     }
 
@@ -394,47 +416,63 @@ export async function generateForDate(options: PipelineOptions): Promise<Pipelin
     ].filter((m) => m && !answerPolicyProblem({ display: m }, proposal.actuarial, safety));
 
     // Steps 8–13 over a few answer subsets; keep the best-centred candidate.
+    // Easy days draw from the most generic answers (the top of the list) and
+    // widen only when nothing fits.
     const rng = mulberry32(seed + attempt * 31337);
     const found: Candidate[] = [];
-    for (const chosen of subsets(rng, answers, target.answers, subsetsPerProposal)) {
-      const starts = [...chosen]
-        .filter((a) => a.grid.length >= 5)
-        .sort((a, b) => b.familiarity - a.familiarity || b.grid.length - a.grid.length)
-        .slice(0, 2);
-      for (const start of starts.length ? starts : chosen.slice(0, 1)) {
-        for (const shape of [
-          target.shape,
-          target.shape === "wide" ? "deep" : "wide",
-        ] as TreeShape[]) {
-          const res = buildCandidate(
-            proposal,
-            chosen,
-            members,
-            start.grid,
-            shape,
-            date,
-            wd,
-            target,
-            rng,
-            seed + attempt,
-            { weights, targets },
-          );
-          constructionAttempts += res.steps;
-          if (res.candidate) found.push(res.candidate);
-          else reasons.push(...res.reasons.slice(0, 2));
-          if (found.length >= 4) break;
+    // Enough to choose from: four, one of them interlocking — or eight.
+    const enough = () =>
+      found.length >= 8 ||
+      (found.length >= 4 && found.some((c) => extraCrossings(c.puzzle.answers) > 0));
+    const collect = (pool: CleanAnswer[]) => {
+      for (const chosen of subsets(rng, pool, target.answers, subsetsPerProposal)) {
+        const starts = [...chosen]
+          .filter((a) => a.grid.length >= 5)
+          .sort((a, b) => b.familiarity - a.familiarity || b.grid.length - a.grid.length)
+          .slice(0, 2);
+        for (const start of starts.length ? starts : chosen.slice(0, 1)) {
+          for (const shape of [
+            target.shape,
+            target.shape === "wide" ? "deep" : "wide",
+          ] as TreeShape[]) {
+            const res = buildCandidate(
+              proposal,
+              chosen,
+              members,
+              start.grid,
+              shape,
+              date,
+              wd,
+              target,
+              rng,
+              seed + attempt,
+              { weights, targets },
+            );
+            constructionAttempts += res.steps;
+            if (res.candidate) found.push(res.candidate);
+            else reasons.push(...res.reasons.slice(0, 2));
+            if (enough()) break;
+          }
+          if (enough()) break;
         }
-        if (found.length >= 4) break;
+        if (enough()) break;
       }
-      if (found.length >= 4) break;
+    };
+    for (const pool of genericPools(answers, target)) {
+      collect(pool);
+      if (found.length) break;
     }
     if (!found.length) {
       reject();
       continue;
     }
+    // Crossword-style first: the most interlocking candidate wins, then the
+    // one nearest the middle of the day's difficulty band.
     const mid = (target.range[0] + target.range[1]) / 2;
     found.sort(
-      (a, b) => Math.abs(a.puzzle.difficultyScore - mid) - Math.abs(b.puzzle.difficultyScore - mid),
+      (a, b) =>
+        extraCrossings(b.puzzle.answers) - extraCrossings(a.puzzle.answers) ||
+        Math.abs(a.puzzle.difficultyScore - mid) - Math.abs(b.puzzle.difficultyScore - mid),
     );
 
     for (const cand of found) {

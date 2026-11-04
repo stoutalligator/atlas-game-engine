@@ -8,8 +8,8 @@ component per game, and the games' code doesn't live in the main repo.
 |---|---|---|
 | **Assumption Drift** | One assumption in a pricing/reserving scenario changes. Call the impact. | Exam packs supplied by the host |
 | **Risk Pool** | Group neighbouring policyholders into pools whose claims hit the target premium exactly. 5×5 Mon → 7×7 weekend. | Generated daily |
-| **Box Plot** | 10×10 picture logic puzzle (nonogram). 110 pictures, all solvable without guessing. | Built-in library |
-| **Cube Rush** | Slide cubicles until the analyst can reach the exit. Easy Mon → hard weekend, with par. | Built-in verified library (240 puzzles) |
+| **Box Plot** | Picture logic puzzle (nonogram) that grows through the week, 5×5 Mon → 12×12 weekend; a Check button outlines mistakes, and the solved picture flips to colour. 364 pictures, all solvable without guessing. | Built-in coloured library (52 per weekday) |
+| **Cube Rush** | Slide cubicles until the analyst can reach the exit. Easy Mon → hard weekend; scored by time, with the optimal move count shown. | Built-in verified library (240 puzzles) |
 | **Word Web** | A crossword that unfolds: one category, no clues; solving a word reveals the words that cross it. Easy Mon → hardest Sun. | Validated puzzles supplied by the host (built-in canonical fallback) |
 | **Black Swan** | Five prompts ("Name a loss reserving method."). Any accepted answer counts; the rarer it is among everyone's guesses, the more it scores. | Question pool + guess counts supplied by the host's server |
 
@@ -70,6 +70,7 @@ import { GAME_CATALOG, GameIcon, isGameId, parseAssumptionDriftPack } from "@sto
 | `storage` | `localStorageAdapter` | any `{ load, save, remove }` (e.g. API-backed, for cross-device sync) |
 | `onComplete` | — | fires with a `GameResult` (stats + share text) when today's puzzle is finished |
 | `packs` | `[]` | Assumption Drift: raw pack JSON in rotation order. Word Web: validated puzzles for the days around today |
+| `resultTags` | `[]` | Tags for today's finish from the host's records ("Personal best!", "No hints!", "🔥 5-day streak"), shown in the result panel |
 
 The games inherit the host's font. Colours follow the ATLAS Tailwind palette (slate, violet, emerald, cyan,
 amber), and the components draw no outer panel, so the host wraps them in its own.
@@ -105,6 +106,19 @@ The host should freeze one rarity table per question per day, so every player th
 scored against the same numbers. The playground uses an in-memory stand-in
 (`apps/playground/src/blackSwanMock.ts`).
 
+### Box Plot
+
+Each weekday has its own size and pool of pictures (`src/games/box-plot/library.ts`):
+Mon 5×5, Tue 7×7, Wed 8×8, Thu/Fri 10×10, Sat/Sun 12×12. Days that share a size split it
+by choppiness (runs per line): the later day gets the broken-up half. Each weekday walks
+its own fixed shuffle, one picture a week, so nothing repeats for 52 weeks.
+
+Pictures live in `src/games/box-plot/art/` as strings where `.` is empty and every other
+character is a palette key, so one string is both the shape and the colours the picture
+flips to (a split-flap reveal) when solved. The tests check that every picture is square,
+coloured from its palette, and solvable by line logic alone. Check (10-second cooldown)
+outlines wrong fills and wrong ✕ marks; checks are reported as the board's hints.
+
 ### Word Web
 
 A daily crossword that unfolds. The puzzle (layout, unlock tree, starting letters,
@@ -116,9 +130,9 @@ per module:
 |---|---|
 | `types.ts` | Puzzle, record (puzzle + audit report) and queue shapes |
 | `normalize.ts` | One normalization for answers and guesses (A–Z only; accents fold; spaces and hyphens drop) |
-| `grid.ts`, `construct.ts` | Geometry, and the deterministic seeded builder that proposes layouts |
+| `grid.ts`, `construct.ts` | Geometry, and the deterministic seeded builder that proposes layouts: crossword-style, ranking placements and layouts by crossings (a beam search finds interlocking loops), with legality always decided by the validator |
 | `validate.ts` | Every hard rule: matching crossings, one answer per direction per cell, every run of letters is an answer, connected, in bounds; unlock tree single-start, acyclic, reachable, parent crosses child, no hidden word showing early, always completable |
-| `graph.ts` | Unlock tree from a layout (wide or deep) and its stats |
+| `graph.ts` | Unlock tree from a layout (wide or deep), its stats, and each word's unfurl letter (the extra letter shown when it appears; none for 3-letter words) |
 | `difficulty.ts` | 15 weighted components → 0–100, weekday bands (`DIFFICULTY_WEIGHTS`, `WEEKDAY_TARGETS`) |
 | `safety.ts`, `recurrence.ts` | Deny-lists, brand/proper-noun/abbreviation policy; repeat rules |
 | `generator.ts` | The `WordWebGenerator` contract and the local bank generator |

@@ -9,6 +9,8 @@ export type GameId =
 export interface GameStat {
   label: string;
   value: string;
+  /** A light-grey line under the value, e.g. "14 moves" under a time. */
+  note?: string;
 }
 
 /** Emitted once when a player finishes today's puzzle (and again on reload of a finished one). */

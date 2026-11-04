@@ -55,11 +55,12 @@ export const GAME_CATALOG: readonly GameInfo[] = [
     title: "Box Plot",
     tagline: "Fill the grid from the clues to reveal a picture.",
     description:
-      "A 10×10 picture logic puzzle. The numbers on each row and column give the runs of filled boxes, in order.",
+      "A picture logic puzzle that grows through the week, from 5×5 on Monday to 12×12 on Sunday. The numbers on each row and column give the runs of filled boxes, in order.",
     howToPlay: [
       "Numbers list the filled runs in that row or column, in order. “3 1” means a run of 3, a gap, then 1.",
       "Fill boxes with the Fill tool. Mark boxes you know are empty with ✕ (right-click also marks).",
       "Drag to paint a whole run. A clue greys out once its line matches.",
+      "Stuck? Check outlines any wrong boxes (one check every 10 seconds).",
       "Every puzzle can be solved by logic alone — no guessing needed.",
     ],
     accent: "cyan",
@@ -75,7 +76,8 @@ export const GAME_CATALOG: readonly GameInfo[] = [
     howToPlay: [
       "Drag any cubicle, or select it and use the arrow keys. Cubicles slide into empty floor only.",
       "Get the analyst (the dark tile) out through the gap marked EXIT.",
-      "Sliding one cubicle any distance counts as one move. Beat par for a perfect day.",
+      "Sliding one cubicle any distance counts as one move. Your score is your time.",
+      "Optimal is the fewest moves the floor plan can be solved in. Match it for a perfect day.",
       "Monday is easy, the weekend is hard.",
     ],
     accent: "amber",
