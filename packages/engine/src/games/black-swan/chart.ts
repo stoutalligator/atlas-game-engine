@@ -4,7 +4,7 @@
 // band is as wide as its share of answers (35 / 27 / 20 / 12 / 6%) and a player's
 // answer at rarity position p lands at x = p. Colours come from CSS variables.
 
-import { BLACK_SWAN_TIERS, type BlackSwanTierKey, tierFor } from "./logic.js";
+import { BLACK_SWAN_TIERS, type BlackSwanTierKey, rankingPositions, tierFor } from "./logic.js";
 
 const DOTS = 1000;
 const K = 3.2;
@@ -187,15 +187,74 @@ export interface RevealOptions {
   label: string | null;
   tier: BlackSwanTierKey | null;
   reduceMotion: boolean;
+  /** Every accepted answer, most common first: lets each dot name an answer on hover. */
+  answers?: ReadonlyArray<ChartAnswer>;
   /** Fires once the player's dot lands (or falls off the chart for a miss). */
   onLand: (at: { x: number; y: number } | null) => void;
 }
 
-/** Dots rain into the chart, then the player's gold dot drops in. Returns a cancel function. */
-export function runReveal(cv: HTMLCanvasElement, opts: RevealOptions): () => void {
+export interface ChartAnswer {
+  label: string;
+  share: number;
+  tier: BlackSwanTierKey;
+}
+
+/** The column under the pointer: a few of its answers, and where to anchor a tooltip. */
+export interface ChartHit {
+  column: number;
+  /** Up to three answers in the column, the player's first, then most common. */
+  answers: Array<ChartAnswer & { mine: boolean }>;
+  /** Answers in the column not shown. */
+  more: number;
+  /** Top-centre of the column's stack (canvas CSS pixels). */
+  x: number;
+  y: number;
+}
+
+export interface RevealHandle {
+  cancel: () => void;
+  /** The column at (x, y), once the reveal has finished. */
+  hitTest: (x: number, y: number) => ChartHit | null;
+  /** Dims every column but this one; null clears. */
+  highlight: (column: number | null) => void;
+}
+
+/**
+ * Answer indexes for each column: those whose rarity position falls inside the
+ * column's [lo, hi) band, or the single nearest answer when none does.
+ */
+export function columnAnswers(
+  positions: readonly number[],
+  cols: ReadonlyArray<{ lo: number; hi: number }>,
+): number[][] {
+  const nearest = (xf: number) => {
+    let best = -1;
+    for (let i = 0; i < positions.length; i++)
+      if (best < 0 || Math.abs(positions[i] - xf) < Math.abs(positions[best] - xf)) best = i;
+    return best;
+  };
+  return cols.map((col) => {
+    const inside = positions.flatMap((p, i) => (p >= col.lo && p < col.hi ? [i] : []));
+    if (inside.length) return inside;
+    const near = nearest((col.lo + col.hi) / 2);
+    return near >= 0 ? [near] : [];
+  });
+}
+
+/**
+ * Dots rain into the chart, then the player's gold dot drops in. The chart is a
+ * stylised long tail, so a column stands for the accepted answers whose rarity
+ * position falls inside it (or the nearest answer, when none does).
+ */
+export function runReveal(cv: HTMLCanvasElement, opts: RevealOptions): RevealHandle {
   const pal = palette(cv);
   const { ctx, w, h } = setup(cv, 280);
   const L = layout(w, h);
+  const answers = opts.answers ?? [];
+  const positions = rankingPositions(answers);
+  const colAnswers = columnAnswers(positions, L.cols);
+  let hover: number | null = null;
+  let done = false;
   let seed = 1234567;
   const rand = () => {
     seed = (seed * 1664525 + 1013904223) >>> 0;
@@ -229,7 +288,8 @@ export function runReveal(cv: HTMLCanvasElement, opts: RevealOptions): () => voi
       const y = Math.min(s.y, -10 + 2 * g * dt * dt);
       const down = y >= s.y;
       const x = down ? s.x : s.x + p.jx * (1 - y / s.y);
-      ctx.globalAlpha = down ? 1 : 0.6;
+      const dim = hover !== null && down && L.cols[hover] !== p.col;
+      ctx.globalAlpha = !down ? 0.6 : dim ? 0.25 : 1;
       dot(ctx, x, y, L.d / 2 - 0.4, down ? colorOf(p.col.tier) : pal.get("--ag-muted"));
       ctx.globalAlpha = 1;
     }
@@ -288,9 +348,43 @@ export function runReveal(cv: HTMLCanvasElement, opts: RevealOptions): () => voi
       }
     }
     if (!landed || (t < meT0 + 1500 && !opts.reduceMotion)) raf = requestAnimationFrame(frame);
+    else done = true;
   };
   raf = requestAnimationFrame(frame);
-  return () => cancelAnimationFrame(raf);
+
+  const hitTest = (mx: number, my: number): ChartHit | null => {
+    if (!done || !answers.length) return null;
+    const i = L.cols.findIndex((c) => mx >= c.x - L.gap / 2 && mx < c.x + c.w + L.gap / 2);
+    if (i < 0) return null;
+    const col = L.cols[i];
+    // Anywhere from the baseline up to just above the column's stack.
+    const stack = col.count + (col === myCol ? 1 : 0);
+    const topY = L.base - Math.ceil(Math.max(1, stack) / L.perRow) * L.d;
+    if (my > L.base + 2 || my < topY - L.d * 2) return null;
+    const list = colAnswers[i].map((k) => ({
+      ...answers[k],
+      mine: answers[k].label === opts.label,
+    }));
+    if (!list.length) return null;
+    list.sort((a, b) => Number(b.mine) - Number(a.mine) || b.share - a.share);
+    const shown = list.slice(0, 3);
+    return {
+      column: i,
+      answers: shown,
+      more: list.length - shown.length,
+      x: col.x + col.w / 2,
+      y: topY,
+    };
+  };
+
+  const highlight = (column: number | null) => {
+    if (!done || column === hover) return;
+    hover = column;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(frame);
+  };
+
+  return { cancel: () => cancelAnimationFrame(raf), hitTest, highlight };
 }
 
 /** A burst of sparks from the player's dot; bigger tiers get more. */

@@ -1,4 +1,5 @@
 import { formatClock, puzzleNumber } from "../../core/daily.js";
+import { withShareLink } from "../../core/share.js";
 import type { WordWebState } from "./play.js";
 import type { WordWebPuzzle } from "./types.js";
 
@@ -21,10 +22,11 @@ export function wordWebShareText(puzzle: WordWebPuzzle, state: WordWebState, dat
   const hints = r?.hintsUsed ?? state.hintsUsed;
   const guesses = r?.guessCount ?? state.guessCount;
   const secs = Math.round((r?.elapsedMs ?? state.elapsedMs) / 1000);
-  return [
+  const text = [
     `ATLAS Word Web 🕸️ #${puzzleNumber(date)}`,
     `${WEEKDAYS[puzzle.weekday]} · ${puzzle.difficulty}`,
     progressionSquares(state),
     `${hints} hint${hints === 1 ? "" : "s"} | ${formatClock(secs)} | ${guesses} guess${guesses === 1 ? "" : "es"}`,
   ].join("\n");
+  return withShareLink("wordweb", text);
 }

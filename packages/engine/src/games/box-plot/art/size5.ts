@@ -177,7 +177,7 @@ export const SIZE_5: ColorPicture[] = [
     rows: [".KKK.", ".KKK.", ".RRR.", "KKKKK", "....."],
   },
   {
-    name: "Glasses",
+    name: "Pair of glasses",
     palette: { K: BLACK, C: SKY },
     rows: [".....", "KKKKK", "KCKCK", "KK.KK", "....."],
   },

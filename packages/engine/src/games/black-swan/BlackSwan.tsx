@@ -4,7 +4,14 @@ import { useCompletion, useDailyProgress, usePuzzleDate } from "../../core/progr
 import { shareText } from "../../core/share.js";
 import type { DailyGameProps, GameResult } from "../../core/types.js";
 import { Button, GameLoading, GameShell, ResultPanel } from "../../ui/Shell.js";
-import { burst, drawDayChart, drawGhost, runReveal } from "./chart.js";
+import {
+  type ChartHit,
+  type RevealHandle,
+  burst,
+  drawDayChart,
+  drawGhost,
+  runReveal,
+} from "./chart.js";
 import {
   BLACK_SWAN_MAX_SCORE,
   BLACK_SWAN_SECONDS,
@@ -326,6 +333,7 @@ function PromptView({
   const [busy, setBusy] = useState(false);
   const lockedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLCanvasElement>(null);
   const state = useRef({ text, pending });
   state.current = { text, pending };
@@ -345,8 +353,25 @@ function PromptView({
     [api, date, prompt.slot, onLocked],
   );
 
+  // A new prompt brings the question and answer box into view together.
   useEffect(() => {
-    inputRef.current?.focus();
+    const root = rootRef.current;
+    if (!root) return;
+    const top = root.getBoundingClientRect().top;
+    const formBottom = root.querySelector(".ag-bs__form")?.getBoundingClientRect().bottom ?? top;
+    if (top < 80 || formBottom > window.innerHeight) {
+      const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      root.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    }
+  }, []);
+
+  // A wrong answer remounts the field (to replay the shake): focus the new input.
+  useEffect(() => {
+    if (shake > 0) inputRef.current?.focus();
+  }, [shake]);
+
+  useEffect(() => {
+    inputRef.current?.focus({ preventScroll: true });
     const draw = () =>
       ghostRef.current &&
       drawGhost(
@@ -384,13 +409,12 @@ function PromptView({
       setTries((t) => [...t, input]);
       setText("");
       setShake((n) => n + 1);
-      inputRef.current?.focus();
     } else if (m.kind === "exact") void lock(m.label, input);
     else setPending(m);
   };
 
   return (
-    <div className="ag-bs__prompt">
+    <div className="ag-bs__prompt" ref={rootRef}>
       <p className="ag-bs__question">{prompt.prompt}</p>
       <div className="ag-bs__timer" aria-hidden="true">
         <i
@@ -481,6 +505,8 @@ function Reveal({
   const [shown, setShown] = useState(false);
   const [points, setPoints] = useState(0);
   const [effect, setEffect] = useState<"" | "tail" | "swan">("");
+  const [hit, setHit] = useState<ChartHit | null>(null);
+  const chartRef = useRef<RevealHandle | null>(null);
   const top = result.tier ? BLACK_SWAN_TIERS.findIndex((t) => t.key === result.tier) : -1;
 
   useEffect(() => {
@@ -488,10 +514,11 @@ function Reveal({
     if (!cv) return;
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const timers: number[] = [];
-    const cancel = runReveal(cv, {
+    const chart = runReveal(cv, {
       p: result.p,
       label: result.label,
       tier: result.tier,
+      answers: result.ranking,
       reduceMotion: reduce,
       onLand: (at) => {
         if (top < 0) {
@@ -529,11 +556,27 @@ function Reveal({
           );
       },
     });
+    chartRef.current = chart;
     return () => {
-      cancel();
+      chart.cancel();
+      chartRef.current = null;
       timers.forEach(window.clearTimeout);
     };
   }, [result, top]);
+
+  // Hover (or tap) a dot to see the answer it stands for.
+  const onPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    const h = chart.hitTest(e.clientX - box.left, e.clientY - box.top);
+    chart.highlight(h?.column ?? null);
+    setHit((prev) => (prev?.column === h?.column ? prev : h));
+  };
+  const clearHit = () => {
+    chartRef.current?.highlight(null);
+    setHit(null);
+  };
 
   const tier = result.tier ? tierInfo(result.tier) : null;
 
@@ -545,7 +588,42 @@ function Reveal({
           ref={canvasRef}
           role="img"
           aria-label="Where your answer fell among everyone's guesses"
+          data-hover={hit !== null}
+          onPointerMove={onPointer}
+          onPointerDown={onPointer}
+          onPointerLeave={clearHit}
         />
+        {hit && (
+          <div
+            className="ag-bs__tip"
+            style={{ left: hit.x, top: hit.y }}
+            data-flip={hit.y < 110}
+            data-edge={
+              hit.x < 120
+                ? "left"
+                : hit.x > (canvasRef.current?.clientWidth ?? 0) - 120
+                  ? "right"
+                  : undefined
+            }
+            aria-hidden="true"
+          >
+            {hit.answers.map((a) => (
+              <span key={a.label} className="ag-bs__tiprow">
+                <span className="ag-bs__chip" data-tier={a.tier}>
+                  {caps(tierInfo(a.tier).name)}
+                </span>
+                <b>
+                  {a.label}
+                  {a.mine && <em> · you</em>}
+                </b>
+                <small>{pct(a.share)}</small>
+              </span>
+            ))}
+            {hit.more > 0 && (
+              <span className="ag-bs__tipmore">+{hit.more} more in this column</span>
+            )}
+          </div>
+        )}
         <div className="ag-bs__fx" aria-hidden="true">
           <canvas ref={fxRef} />
         </div>
