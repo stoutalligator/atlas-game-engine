@@ -53,6 +53,16 @@ const daysForSize = (size: number) =>
     .filter(([, d]) => d.size === size)
     .map(([wd, d]) => ({ wd: Number(wd), ...d }));
 
+/**
+ * The line shown once a picture is revealed: "It's an owl." Names are
+ * singular things ("Bunch of grapes", not "Grapes") so this always reads.
+ */
+export function pictureHeadline(name: string): string {
+  const noun = name.toLowerCase();
+  const article = /^[aeiou]/.test(noun) && !/^(uni|use|eu|one)/.test(noun) ? "an" : "a";
+  return `It's ${article} ${noun}.`;
+}
+
 /** Whether a picture cell is filled. */
 export const isFilledChar = (ch: string) => ch !== ".";
 

@@ -87,7 +87,7 @@ export const SIZE_12_CHOPPY: ColorPicture[] = [
     "....BBBB....",
     "............",
   ]),
-  p("Skyscrapers", { K: C.SLATE, Y: C.YELLOW, B: C.NAVY }, [
+  p("City skyline", { K: C.SLATE, Y: C.YELLOW, B: C.NAVY }, [
     ".....K......",
     ".....K......",
     "....KKK.....",
@@ -213,7 +213,7 @@ export const SIZE_12_CHOPPY: ColorPicture[] = [
     "B.....B.B..G",
     "BBBBBBBBBBBB",
   ]),
-  p("Dice pair", { R: C.RED, S: C.SNOW, B: C.BLUE }, [
+  p("Pair of dice", { R: C.RED, S: C.SNOW, B: C.BLUE }, [
     "RRRRR.......",
     "R.RRR.......",
     "RRRRR.......",
@@ -381,7 +381,7 @@ export const SIZE_12_CHOPPY: ColorPicture[] = [
     ".G.G.G......",
     "............",
   ]),
-  p("Strawberry seeds", { R: C.RED, Y: C.YELLOW, G: C.GREEN }, [
+  p("Strawberry", { R: C.RED, Y: C.YELLOW, G: C.GREEN }, [
     "...G.GG.G...",
     "....GGGG....",
     "..RRRRRRRR..",
@@ -395,7 +395,7 @@ export const SIZE_12_CHOPPY: ColorPicture[] = [
     "...RRRRRR...",
     ".....RR.....",
   ]),
-  p("Glasses", { K: C.CHARCOAL, C: C.ICE }, [
+  p("Pair of glasses", { K: C.CHARCOAL, C: C.ICE }, [
     "............",
     "............",
     "............",
@@ -409,7 +409,7 @@ export const SIZE_12_CHOPPY: ColorPicture[] = [
     "............",
     "............",
   ]),
-  p("Cactus spines", { G: C.GREEN, D: C.DARK_GREEN, P: C.CORAL, F: C.PINK }, [
+  p("Potted cactus", { G: C.GREEN, D: C.DARK_GREEN, P: C.CORAL, F: C.PINK }, [
     ".....FF.....",
     "....GDGG....",
     "....GDGG....",
@@ -423,7 +423,7 @@ export const SIZE_12_CHOPPY: ColorPicture[] = [
     "..PPPPPPPP..",
     "...PPPPPP...",
   ]),
-  p("Lighthouse stripes", { R: C.RED, S: C.SNOW, Y: C.YELLOW, B: C.BLUE, K: C.SLATE }, [
+  p("Lighthouse", { R: C.RED, S: C.SNOW, Y: C.YELLOW, B: C.BLUE, K: C.SLATE }, [
     ".....KK.....",
     "YY..YYYY..YY",
     "....KKKK....",
@@ -437,7 +437,7 @@ export const SIZE_12_CHOPPY: ColorPicture[] = [
     "B.B.B.B.B.B.",
     "BBBBBBBBBBBB",
   ]),
-  p("Window blinds", { B: C.BROWN, S: C.SAND, K: C.SLATE }, [
+  p("Window with blinds", { B: C.BROWN, S: C.SAND, K: C.SLATE }, [
     "BBBBBBBBBBBB",
     "B..........B",
     "BSSSSSSSSSSB",
@@ -451,7 +451,7 @@ export const SIZE_12_CHOPPY: ColorPicture[] = [
     "BBBBBBBBBBBB",
     "............",
   ]),
-  p("Gameboard dots", { R: C.RED, Y: C.YELLOW, B: C.BLUE }, [
+  p("Pegboard", { R: C.RED, Y: C.YELLOW, B: C.BLUE }, [
     "BBBBBBBBBBBB",
     "B.R.Y.R.Y..B",
     "B..........B",

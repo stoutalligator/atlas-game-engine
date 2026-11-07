@@ -11,7 +11,7 @@ export const SIZE_7: ColorPicture[] = [
     rows: ["..PPP..", ".PPWPP.", "PPPPPPP", ".CDCDC.", "..CDC..", "..DCD..", "...C..."],
   },
   {
-    name: "Cherries",
+    name: "Pair of cherries",
     palette: { G: C.GREEN, S: C.OLIVE, R: C.RED, H: C.ROSE },
     rows: ["...GG..", "...S...", "..S.S..", ".S...S.", "RRR.RRR", "RHR.RHR", ".R...R."],
   },
@@ -102,7 +102,7 @@ export const SIZE_7: ColorPicture[] = [
     rows: [".G.G.G.", "..GGG..", ".YOYOY.", ".OYOYO.", ".YOYOY.", ".OYOYO.", "..YOY.."],
   },
   {
-    name: "Grapes",
+    name: "Bunch of grapes",
     palette: { G: C.GREEN, P: C.PURPLE },
     rows: ["....G..", "...G...", ".PPPPP.", "PPPPPPP", ".PPPPP.", "..PPP..", "...P..."],
   },
