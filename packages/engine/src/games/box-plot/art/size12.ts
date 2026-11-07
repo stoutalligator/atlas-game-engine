@@ -335,7 +335,7 @@ const SIZE_12_SOLID: ColorPicture[] = [
     "..BBB..BBB..",
     "..BB....BB..",
   ]),
-  p("Banana bunch", { Y: C.YELLOW, B: C.BROWN, G: C.LIME }, [
+  p("Bunch of bananas", { Y: C.YELLOW, B: C.BROWN, G: C.LIME }, [
     "......BB....",
     ".....YY.....",
     "....YYYY....",

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { columnAnswers } from "../games/black-swan/chart.js";
 import {
   BLACK_SWAN_PROMPTS,
+  BLACK_SWAN_TIERS,
   type BlackSwanQuestion,
   blackSwanTierSizes,
   buildRarityTable,
@@ -8,6 +10,7 @@ import {
   parseBlackSwanQuestions,
   planSchedule,
   questionsForDate,
+  rankingPositions,
   scoreGuess,
   summarizeDay,
   tierFor,
@@ -180,5 +183,35 @@ describe("parseBlackSwanQuestions", () => {
       ]),
     ).toThrow(/positive prior/);
     expect(() => parseBlackSwanQuestions([reserving, reserving])).toThrow(/Duplicate/);
+  });
+});
+
+describe("chart columns", () => {
+  const cols = (n: number) => Array.from({ length: n }, (_, i) => ({ lo: i / n, hi: (i + 1) / n }));
+  const ranking = (n: number) => {
+    const sizes = blackSwanTierSizes(n);
+    return sizes.flatMap((size, t) =>
+      Array.from({ length: size }, () => ({ tier: BLACK_SWAN_TIERS[t].key })),
+    );
+  };
+
+  it("groups every answer into exactly one column when the list is long", () => {
+    const groups = columnAnswers(rankingPositions(ranking(100)), cols(30));
+    const all = groups.flat().sort((a, b) => a - b);
+    expect(all).toEqual(Array.from({ length: 100 }, (_, i) => i));
+    expect(groups.every((g) => g.length > 0)).toBe(true);
+    expect(Math.max(...groups.map((g) => g.length))).toBeGreaterThan(1);
+  });
+
+  it("gives an empty column its nearest answer when the list is short", () => {
+    const groups = columnAnswers(rankingPositions(ranking(8)), cols(30));
+    expect(groups.every((g) => g.length === 1)).toBe(true);
+  });
+
+  it("matches the rarity table's positions", () => {
+    const pos = rankingPositions(ranking(40));
+    expect(pos.every((p, i) => i === 0 || p > pos[i - 1])).toBe(true);
+    expect(pos[0]).toBeGreaterThan(0);
+    expect(pos.at(-1)).toBeLessThan(1);
   });
 });

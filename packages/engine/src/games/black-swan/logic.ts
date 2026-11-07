@@ -201,6 +201,26 @@ export function parseBlackSwanQuestions(raw: unknown): BlackSwanQuestion[] {
 
 // ── rarity ──────────────────────────────────────────────────────────────────
 
+const TIER_BOUNDS = [0, ...BLACK_SWAN_TIERS.slice(0, 4).map((t) => t.upTo), 1];
+
+/** Rarity position of the j-th of `size` answers in tier t: spread evenly across the tier's band. */
+export function tierPosition(t: number, j: number, size: number): number {
+  return TIER_BOUNDS[t] + ((TIER_BOUNDS[t + 1] - TIER_BOUNDS[t]) * (j + 0.5)) / size;
+}
+
+/** Rarity positions for a ranking (most common first), matching RarityRow.p. */
+export function rankingPositions(ranking: ReadonlyArray<{ tier: BlackSwanTierKey }>): number[] {
+  const sizes = new Map<BlackSwanTierKey, number>();
+  for (const r of ranking) sizes.set(r.tier, (sizes.get(r.tier) ?? 0) + 1);
+  const seen = new Map<BlackSwanTierKey, number>();
+  return ranking.map((r) => {
+    const j = seen.get(r.tier) ?? 0;
+    seen.set(r.tier, j + 1);
+    const t = BLACK_SWAN_TIERS.findIndex((x) => x.key === r.tier);
+    return tierPosition(t, j, sizes.get(r.tier) ?? 1);
+  });
+}
+
 export interface RarityRow {
   label: string;
   /** Credibility-blended share of guesses. */
@@ -247,13 +267,12 @@ export function buildRarityTable(
     })
     .sort((a, b) => b.share - a.share || a.label.localeCompare(b.label));
   const sizes = blackSwanTierSizes(rows.length);
-  const bounds = [0, ...BLACK_SWAN_TIERS.slice(0, 4).map((t) => t.upTo), 1];
   const ranked: RarityRow[] = [];
   let i = 0;
   sizes.forEach((size, t) => {
     const tier = BLACK_SWAN_TIERS[t];
     for (let j = 0; j < size && i < rows.length; j++, i++) {
-      const p = bounds[t] + ((bounds[t + 1] - bounds[t]) * (j + 0.5)) / size;
+      const p = tierPosition(t, j, size);
       ranked.push({ ...rows[i], rank: i + 1, p, tier: tier.key, points: tier.points });
     }
   });

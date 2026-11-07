@@ -271,7 +271,7 @@ export const SIZE_8: ColorPicture[] = [
     ".OYOYOY.",
     "..YOYO..",
   ]),
-  p("Grapes", { G: C.GREEN, P: C.PURPLE }, [
+  p("Bunch of grapes", { G: C.GREEN, P: C.PURPLE }, [
     "....G...",
     "...GG...",
     ".PPPPPP.",
@@ -451,7 +451,7 @@ export const SIZE_8: ColorPicture[] = [
     "...CC...",
     "........",
   ]),
-  p("Music notes", { K: C.PURPLE }, [
+  p("Pair of music notes", { K: C.PURPLE }, [
     "..KKKKKK",
     "..K....K",
     "..K....K",

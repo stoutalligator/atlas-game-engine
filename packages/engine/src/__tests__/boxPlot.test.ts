@@ -6,6 +6,7 @@ import {
   LIBRARY,
   choppiness,
   pictureForDate,
+  pictureHeadline,
   poolFor,
 } from "../games/box-plot/library.js";
 import {
@@ -48,6 +49,29 @@ describe("box plot", () => {
       return !lineSolve(p.rowClues, p.colClues);
     }).map((p) => p.name);
     expect(unsolvable).toEqual([]);
+  });
+
+  it("reveal headlines read as one thing, with the right article", () => {
+    expect(pictureHeadline("Owl")).toBe("It's an owl.");
+    expect(pictureHeadline("Strawberry")).toBe("It's a strawberry.");
+    expect(pictureHeadline("Bunch of grapes")).toBe("It's a bunch of grapes.");
+    // Names ending in "s" must be singular words, not plurals like "Grapes".
+    const singularS = new Set([
+      "glasses",
+      "octopus",
+      "cactus",
+      "abacus",
+      "bus",
+      "compass",
+      "walrus",
+      "hippopotamus",
+    ]);
+    const plural = LIBRARY.map((p) => p.name).filter((n) => {
+      const head = n.toLowerCase().split(/ (?:of|with|and) /)[0];
+      const last = head.split(/[\s-]/).at(-1) ?? "";
+      return last.endsWith("s") && !last.endsWith("ss") && !singularS.has(last);
+    });
+    expect([...new Set(plural)]).toEqual([]);
   });
 
   it("picture names are unique within a size", () => {

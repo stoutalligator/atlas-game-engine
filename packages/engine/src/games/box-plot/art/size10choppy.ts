@@ -23,7 +23,7 @@ export const SIZE_10_CHOPPY: ColorPicture[] = [
     ".KS.S.S.OK",
     ".KKKKKKKKK",
   ]),
-  p("Piano keys", { K: C.BLACK, S: C.SNOW }, [
+  p("Piano keyboard", { K: C.BLACK, S: C.SNOW }, [
     "..........",
     "SKKSKKKSKK",
     "SKKSKKKSKK",
@@ -203,7 +203,7 @@ export const SIZE_10_CHOPPY: ColorPicture[] = [
     "..........",
     "..........",
   ]),
-  p("Railroad", { B: C.BROWN, S: C.STEEL }, [
+  p("Railroad track", { B: C.BROWN, S: C.STEEL }, [
     ".S......S.",
     "BSBBBBBBSB",
     ".S......S.",
@@ -263,7 +263,7 @@ export const SIZE_10_CHOPPY: ColorPicture[] = [
     ".KKK..KKK.",
     "..........",
   ]),
-  p("Tic-tac-toe", { K: C.SLATE, R: C.RED, B: C.BLUE }, [
+  p("Tic-tac-toe board", { K: C.SLATE, R: C.RED, B: C.BLUE }, [
     "R.R.K..K..",
     ".R..K..K.B",
     "R.R.K..K..",
@@ -276,7 +276,7 @@ export const SIZE_10_CHOPPY: ColorPicture[] = [
     "....K..K..",
   ]),
   p(
-    "Paw prints",
+    "Pair of paw prints",
     { B: C.BROWN },
     [
       ".B.B......",
@@ -303,7 +303,7 @@ export const SIZE_10_CHOPPY: ColorPicture[] = [
     "...YBYYYBY",
     "...Y.Y..Y.",
   ]),
-  p("Cow pattern", { K: C.BLACK, S: C.SNOW, P: C.PINK }, [
+  p("Spotted cow", { K: C.BLACK, S: C.SNOW, P: C.PINK }, [
     "..........",
     "SSKKSSSKS.",
     "SKKKSSSSSK",
@@ -499,7 +499,7 @@ export const SIZE_10_CHOPPY: ColorPicture[] = [
     "S.S.SRS.SS",
     "SSSSSSSSSS",
   ]),
-  p("Ice-cream stack", { P: C.PINK, M: C.MINT, B: C.CHOCOLATE, C: C.AMBER }, [
+  p("Double-scoop cone", { P: C.PINK, M: C.MINT, B: C.CHOCOLATE, C: C.AMBER }, [
     "...PPPP...",
     "..P.PP.P..",
     "...MMMM...",
@@ -511,7 +511,7 @@ export const SIZE_10_CHOPPY: ColorPicture[] = [
     "...CCCC...",
     "....CC....",
   ]),
-  p("Bunting", { R: C.RED, Y: C.YELLOW, B: C.BLUE, K: C.SLATE }, [
+  p("String of bunting", { R: C.RED, Y: C.YELLOW, B: C.BLUE, K: C.SLATE }, [
     "KKKKKKKKKK",
     "RRR.YYY.BB",
     ".R...Y...B",
@@ -535,17 +535,17 @@ export const SIZE_10_CHOPPY: ColorPicture[] = [
     ".RRRRRR...",
     "..........",
   ]),
-  p("Barcode", { K: C.BLACK }, [
-    "..........",
-    "K.KK.K.KKK",
-    "K.KK.K.KKK",
-    "K.KK.K.KKK",
-    "K.KK.K.KKK",
-    "K.KK.K.KKK",
-    "..........",
-    "K.K.KK.KK.",
-    "..........",
-    "..........",
+  p("Swiss cheese", { T: C.SAND, Y: C.YELLOW, A: C.AMBER }, [
+    "........TT",
+    "......TTTT",
+    "....TT.TTT",
+    "..TTTTTTTT",
+    "AAAAAAAAAA",
+    "Y.YYYY.YYY",
+    "YYYY..YYYY",
+    "Y.YYYYYY.Y",
+    "YYY.YYY..Y",
+    "YYYYYYYYYY",
   ]),
   p("Robot dog", { S: C.GREY, K: C.SLATE, R: C.RED, C: C.SKY }, [
     "SS........",
@@ -571,7 +571,7 @@ export const SIZE_10_CHOPPY: ColorPicture[] = [
     "..RRRRRR..",
     "....KK....",
   ]),
-  p("Cactus flowers", { G: C.GREEN, P: C.PINK, O: C.CORAL }, [
+  p("Flowering cactus", { G: C.GREEN, P: C.PINK, O: C.CORAL }, [
     ".P......P.",
     ".G..P...G.",
     ".G..G...G.",

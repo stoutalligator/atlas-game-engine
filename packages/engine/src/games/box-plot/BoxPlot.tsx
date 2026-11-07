@@ -12,6 +12,7 @@ import { useCompletion, useDailyProgress, usePuzzleDate, useTicker } from "../..
 import { shareText } from "../../core/share.js";
 import type { DailyGameProps, GameResult } from "../../core/types.js";
 import { Button, GameLoading, GameShell, ResultPanel } from "../../ui/Shell.js";
+import { pictureHeadline } from "./library.js";
 import {
   type BoxPlotPuzzle,
   CHECK_COOLDOWN_SEC,
@@ -351,7 +352,7 @@ function BoxPlotGame({ date, storage, onComplete }: DailyGameProps & { date: str
       {result && (
         <ResultPanel
           solved
-          headline={`It's a ${puzzle.name.toLowerCase()}.`}
+          headline={pictureHeadline(puzzle.name)}
           detail="Picture revealed. A fresh grid unlocks at midnight."
           stats={result.stats}
           shareText={result.shareText}
