@@ -89,15 +89,16 @@ export const GAME_CATALOG: readonly GameInfo[] = [
     title: "Black Swan",
     tagline: "Name the answer nobody else will.",
     description:
-      "Five prompts across actuarial, stats, SQL, Python, health and finance. Any accepted answer counts, but the rarer it is among everyone's guesses, the more it scores.",
+      "Seven prompts a day, the same for everyone. Any accepted answer counts, but the less well known it is, the more it scores. Every prompt hides exactly one Black Swan.",
     howToPlay: [
       "Each prompt has a list of accepted answers. Type one before the 25-second timer runs out.",
       "Not on the list? It shakes and clears — try another while time remains. Typos and short forms are offered as a correction to accept.",
-      "Answers are ranked by how often people give them. Tiers shrink toward the tail: the most common 35% are Mode (10 points), then Expected 27% (25), Within σ 20% (50), Tail 12% (100), and the rarest 6% are Black Swans (200).",
-      "Rarity blends simulated players with everyone's real answers (credibility weighting), and locks in at midnight.",
+      "Every accepted answer has a fixed tier, set by how well known it is: Mode (10 points), Expected (30), Within σ (60) and Tail (85).",
+      "Each prompt has exactly one Black Swan (100 points). Find it and you get its story.",
+      "After each answer, see how many players chose the same thing; after the day, see where your score sits on everyone's distribution.",
     ],
     accent: "slate",
-    minutes: "3 min",
+    minutes: "4 min",
     needsContent: true,
   },
   {

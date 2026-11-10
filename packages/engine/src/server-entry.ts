@@ -159,17 +159,20 @@ export function cubeRushPar(date: string): number {
 
 export { isGameId };
 
-// Black Swan: matching, rarity (credibility-weighted), scoring and scheduling.
+// Black Swan: tiers from familiarity, matching, scoring, the day's
+// distribution and scheduling.
 export {
-  BLACK_SWAN_CREDIBILITY_K,
+  BLACK_SWAN_LIST_LIMIT,
   BLACK_SWAN_MAX_SCORE,
   BLACK_SWAN_PROMPTS,
   BLACK_SWAN_SECONDS,
+  BLACK_SWAN_TIER_CUTS,
+  BLACK_SWAN_TIER_KEYS,
   BLACK_SWAN_TIERS,
   BlackSwanPackError,
+  assignTiers,
   blackSwanShareLine,
-  blackSwanTierSizes,
-  buildRarityTable,
+  dayDistribution,
   matchGuess,
   normalizeGuess,
   parseBlackSwanQuestions,
@@ -180,8 +183,11 @@ export {
   tierFor,
 } from "./games/black-swan/logic.js";
 export type {
+  AssignTiersOptions,
   BlackSwanAnswer,
   BlackSwanDayScore,
+  BlackSwanDistribution,
+  BlackSwanListedAnswer,
   BlackSwanQuestion,
   BlackSwanSchedule,
   BlackSwanSlotResult,
@@ -189,8 +195,6 @@ export type {
   BlackSwanTierKey,
   GuessMatch,
   PlanOptions,
-  RarityRow,
-  RarityTable,
 } from "./games/black-swan/logic.js";
 export type { GameId };
 

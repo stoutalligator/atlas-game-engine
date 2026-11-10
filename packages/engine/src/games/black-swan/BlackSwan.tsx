@@ -9,6 +9,7 @@ import {
   type RevealHandle,
   burst,
   drawDayChart,
+  drawDistribution,
   drawGhost,
   runReveal,
 } from "./chart.js";
@@ -16,6 +17,7 @@ import {
   BLACK_SWAN_MAX_SCORE,
   BLACK_SWAN_SECONDS,
   BLACK_SWAN_TIERS,
+  type BlackSwanDistribution,
   type BlackSwanSlotResult,
   type BlackSwanTierKey,
   type GuessMatch,
@@ -64,6 +66,11 @@ export interface BlackSwanApi {
     label: string | null,
     input: string,
   ): Promise<BlackSwanSlotResult | null>;
+  /**
+   * Optional: every finished player's score for the day (see dayDistribution),
+   * for the summary's distribution chart. Called once the player has finished.
+   */
+  distribution?(date: string): Promise<BlackSwanDistribution | null>;
 }
 
 export interface BlackSwanProps extends DailyGameProps {
@@ -86,7 +93,15 @@ type Phase =
 
 const tierInfo = (key: BlackSwanTierKey) =>
   BLACK_SWAN_TIERS.find((t) => t.key === key) ?? BLACK_SWAN_TIERS[0];
-const pct = (v: number) => (v < 0.001 ? "<0.1%" : `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`);
+const count = (n: number, one: string, many = `${one}s`) =>
+  `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
+const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight"];
+const word = (n: number) => NUMBER_WORDS[n] ?? String(n);
+/** "Better than X%" from a distribution, or null when nobody else has finished. */
+function betterThan(d: BlackSwanDistribution | null): number | null {
+  if (!d || d.players < 2) return null;
+  return Math.round((d.below / (d.players - 1)) * 100);
+}
 /** Upper-case for labels, keeping σ lowercase (CSS text-transform would make it Σ). */
 const caps = (s: string) => s.toUpperCase().replace("Σ", "σ");
 
@@ -100,6 +115,7 @@ function BlackSwanGame({
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<Array<BlackSwanSlotResult | undefined>>([]);
   const [phase, setPhase] = useState<Phase>({ kind: "intro" });
+  const [dist, setDist] = useState<BlackSwanDistribution | null>(null);
   const progress = useDailyProgress<{ started: boolean }>("black-swan", date, storage, () => ({
     started: false,
   }));
@@ -143,7 +159,7 @@ function BlackSwanGame({
       stats: [
         { label: "Score", value: `${summary.score}/${BLACK_SWAN_MAX_SCORE}` },
         { label: "Black Swans", value: String(summary.blackSwans) },
-        { label: "Avg rarity", value: pct(summary.rarity) },
+        { label: "Answered", value: `${done.filter((r) => r.label).length}/${done.length}` },
       ],
       score: { points: summary.score, rarity: summary.rarity },
       proof: null,
@@ -151,6 +167,20 @@ function BlackSwanGame({
     };
   }, [allDone, date, done, summary.score, summary.blackSwans, summary.rarity]);
   useCompletion(result, onComplete, progress.recordHistory);
+
+  // Once the day is done, fetch everyone's scores for the distribution chart.
+  useEffect(() => {
+    if (!allDone || !api.distribution) return;
+    let cancelled = false;
+    api
+      .distribution(date)
+      .then((d) => !cancelled && setDist(d))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [allDone, api, date]);
+  const better = betterThan(dist);
 
   const nextSlot = day ? day.prompts.findIndex((_, i) => !results[i]) : -1;
 
@@ -202,6 +232,7 @@ function BlackSwanGame({
         {phase.kind === "intro" && (
           <Intro
             started={done.length > 0}
+            count={day.prompts.length}
             categories={day.prompts.map((p) => p.category)}
             onStart={() => openSlot(nextSlot)}
           />
@@ -232,16 +263,19 @@ function BlackSwanGame({
           <ResultPanel
             solved
             headline={`${summary.score} points`}
-            detail={
+            detail={[
               summary.blackSwans
-                ? `${summary.blackSwans} Black Swan${summary.blackSwans === 1 ? "" : "s"} today. Average rarity ${pct(summary.rarity)}.`
-                : `Average rarity ${pct(summary.rarity)}. Hunt the tail tomorrow.`
-            }
+                ? `${count(summary.blackSwans, "Black Swan")} today.`
+                : "No Black Swans today. Hunt the tail tomorrow.",
+              better !== null ? `Better than ${better}% of today's players.` : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             stats={result.stats}
             shareText={result.shareText}
             history={progress.stats}
           >
-            <Recap prompts={day.prompts} results={results} />
+            <Recap prompts={day.prompts} results={results} dist={dist} />
           </ResultPanel>
         )}
       </div>
@@ -273,14 +307,15 @@ function Pips({
 
 function Intro({
   started,
+  count: n,
   categories,
   onStart,
-}: { started: boolean; categories: string[]; onStart: () => void }) {
+}: { started: boolean; count: number; categories: string[]; onStart: () => void }) {
   return (
     <div className="ag-bs__intro">
       <p className="ag-bs__lede">
-        Five prompts. Name an answer nobody else will. Every accepted answer counts, but the rarer
-        it is, the more it scores.
+        {word(n).replace(/^./, (c) => c.toUpperCase())} prompts, 25 seconds each. The obvious answer
+        sits at the Mode; the obscure ones live out in the tail.
       </p>
       <div className="ag-bs__cats">
         {categories.map((c, i) => (
@@ -294,9 +329,8 @@ function Intro({
         {BLACK_SWAN_TIERS.map((t) => (
           <div key={t.key} className="ag-bs__tier" data-tier={t.key}>
             <b>{t.name}</b>
-            <span>
-              {t.range} · {t.points} pts
-            </span>
+            <span>{t.points} pts</span>
+            <small>{t.blurb}</small>
           </div>
         ))}
       </div>
@@ -305,7 +339,7 @@ function Intro({
           {BLACK_SWAN_SECONDS} seconds per prompt · typos are forgiven · made-up answers don't count
         </span>
         <Button variant="primary" onClick={onStart}>
-          {started ? "Continue →" : "Play today's five →"}
+          {started ? "Continue →" : `Play today's ${word(n)} →`}
         </Button>
       </div>
     </div>
@@ -376,7 +410,7 @@ function PromptView({
       ghostRef.current &&
       drawGhost(
         ghostRef.current,
-        `${prompt.answerCount} accepted answers · the crowd fills in after you lock in`,
+        `${prompt.answerCount.toLocaleString("en-US")} accepted answers · the crowd fills in after you lock in`,
       );
     draw();
     window.addEventListener("resize", draw);
@@ -478,7 +512,7 @@ function PromptView({
         ))}
       </div>
       <p className="ag-bs__hint">
-        Rare and correct beats common. Not on the list? Try again until time runs out.
+        Obscure and correct beats obvious. Not on the list? Try again until time runs out.
       </p>
       <div className="ag-bs__stage ag-bs__stage--ghost" aria-hidden="true">
         <canvas ref={ghostRef} />
@@ -616,7 +650,7 @@ function Reveal({
                   {a.label}
                   {a.mine && <em> · you</em>}
                 </b>
-                <small>{pct(a.share)}</small>
+                <small>{count(a.picks, "pick")}</small>
               </span>
             ))}
             {hit.more > 0 && (
@@ -635,7 +669,7 @@ function Reveal({
         <span>
           <i data-dot="you" /> you
         </span>
-        <span>Most common on the left; the tail runs right.</span>
+        <span>Best-known answers on the left; the tail runs right.</span>
       </div>
       <div className="ag-bs__steps" aria-hidden="true">
         {BLACK_SWAN_TIERS.map((t, i) => (
@@ -663,8 +697,8 @@ function Reveal({
         <div className="ag-bs__what">
           <b>{result.label ?? (result.input ? `“${result.input}”` : "No answer")}</b>
           <span>
-            {result.label && result.share !== null && result.rank !== null
-              ? `${pct(result.share)} of guesses · #${result.rank} of ${result.answerCount} answers`
+            {result.label && tier
+              ? `${(result.picks ?? 0) > 1 ? `${count(result.picks ?? 0, "player")} chose` : "Only you chose"} this today. ${tier.blurb}`
               : result.input
                 ? "Not an accepted answer, so it scores 0."
                 : "Time ran out."}
@@ -675,22 +709,12 @@ function Reveal({
           <small>points</small>
         </div>
       </div>
-      <div className="ag-bs__cred">
-        <span>
-          Rarity uses <b>{result.realCount}</b> real guesses + <b>200</b> simulated
-        </span>
-        <span>
-          Credibility Z = <b>{Math.round(result.z * 100)}%</b>
-          <span className="ag-bs__zbar">
-            <i style={{ width: `${result.z * 100}%` }} />
-          </span>
-        </span>
-      </div>
+      {shown && <SwanCard result={result} />}
       {shown && <AnswerList result={result} />}
       <div className="ag-row ag-row--between">
         <span className="ag-bs__hint">
-          Most common: {result.mostCommon.label} ({pct(result.mostCommon.share)}) · Rarest accepted:{" "}
-          {result.rarest}
+          {count(result.answerCount, "accepted answer")} · {count(result.players, "player")}{" "}
+          answered so far
         </span>
         <Button variant="primary" onClick={onNext} disabled={!shown}>
           {last ? "See today's result →" : "Next prompt →"}
@@ -703,26 +727,50 @@ function Reveal({
 function Recap({
   prompts,
   results,
-}: { prompts: BlackSwanPrompt[]; results: Array<BlackSwanSlotResult | undefined> }) {
+  dist,
+}: {
+  prompts: BlackSwanPrompt[];
+  results: Array<BlackSwanSlotResult | undefined>;
+  dist: BlackSwanDistribution | null;
+}) {
   const chartRef = useRef<HTMLCanvasElement>(null);
+  const distRef = useRef<HTMLCanvasElement>(null);
+  const showDist = !!dist && dist.players > 1;
   useEffect(() => {
-    const draw = () =>
-      chartRef.current &&
-      drawDayChart(
-        chartRef.current,
-        results.map((r) => r?.p ?? null),
-      );
+    const draw = () => {
+      if (chartRef.current)
+        drawDayChart(
+          chartRef.current,
+          results.map((r) => r?.p ?? null),
+        );
+      if (distRef.current && dist && showDist) drawDistribution(distRef.current, dist);
+    };
     draw();
     window.addEventListener("resize", draw);
     return () => window.removeEventListener("resize", draw);
-  }, [results]);
+  }, [results, dist, showDist]);
   return (
     <div className="ag-bs__recap">
+      {showDist && dist && (
+        <figure className="ag-bs__dist">
+          <div className="ag-bs__stage">
+            <canvas
+              ref={distRef}
+              role="img"
+              aria-label={`Today's scores from ${dist.players} players; you scored ${dist.score}`}
+            />
+          </div>
+          <figcaption>
+            Today's scores · {count(dist.players, "player")} · μ = {Math.round(dist.mean)}, σ ={" "}
+            {Math.round(dist.sd)}
+          </figcaption>
+        </figure>
+      )}
       <div className="ag-bs__stage">
         <canvas
           ref={chartRef}
           role="img"
-          aria-label="Where your five answers fell on the rarity curve"
+          aria-label={`Where your ${word(prompts.length)} answers fell on the rarity curve`}
         />
       </div>
       <table>
@@ -752,10 +800,26 @@ function Recap({
   );
 }
 
-/** Every accepted answer for a prompt the player has answered, most common first. */
+/** The prompt's Black Swan, revealed once the player has answered. */
+function SwanCard({ result }: { result: BlackSwanSlotResult }) {
+  const mine = result.tier === "swan";
+  // The result card already names the swan the player found; only its fact is new.
+  if (mine && !result.swan.fact) return null;
+  return (
+    <aside className="ag-bs__swan" data-mine={mine}>
+      <span className="ag-bs__chip" data-tier="swan">
+        🦢 {mine ? "YOU FOUND THE BLACK SWAN" : "TODAY'S BLACK SWAN"}
+      </span>
+      <b>{result.swan.label}</b>
+      {result.swan.fact && <p>{result.swan.fact}</p>}
+    </aside>
+  );
+}
+
+/** Accepted answers for a prompt the player has answered, rarest first. */
 function AnswerList({ result }: { result: BlackSwanSlotResult }) {
   const listRef = useRef<HTMLOListElement>(null);
-  const ranking = result.ranking ?? [];
+  const ranking = [...(result.ranking ?? [])].reverse();
   if (!ranking.length) return null;
   // Opening the list scrolls the player's own answer into view.
   const onToggle = (e: React.SyntheticEvent<HTMLDetailsElement>) => {
@@ -766,11 +830,14 @@ function AnswerList({ result }: { result: BlackSwanSlotResult }) {
   };
   return (
     <details className="ag-bs__answers" onToggle={onToggle}>
-      <summary>All {ranking.length} accepted answers</summary>
+      <summary>
+        {result.more > 0
+          ? `${ranking.length} of ${result.answerCount.toLocaleString("en-US")} accepted answers`
+          : `All ${result.answerCount} accepted answers`}
+      </summary>
       <ol ref={listRef}>
-        {ranking.map((a, i) => (
+        {ranking.map((a) => (
           <li key={a.label} data-me={a.label === result.label}>
-            <span className="ag-bs__rank">{i + 1}</span>
             <span className="ag-bs__alabel">
               {a.label}
               {a.label === result.label && <em> · you</em>}
@@ -778,9 +845,14 @@ function AnswerList({ result }: { result: BlackSwanSlotResult }) {
             <span className="ag-bs__chip" data-tier={a.tier}>
               {caps(tierInfo(a.tier).name)}
             </span>
-            <span className="ag-bs__ashare">{pct(a.share)}</span>
+            <span className="ag-bs__ashare">{a.picks ? count(a.picks, "pick") : ""}</span>
           </li>
         ))}
+        {result.more > 0 && (
+          <li className="ag-bs__amore">
+            + {result.more.toLocaleString("en-US")} more accepted answers
+          </li>
+        )}
       </ol>
     </details>
   );
