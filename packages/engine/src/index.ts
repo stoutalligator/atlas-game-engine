@@ -22,6 +22,8 @@ export {
 } from "./games/black-swan/BlackSwan.js";
 export { BLACK_SWAN_TIERS } from "./games/black-swan/logic.js";
 export type {
+  BlackSwanDistribution,
+  BlackSwanListedAnswer,
   BlackSwanSlotResult,
   BlackSwanTierKey,
   GuessMatch,

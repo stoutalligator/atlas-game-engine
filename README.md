@@ -11,7 +11,7 @@ component per game, and the games' code doesn't live in the main repo.
 | **Box Plot** | Picture logic puzzle (nonogram) that grows through the week, 5×5 Mon → 12×12 weekend; a Check button outlines mistakes, and the solved picture flips to colour. 364 pictures, all solvable without guessing. | Built-in coloured library (52 per weekday) |
 | **Cube Rush** | Slide cubicles until the analyst can reach the exit. Easy Mon → hard weekend; scored by time, with the optimal move count shown. | Built-in verified library (240 puzzles) |
 | **Word Web** | A crossword that unfolds: one category, no clues; solving a word reveals the words that cross it. Easy Mon → hardest Sun. | Validated puzzles supplied by the host (built-in canonical fallback) |
-| **Black Swan** | Five prompts ("Name a loss reserving method."). Any accepted answer counts; the rarer it is among everyone's guesses, the more it scores. | Question pool + guess counts supplied by the host's server |
+| **Black Swan** | Seven prompts ("Name a loss reserving method."). Any accepted answer counts; the less well known it is, the more it scores. Each prompt hides one Black Swan. | Question pool + guess counts supplied by the host's server |
 
 Every player gets the same puzzle for a date. New puzzles unlock at the player's local midnight.
 Progress, streaks, and stats are saved in the browser through a swappable storage adapter.
@@ -80,31 +80,35 @@ dashboards.
 
 ### Black Swan
 
-Black Swan scores against everyone's answers, so the host keeps the answer lists and the
-guesses on its server and passes the component four calls:
+The host keeps the questions and the guesses on its server and passes the component four
+calls, plus an optional fifth for the day's score distribution:
 
 ```tsx
 import { BlackSwan, type BlackSwanApi } from "@stoutalligator/engine";
 
-const api: BlackSwanApi = { load, open, check, lock }; // e.g. server actions
+const api: BlackSwanApi = { load, open, check, lock, distribution }; // e.g. server actions
 <BlackSwan api={api} onComplete={…} />   // or <AtlasGame game="black-swan" blackSwanApi={api} />
 ```
+
+Every accepted answer carries a fixed tier, set from real-world familiarity when the
+question is built: Mode 10 · Expected 30 · Within σ 60 · Tail 85, and exactly one Black Swan
+(100, with an optional `fact`) per prompt. What players pick never changes the score; it
+only fills in "N players chose this". Seven prompts a day, 700 points max.
 
 The pure logic for the server is in `@stoutalligator/engine/server`:
 
 | Function | |
 |---|---|
-| `parseBlackSwanQuestions(raw)` | Validates a pool (rejects an alias that matches two answers) |
-| `questionsForDate(pool, schedule, date)` | The day's five prompts (planned, or a deterministic fallback) |
-| `planSchedule(pool, { start, days, cooldownDays, existing })` | Five categories a day, least-recently-used questions, cooldown |
-| `matchGuess(question, input)` | `exact` (lock in) / `suggest` (alias or typo: confirm first) / `null` |
-| `buildRarityTable(question, counts)` | Credibility blend `Z = n / (n + 200)` of priors and real counts → tiers |
-| `scoreGuess(table, label, input)` | Mode 10 · Expected 25 · Within σ 50 · Tail 100 · Black Swan 200 |
-| `summarizeDay(results)` | Day score, mean rarity (tie-break), Black Swan count |
+| `assignTiers(items, { cuts, swan })` | Familiarity scores → tiers: cumulative-familiarity cuts at 50 / 75 / 90%, one Black Swan |
+| `parseBlackSwanQuestions(raw)` | Validates a pool (tier on every answer, exactly one Black Swan, no alias matching two answers) |
+| `questionsForDate(pool, schedule, date)` | The day's seven prompts (planned, or a deterministic fallback) |
+| `planSchedule(pool, { start, days, cooldownDays, existing })` | One category per prompt while they last, least-recently-used questions, cooldown |
+| `matchGuess(question, input)` | `exact` (lock in) / `suggest` (alias or typo: confirm first) / `null`; indexed, fine for tens of thousands of answers |
+| `scoreGuess(question, label, input, counts)` | Points from the answer's tier; `counts` (picks per answer) only feeds "N players chose this" |
+| `summarizeDay(results)` | Day score, mean rarity position (tie-break), Black Swan count |
+| `dayDistribution(scores, mine)` | Histogram, μ, σ and players below, for the summary chart |
 
-The host should freeze one rarity table per question per day, so every player that day is
-scored against the same numbers. The playground uses an in-memory stand-in
-(`apps/playground/src/blackSwanMock.ts`).
+The playground uses an in-memory stand-in (`apps/playground/src/blackSwanMock.ts`).
 
 ### Box Plot
 

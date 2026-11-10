@@ -22,8 +22,10 @@ export {
   BLACK_SWAN_MAX_SCORE,
   BLACK_SWAN_PROMPTS,
   BLACK_SWAN_SECONDS,
+  BLACK_SWAN_TIER_KEYS,
   BLACK_SWAN_TIERS,
   BlackSwanPackError,
+  assignTiers,
   parseBlackSwanQuestions,
 } from "./games/black-swan/logic.js";
 export type {

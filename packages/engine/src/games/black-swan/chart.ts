@@ -1,10 +1,17 @@
-// Canvas drawing for Black Swan. The chart is the same picture for every
+// Canvas drawing for Black Swan. The reveal chart is the same picture for every
 // prompt: ~1000 falling dots in columns shaped like a long tail, e^(−kx) on
-// [0, 1]. x runs along the answer list from most to least common, so each tier's
-// band is as wide as its share of answers (35 / 27 / 20 / 12 / 6%) and a player's
-// answer at rarity position p lands at x = p. Colours come from CSS variables.
+// [0, 1]. x runs along the answer list from most to least common, each tier
+// owning a fixed band (35 / 27 / 20 / 12 / 6%), so a player's answer at rarity
+// position p lands at x = p. The summary adds the day's score distribution.
+// Colours come from CSS variables.
 
-import { BLACK_SWAN_TIERS, type BlackSwanTierKey, rankingPositions, tierFor } from "./logic.js";
+import {
+  BLACK_SWAN_MAX_SCORE,
+  BLACK_SWAN_TIERS,
+  type BlackSwanDistribution,
+  type BlackSwanTierKey,
+  tierFor,
+} from "./logic.js";
 
 const DOTS = 1000;
 const K = 3.2;
@@ -195,14 +202,17 @@ export interface RevealOptions {
 
 export interface ChartAnswer {
   label: string;
-  share: number;
   tier: BlackSwanTierKey;
+  /** Rarity position (x on the chart). */
+  p: number;
+  /** Players who locked this answer in. */
+  picks: number;
 }
 
 /** The column under the pointer: a few of its answers, and where to anchor a tooltip. */
 export interface ChartHit {
   column: number;
-  /** Up to three answers in the column, the player's first, then most common. */
+  /** Up to three answers in the column, the player's first, then the most picked. */
   answers: Array<ChartAnswer & { mine: boolean }>;
   /** Answers in the column not shown. */
   more: number;
@@ -251,7 +261,7 @@ export function runReveal(cv: HTMLCanvasElement, opts: RevealOptions): RevealHan
   const { ctx, w, h } = setup(cv, 280);
   const L = layout(w, h);
   const answers = opts.answers ?? [];
-  const positions = rankingPositions(answers);
+  const positions = answers.map((a) => a.p);
   const colAnswers = columnAnswers(positions, L.cols);
   let hover: number | null = null;
   let done = false;
@@ -366,7 +376,7 @@ export function runReveal(cv: HTMLCanvasElement, opts: RevealOptions): RevealHan
       mine: answers[k].label === opts.label,
     }));
     if (!list.length) return null;
-    list.sort((a, b) => Number(b.mine) - Number(a.mine) || b.share - a.share);
+    list.sort((a, b) => Number(b.mine) - Number(a.mine) || b.picks - a.picks || a.p - b.p);
     const shown = list.slice(0, 3);
     return {
       column: i,
@@ -488,4 +498,80 @@ export function drawDayChart(cv: HTMLCanvasElement, ps: ReadonlyArray<number | n
     ctx.textAlign = "center";
     ctx.fillText(String(i + 1), px, py + 1);
   });
+}
+
+/**
+ * The day's scores: a histogram of every finished player, a normal curve with
+ * the same mean and σ laid over it, and the player's own score marked with its
+ * z-score.
+ */
+export function drawDistribution(cv: HTMLCanvasElement, dist: BlackSwanDistribution) {
+  const pal = palette(cv);
+  const { ctx, w } = setup(cv, 170);
+  const padX = 14;
+  const top = 26;
+  const base = 128;
+  const max = BLACK_SWAN_MAX_SCORE;
+  const x = (score: number) => padX + (Math.min(max, Math.max(0, score)) / max) * (w - padX * 2);
+  const tallest = Math.max(1, ...dist.bins);
+  const barW = (w - padX * 2) / dist.bins.length;
+  const mineBin = Math.min(dist.bins.length - 1, Math.floor(dist.score / dist.binSize));
+  dist.bins.forEach((n, i) => {
+    const h = (n / tallest) * (base - top);
+    ctx.fillStyle = i === mineBin ? pal.get("--ag-bs-gold") : pal.get("--ag-line-soft");
+    ctx.fillRect(padX + i * barW + 1, base - h, Math.max(1, barW - 2), h);
+  });
+  // Normal curve, scaled so its area matches the histogram's.
+  if (dist.sd > 0 && dist.players > 1) {
+    const scale = (dist.players * dist.binSize) / (dist.sd * Math.sqrt(2 * Math.PI));
+    const y = (s: number) =>
+      base - ((scale * Math.exp(-(((s - dist.mean) / dist.sd) ** 2) / 2)) / tallest) * (base - top);
+    ctx.beginPath();
+    for (let i = 0; i <= 140; i++) {
+      const s = (i / 140) * max;
+      if (i === 0) ctx.moveTo(x(s), Math.max(top - 10, y(s)));
+      else ctx.lineTo(x(s), Math.max(top - 10, y(s)));
+    }
+    ctx.strokeStyle = pal.get("--ag-ink");
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // μ and ±σ ticks along the axis.
+    ctx.font = `800 9px ${pal.font}`;
+    ctx.textAlign = "center";
+    for (const k of [-1, 0, 1]) {
+      const s = dist.mean + k * dist.sd;
+      if (s < 0 || s > max) continue;
+      ctx.fillStyle = pal.get("--ag-muted");
+      ctx.fillRect(x(s) - 0.5, base, 1, 6);
+      ctx.fillText(k === 0 ? "μ" : k < 0 ? "−σ" : "+σ", x(s), base + 16);
+    }
+  }
+  ctx.fillStyle = pal.get("--ag-ink");
+  ctx.fillRect(padX - 4, base, w - 2 * padX + 8, 2);
+  ctx.fillStyle = pal.get("--ag-muted");
+  ctx.font = `700 9px ${pal.font}`;
+  ctx.textAlign = "left";
+  ctx.fillText("0", padX, base + 30);
+  ctx.textAlign = "right";
+  ctx.fillText(String(max), w - padX, base + 30);
+  // The player's marker and z-score.
+  const mx = x(dist.score);
+  ctx.strokeStyle = pal.get("--ag-ink");
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(mx, top - 6);
+  ctx.lineTo(mx, base);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  dot(ctx, mx, top - 6, 6, pal.get("--ag-bs-gold"), pal.get("--ag-ink"));
+  const z = dist.sd > 0 ? (dist.score - dist.mean) / dist.sd : 0;
+  const label = `YOU · ${dist.score} · z = ${z >= 0 ? "+" : "−"}${Math.abs(z).toFixed(1)}`;
+  ctx.font = `900 11px ${pal.font}`;
+  const tw = ctx.measureText(label).width;
+  const lx = Math.min(Math.max(mx, tw / 2 + 6), w - tw / 2 - 6);
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.fillRect(lx - tw / 2 - 5, 2, tw + 10, 15);
+  ctx.fillStyle = pal.get("--ag-ink");
+  ctx.textAlign = "center";
+  ctx.fillText(label, lx, 13);
 }

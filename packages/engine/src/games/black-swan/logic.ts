@@ -1,19 +1,82 @@
-// Black Swan — name an answer that fits the prompt; the rarer it is among
-// everyone's answers, the more it scores. Pure logic only (no React, no I/O):
-// the host stores guesses and passes answer counts in, so it runs on a server.
+// Black Swan — name an answer that fits the prompt; the less well known it is,
+// the more it scores. Every accepted answer carries a fixed tier (set from
+// real-world familiarity when the question is built), and each prompt has
+// exactly one Black Swan. Pure logic only (no React, no I/O): the host stores
+// questions and guesses and calls these on its server.
 
 import { addDays, dayIndex, isDateKey } from "../../core/daily.js";
 
-export const BLACK_SWAN_PROMPTS = 5;
+export const BLACK_SWAN_PROMPTS = 7;
 export const BLACK_SWAN_SECONDS = 25;
-/** Simulated players behind each question's prior (the credibility constant k). */
-export const BLACK_SWAN_CREDIBILITY_K = 200;
+
+/**
+ * The five tiers, most common first. Points are fixed per tier. `upTo` only
+ * places answers on the chart: each tier gets a band of the x axis (35 / 27 /
+ * 20 / 12 / 6%) and an answer's rarity position p falls inside its tier's band.
+ */
+export const BLACK_SWAN_TIERS = [
+  {
+    key: "mode",
+    name: "Mode",
+    points: 10,
+    upTo: 0.35,
+    blurb: "The answer everyone reaches for.",
+  },
+  {
+    key: "expected",
+    name: "Expected",
+    points: 30,
+    upTo: 0.62,
+    blurb: "Right where the crowd expected.",
+  },
+  {
+    key: "sigma",
+    name: "Within σ",
+    points: 60,
+    upTo: 0.82,
+    blurb: "A standard deviation off the pack.",
+  },
+  {
+    key: "tail",
+    name: "Tail",
+    points: 85,
+    upTo: 0.94,
+    blurb: "Out in the tail. Few get this far.",
+  },
+  {
+    key: "swan",
+    name: "Black Swan",
+    points: 100,
+    upTo: Number.POSITIVE_INFINITY,
+    blurb: "The one answer nobody sees coming.",
+  },
+] as const;
+
+export type BlackSwanTier = (typeof BLACK_SWAN_TIERS)[number];
+export type BlackSwanTierKey = BlackSwanTier["key"];
+export const BLACK_SWAN_TIER_KEYS: readonly BlackSwanTierKey[] = BLACK_SWAN_TIERS.map((t) => t.key);
+export const BLACK_SWAN_MAX_SCORE = BLACK_SWAN_PROMPTS * BLACK_SWAN_TIERS[4].points;
+
+const tierIndex = (key: BlackSwanTierKey) => BLACK_SWAN_TIER_KEYS.indexOf(key);
+const isTierKey = (v: unknown): v is BlackSwanTierKey =>
+  typeof v === "string" && (BLACK_SWAN_TIER_KEYS as readonly string[]).includes(v);
+
+/** The tier whose chart band holds rarity position p. */
+export function tierFor(p: number): BlackSwanTier {
+  return BLACK_SWAN_TIERS.find((t) => p < t.upTo) ?? BLACK_SWAN_TIERS[4];
+}
 
 export interface BlackSwanAnswer {
   label: string;
   aliases: string[];
-  /** Relative weight: roughly how many of 100 simulated players give this answer. */
-  prior: number;
+  tier: BlackSwanTierKey;
+  /**
+   * How well known the answer is (e.g. yearly Wikipedia pageviews). Only orders
+   * answers inside a tier, most familiar first; it never changes the score.
+   */
+  familiarity?: number;
+  /** A line of trivia, shown with the prompt's Black Swan once the player has answered. */
+  fact?: string;
 }
 
 export interface BlackSwanQuestion {
@@ -25,61 +88,52 @@ export interface BlackSwanQuestion {
 
 export class BlackSwanPackError extends Error {}
 
+// ── tiers from familiarity ──────────────────────────────────────────────────
+
 /**
- * Tiers cut the answer list, ranked by how common each answer is, into slices
- * that shrink toward the tail: the most common 35% of answers are Mode, the next
- * 27% Expected, then 20% Within σ, 12% Tail, and the rarest 6% (always at least
- * one) Black Swan.
- * `upTo` is each tier's upper bound on the rarity position p (see RarityRow).
+ * Default cuts on cumulative familiarity: the answers that make up the first
+ * 50% of all familiarity are Mode, up to 75% Expected, up to 90% Within σ, and
+ * everything after that is Tail. A long-tail list (every anime ever made)
+ * therefore puts nearly everything in Tail; an even list (countries) spreads out.
  */
-export const BLACK_SWAN_TIERS = [
-  {
-    key: "mode",
-    name: "Mode",
-    points: 10,
-    upTo: 0.35,
-    fraction: 0.35,
-    range: "Most common 35% of answers",
-  },
-  { key: "expected", name: "Expected", points: 25, upTo: 0.62, fraction: 0.27, range: "Next 27%" },
-  { key: "sigma", name: "Within σ", points: 50, upTo: 0.82, fraction: 0.2, range: "Next 20%" },
-  { key: "tail", name: "Tail", points: 100, upTo: 0.94, fraction: 0.12, range: "Next 12%" },
-  {
-    key: "swan",
-    name: "Black Swan",
-    points: 200,
-    upTo: Number.POSITIVE_INFINITY,
-    fraction: 0.06,
-    range: "Rarest 6%",
-  },
-] as const;
+export const BLACK_SWAN_TIER_CUTS: readonly [number, number, number] = [0.5, 0.75, 0.9];
 
-export type BlackSwanTier = (typeof BLACK_SWAN_TIERS)[number];
-export type BlackSwanTierKey = BlackSwanTier["key"];
-export const BLACK_SWAN_MAX_SCORE = BLACK_SWAN_PROMPTS * BLACK_SWAN_TIERS[4].points;
-
-export function tierFor(p: number): BlackSwanTier {
-  return BLACK_SWAN_TIERS.find((t) => p < t.upTo) ?? BLACK_SWAN_TIERS[4];
+export interface AssignTiersOptions {
+  /** Cumulative-familiarity cuts for Mode / Expected / Within σ. */
+  cuts?: readonly [number, number, number];
+  /** The label to make the Black Swan. Defaults to the least familiar answer. */
+  swan?: string;
 }
 
 /**
- * How many of `n` ranked answers fall in each tier (Mode … Black Swan): sized to
- * the tier fractions, at least one per tier, and never growing toward the tail.
- * 100 answers → 35 / 27 / 20 / 12 / 6.
+ * Turns familiarity scores into tiers for the question pipeline. Exactly one
+ * answer becomes the Black Swan; the rest are tiered by where they start on the
+ * cumulative familiarity curve, most familiar first. The most familiar answer
+ * is always Mode.
  */
-export function blackSwanTierSizes(n: number): number[] {
-  const at = (i: number) => Math.max(1, Math.round(n * BLACK_SWAN_TIERS[i].fraction));
-  const sizes = [at(0), at(1), 0, at(3), at(4)];
-  sizes[2] = n - sizes[0] - sizes[1] - sizes[3] - sizes[4];
-  // Very short lists: borrow from the bigger common tiers so Within σ keeps one.
-  while (sizes[2] < 1) {
-    const from = sizes[1] >= sizes[0] && sizes[1] > 1 ? 1 : sizes[0] > 1 ? 0 : -1;
-    if (from < 0) break;
-    sizes[from]--;
-    sizes[2]++;
-  }
-  // Rounding can leave a later tier bigger than an earlier one; tiers only shrink.
-  return sizes.sort((a, b) => b - a);
+export function assignTiers<T extends { label: string; familiarity: number }>(
+  items: readonly T[],
+  opts: AssignTiersOptions = {},
+): Array<T & { tier: BlackSwanTierKey }> {
+  if (!items.length) return [];
+  const cuts = opts.cuts ?? BLACK_SWAN_TIER_CUTS;
+  const sorted = [...items].sort(
+    (a, b) => b.familiarity - a.familiarity || a.label.localeCompare(b.label),
+  );
+  const swanLabel = opts.swan ?? sorted[sorted.length - 1].label;
+  if (!sorted.some((a) => a.label === swanLabel))
+    throw new BlackSwanPackError(`assignTiers: "${swanLabel}" isn't one of the answers.`);
+  const rest = sorted.filter((a) => a.label !== swanLabel);
+  const total = rest.reduce((t, a) => t + Math.max(0, a.familiarity), 0);
+  let before = 0;
+  const tiers = new Map<string, BlackSwanTierKey>([[swanLabel, "swan"]]);
+  rest.forEach((a, i) => {
+    const start = total > 0 ? before / total : i / rest.length;
+    const t = i === 0 ? 0 : start < cuts[0] ? 0 : start < cuts[1] ? 1 : start < cuts[2] ? 2 : 3;
+    tiers.set(a.label, BLACK_SWAN_TIER_KEYS[t]);
+    before += Math.max(0, a.familiarity);
+  });
+  return items.map((a) => ({ ...a, tier: tiers.get(a.label) as BlackSwanTierKey }));
 }
 
 // ── matching ────────────────────────────────────────────────────────────────
@@ -111,8 +165,9 @@ function levenshtein(a: string, b: string, max: number): number {
   return prev[b.length];
 }
 
-/** Typos allowed for a form of this length. */
+/** Typos allowed for a form of this length (spaces removed). */
 const tolerance = (n: number) => (n >= 9 ? 2 : n >= 5 ? 1 : 0);
+const MAX_TOLERANCE = 2;
 
 export interface GuessMatch {
   /** "exact": the player typed the answer itself. "suggest": an alias or a near miss — confirm first. */
@@ -120,27 +175,108 @@ export interface GuessMatch {
   label: string;
 }
 
-/** Matches a typed guess to an accepted answer, or null if it isn't one. */
+interface Form {
+  /** Normalized form with spaces removed. */
+  key: string;
+  label: string;
+  isLabel: boolean;
+  /** Position of the answer in the question's order (most common first). */
+  order: number;
+}
+
+/** Everything derived from a question once: answer order, positions and the match index. */
+interface QuestionIndex {
+  /** Answers, most common first: by tier, then familiarity, then label. */
+  ordered: BlackSwanAnswer[];
+  byLabel: Map<string, { answer: BlackSwanAnswer; order: number; p: number }>;
+  /** Spaceless normalized form → its best form (labels beat aliases). */
+  exact: Map<string, Form>;
+  /** Spaceless length → forms, for typo matching inside a small length band. */
+  byLength: Map<number, Form[]>;
+  tierCounts: Record<BlackSwanTierKey, number>;
+  swan: BlackSwanAnswer;
+}
+
+const indexes = new WeakMap<BlackSwanQuestion, QuestionIndex>();
+
+const TIER_BOUNDS = [0, ...BLACK_SWAN_TIERS.slice(0, 4).map((t) => t.upTo), 1];
+
+/** Rarity position of the j-th of `size` answers in tier t: spread evenly across the tier's band. */
+export function tierPosition(t: number, j: number, size: number): number {
+  return TIER_BOUNDS[t] + ((TIER_BOUNDS[t + 1] - TIER_BOUNDS[t]) * (j + 0.5)) / size;
+}
+
+function indexQuestion(q: BlackSwanQuestion): QuestionIndex {
+  const cached = indexes.get(q);
+  if (cached) return cached;
+  const ordered = [...q.answers].sort(
+    (a, b) =>
+      tierIndex(a.tier) - tierIndex(b.tier) ||
+      (b.familiarity ?? 0) - (a.familiarity ?? 0) ||
+      a.label.localeCompare(b.label),
+  );
+  const tierCounts = Object.fromEntries(BLACK_SWAN_TIER_KEYS.map((k) => [k, 0])) as Record<
+    BlackSwanTierKey,
+    number
+  >;
+  for (const a of ordered) tierCounts[a.tier]++;
+  const seen = Object.fromEntries(BLACK_SWAN_TIER_KEYS.map((k) => [k, 0])) as Record<
+    BlackSwanTierKey,
+    number
+  >;
+  const byLabel = new Map<string, { answer: BlackSwanAnswer; order: number; p: number }>();
+  const exact = new Map<string, Form>();
+  const byLength = new Map<number, Form[]>();
+  ordered.forEach((answer, order) => {
+    const t = tierIndex(answer.tier);
+    const p = tierPosition(t, seen[answer.tier]++, tierCounts[answer.tier]);
+    byLabel.set(answer.label, { answer, order, p });
+    [answer.label, ...answer.aliases].forEach((raw, f) => {
+      const key = normalizeGuess(raw).replace(/ /g, "");
+      if (!key) return;
+      const form: Form = { key, label: answer.label, isLabel: f === 0, order };
+      const prev = exact.get(key);
+      if (!prev || (form.isLabel && !prev.isLabel)) exact.set(key, form);
+      const band = byLength.get(key.length);
+      if (band) band.push(form);
+      else byLength.set(key.length, [form]);
+    });
+  });
+  const swan = ordered[ordered.length - 1];
+  const index = { ordered, byLabel, exact, byLength, tierCounts, swan };
+  indexes.set(q, index);
+  return index;
+}
+
+/**
+ * Matches a typed guess to an accepted answer, or null if it isn't one. Exact
+ * forms are a map lookup; typos are only checked against forms of a similar
+ * length, so lists with tens of thousands of answers stay fast.
+ */
 export function matchGuess(question: BlackSwanQuestion, input: string): GuessMatch | null {
-  const x = normalizeGuess(input);
-  if (!x) return null;
-  const xs = x.replace(/ /g, "");
-  let best: { label: string; d: number; exact: boolean } | null = null;
-  for (const a of question.answers) {
-    const forms = [a.label, ...a.aliases];
-    for (let f = 0; f < forms.length; f++) {
-      const form = normalizeGuess(forms[f]);
-      if (!form) continue;
-      const fs = form.replace(/ /g, "");
-      const tol = tolerance(fs.length);
-      const d = Math.min(levenshtein(x, form, tol), levenshtein(xs, fs, tol));
+  const key = normalizeGuess(input).replace(/ /g, "");
+  if (!key) return null;
+  const idx = indexQuestion(question);
+  const hit = idx.exact.get(key);
+  if (hit) return { kind: hit.isLabel ? "exact" : "suggest", label: hit.label };
+  let best: { form: Form; d: number } | null = null;
+  for (let len = key.length - MAX_TOLERANCE; len <= key.length + MAX_TOLERANCE; len++) {
+    for (const form of idx.byLength.get(len) ?? []) {
+      const tol = tolerance(form.key.length);
+      if (Math.abs(len - key.length) > tol) continue;
+      const d = levenshtein(key, form.key, tol);
       if (d > tol) continue;
-      const exact = f === 0 && d === 0;
-      if (!best || d < best.d || (d === best.d && exact && !best.exact))
-        best = { label: a.label, d, exact };
+      // Closest first; on a tie, the answer's own label, then the more common answer.
+      if (
+        !best ||
+        d < best.d ||
+        (d === best.d && form.isLabel && !best.form.isLabel) ||
+        (d === best.d && form.isLabel === best.form.isLabel && form.order < best.form.order)
+      )
+        best = { form, d };
     }
   }
-  return best ? { kind: best.exact ? "exact" : "suggest", label: best.label } : null;
+  return best ? { kind: "suggest", label: best.form.label } : null;
 }
 
 // ── pack parsing ────────────────────────────────────────────────────────────
@@ -149,8 +285,8 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
 
 /**
  * Validates raw question JSON (an array of questions, or { questions: [...] }).
- * Throws BlackSwanPackError naming the first problem, including any alias that
- * would match two different answers.
+ * Throws BlackSwanPackError naming the first problem: a missing tier, not
+ * exactly one Black Swan, or an alias that would match two different answers.
  */
 export function parseBlackSwanQuestions(raw: unknown): BlackSwanQuestion[] {
   const list = Array.isArray(raw)
@@ -174,17 +310,21 @@ export function parseBlackSwanQuestions(raw: unknown): BlackSwanQuestion[] {
     if (!Array.isArray(answers) || answers.length < 5)
       throw new BlackSwanPackError(`${id} needs at least 5 accepted answers.`);
     const seen = new Map<string, string>();
+    const labels = new Set<string>();
     const parsed = answers.map((a, j): BlackSwanAnswer => {
       if (!isObj(a) || typeof a.label !== "string" || !a.label)
         throw new BlackSwanPackError(`${id} answer ${j + 1} has no label.`);
-      const prior = a.prior;
-      if (typeof prior !== "number" || !(prior > 0))
-        throw new BlackSwanPackError(`${id} "${a.label}" needs a positive prior.`);
+      if (labels.has(a.label)) throw new BlackSwanPackError(`${id}: "${a.label}" is listed twice.`);
+      labels.add(a.label);
+      if (!isTierKey(a.tier))
+        throw new BlackSwanPackError(
+          `${id} "${a.label}" needs a tier (${BLACK_SWAN_TIER_KEYS.join(", ")}).`,
+        );
       const aliases = Array.isArray(a.aliases)
         ? a.aliases.filter((x): x is string => typeof x === "string")
         : [];
       for (const form of [a.label, ...aliases]) {
-        const k = normalizeGuess(form);
+        const k = normalizeGuess(form).replace(/ /g, "");
         if (!k) continue;
         const other = seen.get(k);
         if (other && other !== a.label)
@@ -193,90 +333,35 @@ export function parseBlackSwanQuestions(raw: unknown): BlackSwanQuestion[] {
           );
         seen.set(k, a.label);
       }
-      return { label: a.label, aliases, prior };
+      const out: BlackSwanAnswer = { label: a.label, aliases, tier: a.tier };
+      if (typeof a.familiarity === "number" && Number.isFinite(a.familiarity))
+        out.familiarity = a.familiarity;
+      if (typeof a.fact === "string" && a.fact.trim()) out.fact = a.fact.trim();
+      return out;
     });
+    const swans = parsed.filter((a) => a.tier === "swan");
+    if (swans.length !== 1)
+      throw new BlackSwanPackError(
+        `${id} needs exactly one Black Swan answer (has ${swans.length}).`,
+      );
     return { id, category, prompt, answers: parsed };
   });
 }
 
-// ── rarity ──────────────────────────────────────────────────────────────────
+// ── scoring ─────────────────────────────────────────────────────────────────
 
-const TIER_BOUNDS = [0, ...BLACK_SWAN_TIERS.slice(0, 4).map((t) => t.upTo), 1];
+/** Answers sent with a result, at most (plus the player's own, the Black Swan and the crowd's picks). */
+export const BLACK_SWAN_LIST_LIMIT = 250;
+/** How many of the crowd's most-picked answers are always included in a result's list. */
+const TOP_PICKS = 40;
 
-/** Rarity position of the j-th of `size` answers in tier t: spread evenly across the tier's band. */
-export function tierPosition(t: number, j: number, size: number): number {
-  return TIER_BOUNDS[t] + ((TIER_BOUNDS[t + 1] - TIER_BOUNDS[t]) * (j + 0.5)) / size;
-}
-
-/** Rarity positions for a ranking (most common first), matching RarityRow.p. */
-export function rankingPositions(ranking: ReadonlyArray<{ tier: BlackSwanTierKey }>): number[] {
-  const sizes = new Map<BlackSwanTierKey, number>();
-  for (const r of ranking) sizes.set(r.tier, (sizes.get(r.tier) ?? 0) + 1);
-  const seen = new Map<BlackSwanTierKey, number>();
-  return ranking.map((r) => {
-    const j = seen.get(r.tier) ?? 0;
-    seen.set(r.tier, j + 1);
-    const t = BLACK_SWAN_TIERS.findIndex((x) => x.key === r.tier);
-    return tierPosition(t, j, sizes.get(r.tier) ?? 1);
-  });
-}
-
-export interface RarityRow {
+export interface BlackSwanListedAnswer {
   label: string;
-  /** Credibility-blended share of guesses. */
-  share: number;
-  /** 1 = most common answer. */
-  rank: number;
-  /**
-   * Rarity position in [0, 1): where the answer sits in the ranked list, spread evenly
-   * within its tier so tier boundaries fall at 0.2 / 0.5 / 0.85 / 0.97. Places the
-   * player's dot on the chart and breaks leaderboard ties.
-   */
-  p: number;
   tier: BlackSwanTierKey;
-  points: number;
-}
-
-export interface RarityTable {
-  questionId: string;
-  /** Real (non-simulated) guesses behind the table. */
-  realCount: number;
-  /** Credibility Z = n / (n + k). */
-  z: number;
-  /** Most common first. */
-  rows: RarityRow[];
-}
-
-/**
- * Blends each answer's prior with real guess counts using Bühlmann credibility,
- * share = Z·observed + (1 − Z)·prior with Z = n / (n + k), then ranks answers
- * and assigns tiers. Hosts freeze one table per question per day.
- */
-export function buildRarityTable(
-  question: BlackSwanQuestion,
-  counts: Readonly<Record<string, number>>,
-  k: number = BLACK_SWAN_CREDIBILITY_K,
-): RarityTable {
-  const priorTotal = question.answers.reduce((t, a) => t + a.prior, 0);
-  const n = question.answers.reduce((t, a) => t + Math.max(0, counts[a.label] ?? 0), 0);
-  const z = n / (n + k);
-  const rows = question.answers
-    .map((a) => {
-      const observed = n ? Math.max(0, counts[a.label] ?? 0) / n : 0;
-      return { label: a.label, share: z * observed + (1 - z) * (a.prior / priorTotal) };
-    })
-    .sort((a, b) => b.share - a.share || a.label.localeCompare(b.label));
-  const sizes = blackSwanTierSizes(rows.length);
-  const ranked: RarityRow[] = [];
-  let i = 0;
-  sizes.forEach((size, t) => {
-    const tier = BLACK_SWAN_TIERS[t];
-    for (let j = 0; j < size && i < rows.length; j++, i++) {
-      const p = tierPosition(t, j, size);
-      ranked.push({ ...rows[i], rank: i + 1, p, tier: tier.key, points: tier.points });
-    }
-  });
-  return { questionId: question.id, realCount: n, z, rows: ranked };
+  /** Rarity position, for placing the answer on the chart. */
+  p: number;
+  /** Players who locked this answer in (from the host's counts). */
+  picks: number;
 }
 
 export interface BlackSwanSlotResult {
@@ -287,59 +372,131 @@ export interface BlackSwanSlotResult {
   label: string | null;
   tier: BlackSwanTierKey | null;
   points: number;
-  /** Rank of the answer among all accepted answers (1 = most common). */
-  rank: number | null;
-  answerCount: number;
+  /** Rarity position in [0, 1) (see tierPosition), or null for a miss. */
   p: number | null;
-  share: number | null;
-  realCount: number;
-  z: number;
-  mostCommon: { label: string; share: number };
-  rarest: string;
+  /** Players who locked in the same answer, this player included. */
+  picks: number | null;
+  /** Players who locked in any accepted answer to this prompt. */
+  players: number;
+  answerCount: number;
+  tierCounts: Record<BlackSwanTierKey, number>;
+  /** The prompt's Black Swan and its fact. Only ever sent after the prompt is locked in. */
+  swan: { label: string; fact: string | null };
   /**
-   * Every accepted answer, most common first, so the player can see the whole list once
-   * they've answered. Only ever sent after the prompt is locked in.
+   * Accepted answers, most common first: the most common ones up to
+   * BLACK_SWAN_LIST_LIMIT, plus the player's answer, the Black Swan and the
+   * crowd's most-picked answers. `more` counts the ones left out.
    */
-  ranking: Array<{ label: string; share: number; tier: BlackSwanTierKey }>;
+  ranking: BlackSwanListedAnswer[];
+  more: number;
 }
 
-/** Scores a locked-in answer (label) against the day's frozen table. */
+/**
+ * Scores a locked-in answer (label, or null for a miss). `counts` is how many
+ * players have locked in each answer to this prompt so far; it never changes
+ * the points, it only fills in "N players chose this".
+ */
 export function scoreGuess(
-  table: RarityTable,
+  question: BlackSwanQuestion,
   label: string | null,
   input: string,
+  counts: Readonly<Record<string, number>> = {},
 ): BlackSwanSlotResult {
-  const row = label ? table.rows.find((r) => r.label === label) : undefined;
+  const idx = indexQuestion(question);
+  const mine = label ? idx.byLabel.get(label) : undefined;
+  const picksOf = (l: string) => Math.max(0, counts[l] ?? 0);
+  let players = 0;
+  for (const [l, n] of Object.entries(counts)) if (idx.byLabel.has(l)) players += Math.max(0, n);
+
+  const keep = new Set<number>();
+  for (let i = 0; i < Math.min(BLACK_SWAN_LIST_LIMIT, idx.ordered.length); i++) keep.add(i);
+  keep.add(idx.ordered.length - 1);
+  if (mine) keep.add(mine.order);
+  const topPicks = Object.entries(counts)
+    .filter(([l, n]) => n > 0 && idx.byLabel.has(l))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, TOP_PICKS);
+  for (const [l] of topPicks) keep.add((idx.byLabel.get(l) as { order: number }).order);
+  const ranking = [...keep]
+    .sort((a, b) => a - b)
+    .map((i) => {
+      const a = idx.ordered[i];
+      const e = idx.byLabel.get(a.label) as { p: number };
+      return { label: a.label, tier: a.tier, p: e.p, picks: picksOf(a.label) };
+    });
+
   return {
-    questionId: table.questionId,
+    questionId: question.id,
     input,
-    label: row?.label ?? null,
-    tier: row?.tier ?? null,
-    points: row?.points ?? 0,
-    rank: row?.rank ?? null,
-    answerCount: table.rows.length,
-    p: row?.p ?? null,
-    share: row?.share ?? null,
-    realCount: table.realCount,
-    z: table.z,
-    mostCommon: { label: table.rows[0].label, share: table.rows[0].share },
-    rarest: table.rows[table.rows.length - 1].label,
-    ranking: table.rows.map((r) => ({ label: r.label, share: r.share, tier: r.tier })),
+    label: mine?.answer.label ?? null,
+    tier: mine?.answer.tier ?? null,
+    points: mine ? BLACK_SWAN_TIERS[tierIndex(mine.answer.tier)].points : 0,
+    p: mine?.p ?? null,
+    picks: mine ? picksOf(mine.answer.label) : null,
+    players,
+    answerCount: idx.ordered.length,
+    tierCounts: { ...idx.tierCounts },
+    swan: { label: idx.swan.label, fact: idx.swan.fact ?? null },
+    ranking,
+    more: idx.ordered.length - ranking.length,
   };
 }
 
 export interface BlackSwanDayScore {
   score: number;
-  /** Mean rarity percentile across the prompts (misses count as 0). Breaks ties. */
+  /** Mean rarity position across the prompts (misses count as 0). Breaks ties. */
   rarity: number;
   blackSwans: number;
 }
 
-export function summarizeDay(results: readonly BlackSwanSlotResult[]): BlackSwanDayScore {
+export function summarizeDay(
+  results: ReadonlyArray<Pick<BlackSwanSlotResult, "points" | "p" | "tier">>,
+): BlackSwanDayScore {
   return {
     score: results.reduce((t, r) => t + r.points, 0),
     rarity: results.length ? results.reduce((t, r) => t + (r.p ?? 0), 0) / results.length : 0,
     blackSwans: results.filter((r) => r.tier === "swan").length,
+  };
+}
+
+// ── the day's distribution ──────────────────────────────────────────────────
+
+export interface BlackSwanDistribution {
+  /** Width of each histogram bin, in points. */
+  binSize: number;
+  /** Players per bin: bins[i] covers scores [i·binSize, (i+1)·binSize). The last bin includes the max. */
+  bins: number[];
+  /** Players who finished the day, the viewer included. */
+  players: number;
+  /** Players who scored strictly less than the viewer. */
+  below: number;
+  /** The viewer's day score. */
+  score: number;
+  mean: number;
+  /** Population standard deviation of the scores. */
+  sd: number;
+}
+
+/** Bins every finished player's day score, for the summary's distribution chart. */
+export function dayDistribution(
+  scores: readonly number[],
+  mine: number,
+  binSize = 25,
+): BlackSwanDistribution {
+  const nBins = Math.ceil(BLACK_SWAN_MAX_SCORE / binSize);
+  const bins = Array.from({ length: nBins }, () => 0);
+  for (const s of scores) bins[Math.min(nBins - 1, Math.max(0, Math.floor(s / binSize)))]++;
+  const n = scores.length;
+  const mean = n ? scores.reduce((t, s) => t + s, 0) / n : 0;
+  const sd = n ? Math.sqrt(scores.reduce((t, s) => t + (s - mean) ** 2, 0) / n) : 0;
+  return {
+    binSize,
+    bins,
+    players: n,
+    below: scores.filter((s) => s < mine).length,
+    score: mine,
+    mean,
+    sd,
   };
 }
 
@@ -364,8 +521,8 @@ export interface PlanOptions {
 }
 
 /**
- * Plans `days` days from `start`: five prompts a day from five different
- * categories (when there are five), least-recently-used questions first, never
+ * Plans `days` days from `start`: BLACK_SWAN_PROMPTS prompts a day, one per
+ * category while categories last, least-recently-used questions first, never
  * repeating one inside the cooldown when the pool allows. Deterministic.
  */
 export function planSchedule(
@@ -454,7 +611,7 @@ export function questionsForDate(
   return chosen;
 }
 
-/** Share card line, e.g. "▁ ▃ ▇ 🦢 ✕   575/1000". */
+/** Share card line, e.g. "▁ ▃ ▇ 🦢 ✕ ▅ ▃   325/700". */
 export function blackSwanShareLine(results: readonly BlackSwanSlotResult[]): string {
   const glyph: Record<BlackSwanTierKey, string> = {
     mode: "▁",
