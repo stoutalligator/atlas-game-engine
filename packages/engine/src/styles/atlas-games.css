@@ -2876,6 +2876,27 @@
   }
 }
 
+/* frameless: the host makes the whole page the sky (wrap the game in .ag-bs-frameless).
+   No card at all; the starfield covers the viewport behind the page's content. */
+.ag-bs-frameless .ag-root[data-game="black-swan"] {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-inline: 0;
+}
+.ag-bs-frameless .ag-bs__stars {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+}
+.ag-bs-frameless .ag-root[data-game="black-swan"] .ag-bar {
+  border-bottom-color: transparent;
+}
+
 /* ── Word Web ───────────────────────────────────────────────────────────── */
 
 .ag-sr {
