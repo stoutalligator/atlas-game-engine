@@ -86,16 +86,16 @@ export const GAME_CATALOG: readonly GameInfo[] = [
   },
   {
     id: "black-swan",
-    title: "Black Swan",
+    title: "Outlier",
     tagline: "Name the answer nobody else will.",
     description:
-      "Seven prompts a day, the same for everyone. Any accepted answer counts, but the less well known it is, the more it scores. Every prompt hides exactly one Black Swan.",
+      "Seven prompts a day, the same for everyone. Any accepted answer counts, but the rarer it is, the farther it takes you, from the Moon out to Andromeda. Every prompt hides exactly one Outlier.",
     howToPlay: [
       "Each prompt has a list of accepted answers. Type one before the 25-second timer runs out.",
       "Not on the list? It shakes and clears — try another while time remains. Typos and short forms are offered as a correction to accept.",
       "Every accepted answer has a fixed tier, set by how well known it is: Mode (10 points), Expected (30), Within σ (60) and Tail (85).",
-      "Each prompt has exactly one Black Swan (100 points). Find it and you get its story.",
-      "After each answer, see how many players chose the same thing; after the day, see where your score sits on everyone's distribution.",
+      "Each prompt has exactly one Outlier (100 points). Find it and you get its story.",
+      "Your score is a distance: the rarer your answers, the farther from Earth you travel, past real planets, stars and galaxies.",
     ],
     accent: "slate",
     minutes: "4 min",

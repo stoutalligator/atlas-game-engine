@@ -41,14 +41,14 @@ export const BLACK_SWAN_TIERS = [
     name: "Tail",
     points: 85,
     upTo: 0.94,
-    blurb: "Out in the tail. Few get this far.",
+    blurb: "Out in the tail. Few travel this far.",
   },
   {
     key: "swan",
-    name: "Black Swan",
+    name: "Outlier",
     points: 100,
     upTo: Number.POSITIVE_INFINITY,
-    blurb: "The one answer nobody sees coming.",
+    blurb: "The one answer nobody else saw. Straight to hyperspace.",
   },
 ] as const;
 
@@ -618,7 +618,7 @@ export function blackSwanShareLine(results: readonly BlackSwanSlotResult[]): str
     expected: "▃",
     sigma: "▅",
     tail: "▇",
-    swan: "🦢",
+    swan: "🌠",
   };
   const { score } = summarizeDay(results);
   return `${results.map((r) => (r.tier ? glyph[r.tier] : "✕")).join(" ")}   ${score}/${BLACK_SWAN_MAX_SCORE}`;
