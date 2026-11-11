@@ -88,7 +88,8 @@ Andromeda). Each answer warps a live starfield (farther for rarer tiers), then a
 galaxies, each with a checked distance and one fact). The crowd chart is one tap away.
 The id, the exports (`BlackSwan`, `BlackSwanApi`, ...) and the server API keep their
 `black-swan` names, so hosts need no changes beyond upgrading. Styles are scoped to
-`.ag-root[data-game="black-swan"]`.
+`.ag-root[data-game="black-swan"]`. Wrap the game in `.ag-bs-frameless` to drop the card and let the
+starfield fill the whole viewport (the host then themes the page itself).
 
 The host keeps the questions and the guesses on its server and passes the component four
 calls, plus an optional fifth for the day's score distribution:
