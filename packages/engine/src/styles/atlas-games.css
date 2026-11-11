@@ -2897,6 +2897,22 @@
   border-bottom-color: transparent;
 }
 
+/* Outlier's loading placeholder: faint glass on the night sky, never white */
+.ag-loading[data-game="black-swan"] {
+  min-height: var(--ag-bs-height, min(780px, calc(100dvh - 120px)));
+}
+.ag-loading[data-game="black-swan"] .ag-loading__bar,
+.ag-loading[data-game="black-swan"] .ag-loading__board {
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03), rgba(150, 170, 255, 0.08), rgba(255, 255, 255, 0.03));
+  background-size: 200% 100%;
+}
+.ag-loading[data-game="black-swan"] .ag-loading__board {
+  flex: 1;
+  height: auto;
+  min-height: 320px;
+}
+
 /* ── Word Web ───────────────────────────────────────────────────────────── */
 
 .ag-sr {
