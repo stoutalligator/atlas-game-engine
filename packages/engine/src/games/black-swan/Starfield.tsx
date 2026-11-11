@@ -28,7 +28,7 @@ const BEHIND = 0.45;
 const GOLDEN = 2.39996;
 
 /**
- * Outlier's sky. Stars stream gently toward the viewer; a jump streaks them and
+ * Outlier's sky. Between answers it holds still (stars only twinkle); a jump streaks them and
  * moves the camera out along the real distance scale, so the Moon, the planets,
  * stars and galaxies appear ahead as small labelled objects, grow as you near
  * them and fly past. Static (no streaming) under prefers-reduced-motion.
@@ -115,7 +115,8 @@ export const Starfield = forwardRef<StarfieldHandle, { startLog: number }>(funct
       const c = cam.current;
       const t = Math.min(1, (now - c.start) / c.ms);
       const boost = t < 1 ? c.strength * Math.sin(Math.PI * t) ** 2 : 0;
-      const speed = reduce ? 0 : (0.009 + boost * 0.21) * dt; // calm drift; warps still streak
+      // Still between answers (so the labelled objects can be read); it only flies on a jump.
+      const speed = reduce ? 0 : boost * 0.21 * dt;
       const camLog = reduce ? c.to : currentRef.current(now);
       ctx.clearRect(0, 0, w, h);
       const cx = w / 2;
@@ -137,7 +138,9 @@ export const Starfield = forwardRef<StarfieldHandle, { startLog: number }>(funct
         const y = cy + s.y * k;
         if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
         const near = 1 - s.z / DEPTH;
-        const a = Math.min(1, 0.08 + near * near * 1.4);
+        // A faint twinkle keeps a still sky alive.
+        const twinkle = reduce ? 1 : 0.75 + 0.25 * Math.sin(now / 900 + s.hue * 40);
+        const a = Math.min(1, (0.08 + near * near * 1.4) * twinkle);
         const r = 0.4 + near * near * 2;
         const col = colour(s.hue);
         if (boost > 0.05) {
