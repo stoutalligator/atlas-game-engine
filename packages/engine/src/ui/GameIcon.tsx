@@ -23,10 +23,15 @@ const PATHS: Record<GameId, React.ReactNode> = {
       <path d="M5 11h14" />
     </>
   ),
+  // Outlier: a shooting star streaking out into the dark.
   "black-swan": (
     <>
-      <path d="M3 18c4 0 5-3 9-3s5 3 9 3" />
-      <path d="M12 15c-1-3 0-7 3-9 1.5-1 3-.5 3 1s-1.5 2-3 2" />
+      <path d="M16 3l1.23 3.3 3.53.15-2.76 2.2.94 3.4L16 10.1l-2.94 1.95.94-3.4-2.76-2.2 3.53-.15z" />
+      <path d="M11.5 13.5L4 21" />
+      <path d="M9 10.5l-4.5 4.5" opacity="0.6" />
+      <path d="M14.5 16l-3.5 3.5" opacity="0.6" />
+      <circle cx="5" cy="5" r="0.6" fill="currentColor" />
+      <circle cx="21" cy="17" r="0.6" fill="currentColor" />
     </>
   ),
   "cube-rush": (
