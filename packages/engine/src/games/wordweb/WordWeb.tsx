@@ -515,9 +515,6 @@ function WordWebGame({
                       ? "Hint ready"
                       : ""}
               </span>
-              <Button variant="primary" onClick={submit}>
-                Check ↵
-              </Button>
             </div>
           </div>
         )}
