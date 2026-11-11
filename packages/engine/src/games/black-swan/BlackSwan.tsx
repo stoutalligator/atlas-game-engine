@@ -81,7 +81,7 @@ export interface BlackSwanProps extends DailyGameProps {
 
 export function BlackSwan({ api, date: dateProp, storage, onComplete }: BlackSwanProps) {
   const date = usePuzzleDate(dateProp);
-  if (!date) return <GameLoading />;
+  if (!date) return <GameLoading game="black-swan" />;
   return (
     <BlackSwanGame key={date} api={api} date={date} storage={storage} onComplete={onComplete} />
   );
@@ -221,7 +221,7 @@ function BlackSwanGame({
   }, []);
 
   if (error) return <div className="ag-root ag-error">{error}</div>;
-  if (!day || progress.state === null) return <GameLoading />;
+  if (!day || progress.state === null) return <GameLoading game="black-swan" />;
 
   const prompt = phase.kind === "prompt" ? day.prompts[phase.slot] : null;
 

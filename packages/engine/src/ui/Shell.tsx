@@ -99,9 +99,10 @@ export function GameShell({ game, date, chips = [], actions, banner, children }:
   );
 }
 
-export function GameLoading() {
+/** Placeholder while a game loads; `game` lets a themed game (Outlier) style it. */
+export function GameLoading({ game }: { game?: GameId } = {}) {
   return (
-    <div className="ag-root ag-loading" aria-busy="true">
+    <div className="ag-root ag-loading" data-game={game} aria-busy="true">
       <div className="ag-loading__bar" />
       <div className="ag-loading__board" />
     </div>
