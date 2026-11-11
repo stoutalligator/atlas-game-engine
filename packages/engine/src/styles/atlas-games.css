@@ -2155,8 +2155,16 @@
   font-weight: 600;
   letter-spacing: 0.04em;
 }
-.ag-bs__route-stop circle {
+.ag-bs__route-stop rect {
   filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+  shape-rendering: crispEdges;
+}
+.ag-bs__route-earth {
+  shape-rendering: crispEdges;
+}
+.ag-bs__route text {
+  font-family: ui-monospace, "Geist Mono", "SF Mono", Menlo, Consolas, monospace;
+  text-transform: uppercase;
 }
 .ag-bs__route-stop[data-passed="false"] {
   opacity: 0.35;
@@ -2904,7 +2912,12 @@
 .ag-loading[data-game="black-swan"] .ag-loading__bar,
 .ag-loading[data-game="black-swan"] .ag-loading__board {
   border-radius: 14px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03), rgba(150, 170, 255, 0.08), rgba(255, 255, 255, 0.03));
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(150, 170, 255, 0.08),
+    rgba(255, 255, 255, 0.03)
+  );
   background-size: 200% 100%;
 }
 .ag-loading[data-game="black-swan"] .ag-loading__board {
