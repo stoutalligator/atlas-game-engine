@@ -115,7 +115,7 @@ export const Starfield = forwardRef<StarfieldHandle, { startLog: number }>(funct
       const c = cam.current;
       const t = Math.min(1, (now - c.start) / c.ms);
       const boost = t < 1 ? c.strength * Math.sin(Math.PI * t) ** 2 : 0;
-      const speed = reduce ? 0 : (0.012 + boost * 0.25) * dt;
+      const speed = reduce ? 0 : (0.009 + boost * 0.21) * dt; // calm drift; warps still streak
       const camLog = reduce ? c.to : currentRef.current(now);
       ctx.clearRect(0, 0, w, h);
       const cx = w / 2;
