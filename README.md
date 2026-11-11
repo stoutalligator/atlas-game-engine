@@ -11,7 +11,7 @@ component per game, and the games' code doesn't live in the main repo.
 | **Box Plot** | Picture logic puzzle (nonogram) that grows through the week, 5×5 Mon → 12×12 weekend; a Check button outlines mistakes, and the solved picture flips to colour. 364 pictures, all solvable without guessing. | Built-in coloured library (52 per weekday) |
 | **Cube Rush** | Slide cubicles until the analyst can reach the exit. Easy Mon → hard weekend; scored by time, with the optimal move count shown. | Built-in verified library (240 puzzles) |
 | **Word Web** | A crossword that unfolds: one category, no clues; solving a word reveals the words that cross it. Easy Mon → hardest Sun. | Validated puzzles supplied by the host (built-in canonical fallback) |
-| **Black Swan** | Seven prompts ("Name a loss reserving method."). Any accepted answer counts; the less well known it is, the more it scores. Each prompt hides one Black Swan. | Question pool + guess counts supplied by the host's server |
+| **Outlier** (id `black-swan`) | Seven prompts ("Name a loss reserving method."). Any accepted answer counts; the rarer it is, the more it scores and the farther from Earth it takes you. Each prompt hides one Outlier. | Question pool + guess counts supplied by the host's server |
 
 Every player gets the same puzzle for a date. New puzzles unlock at the player's local midnight.
 Progress, streaks, and stats are saved in the browser through a swappable storage adapter.
@@ -78,7 +78,17 @@ amber), and the components draw no outer panel, so the host wraps them in its ow
 `readDailyStatus(game, date)` and `readStreak(game, date)` from `/catalog` power "✓ Solved" and 🔥 badges on
 dashboards.
 
-### Black Swan
+### Outlier (id `black-swan`)
+
+Plays as **Outlier**: a deep-space theme where the day's score is a distance travelled
+out from Earth (log scale: one Mode answer reaches the Moon, a perfect 700 reaches
+Andromeda). Each answer warps a live starfield (farther for rarer tiers), then a centred
+"jump" shows the tier, points, new distance and any real landmark reached
+(`games/black-swan/journey.ts`: Moon, planets, Voyager 1, nearby stars, nebulae,
+galaxies, each with a checked distance and one fact). The crowd chart is one tap away.
+The id, the exports (`BlackSwan`, `BlackSwanApi`, ...) and the server API keep their
+`black-swan` names, so hosts need no changes beyond upgrading. Styles are scoped to
+`.ag-root[data-game="black-swan"]`.
 
 The host keeps the questions and the guesses on its server and passes the component four
 calls, plus an optional fifth for the day's score distribution:
@@ -91,8 +101,8 @@ const api: BlackSwanApi = { load, open, check, lock, distribution }; // e.g. ser
 ```
 
 Every accepted answer carries a fixed tier, set from real-world familiarity when the
-question is built: Mode 10 · Expected 30 · Within σ 60 · Tail 85, and exactly one Black Swan
-(100, with an optional `fact`) per prompt. What players pick never changes the score; it
+question is built: Mode 10 · Expected 30 · Within σ 60 · Tail 85, and exactly one Outlier
+(tier key `swan`; 100, with an optional `fact`) per prompt. What players pick never changes the score; it
 only fills in "N players chose this". Seven prompts a day, 700 points max.
 
 The pure logic for the server is in `@stoutalligator/engine/server`:

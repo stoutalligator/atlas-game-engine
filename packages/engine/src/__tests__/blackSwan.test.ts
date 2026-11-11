@@ -227,7 +227,7 @@ describe("scoreGuess", () => {
       scoreGuess(reserving, null, "x"),
       scoreGuess(reserving, "Chain ladder", "x"),
     ];
-    expect(blackSwanShareLine(rs)).toBe("🦢 ✕ ▁   110/700");
+    expect(blackSwanShareLine(rs)).toBe("🌠 ✕ ▁   110/700");
   });
 });
 

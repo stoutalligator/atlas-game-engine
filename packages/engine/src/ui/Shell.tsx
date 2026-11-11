@@ -57,7 +57,7 @@ export function GameShell({ game, date, chips = [], actions, banner, children }:
   }, [game]);
 
   return (
-    <div className="ag-root" data-accent={info.accent}>
+    <div className="ag-root" data-accent={info.accent} data-game={game}>
       <div className="ag-bar">
         <div className="ag-bar__id">
           <span className="ag-tag">#{puzzleNumber(date)}</span>

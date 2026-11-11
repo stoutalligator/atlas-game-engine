@@ -30,6 +30,8 @@ type Ctx = CanvasRenderingContext2D;
 
 interface Palette {
   get: (name: string) => string;
+  /** The variable's value, or "" when unset (no fallback colour). */
+  raw: (name: string) => string;
   tier: (key: BlackSwanTierKey) => string;
   font: string;
 }
@@ -37,7 +39,25 @@ interface Palette {
 function palette(el: Element): Palette {
   const cs = getComputedStyle(el);
   const get = (name: string) => cs.getPropertyValue(name).trim() || "#64748b";
-  return { get, tier: (k) => get(TIER_VAR[k]), font: cs.fontFamily || "system-ui, sans-serif" };
+  const raw = (name: string) => cs.getPropertyValue(name).trim();
+  return {
+    get,
+    raw,
+    tier: (k) => get(TIER_VAR[k]),
+    font: cs.fontFamily || "system-ui, sans-serif",
+  };
+}
+
+/** Draws with a soft halo when the theme sets --ag-bs-glow (the night theme does). */
+function glow(ctx: Ctx, pal: Palette, draw: () => void) {
+  const c = pal.raw("--ag-bs-glow");
+  if (c) {
+    ctx.save();
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 14;
+  }
+  draw();
+  if (c) ctx.restore();
 }
 
 function setup(cv: HTMLCanvasElement, h: number) {
@@ -319,10 +339,12 @@ export function runReveal(cv: HTMLCanvasElement, opts: RevealOptions): RevealHan
         if (down) {
           const pulse = opts.reduceMotion ? 0 : Math.max(0, 1 - (dt - 450) / 900);
           ctx.globalAlpha = 0.35 * pulse + 0.15;
-          dot(ctx, s.x, s.y, L.d * 1.9 + 6 * pulse, pal.get("--ag-bs-gold"));
+          dot(ctx, s.x, s.y, L.d * 1.9 + 6 * pulse, pal.get("--ag-bs-you"));
           ctx.globalAlpha = 1;
         }
-        dot(ctx, s.x, y, L.d / 2 + 2.2, pal.get("--ag-bs-gold"), pal.get("--ag-ink"));
+        glow(ctx, pal, () =>
+          dot(ctx, s.x, y, L.d / 2 + 2.2, pal.get("--ag-bs-you"), pal.get("--ag-bs-you-ring")),
+        );
         if (down && opts.label) {
           ctx.font = `900 11px ${pal.font}`;
           const full = `YOU · ${opts.label}`;
@@ -330,7 +352,7 @@ export function runReveal(cv: HTMLCanvasElement, opts: RevealOptions): RevealHan
           const tw = ctx.measureText(label).width;
           const lx = Math.min(Math.max(s.x, tw / 2 + 6), w - tw / 2 - 6);
           const ly = Math.max(14, s.y - L.d - 10);
-          ctx.fillStyle = "rgba(255,255,255,0.92)";
+          ctx.fillStyle = pal.get("--ag-bs-label");
           ctx.fillRect(lx - tw / 2 - 5, ly - 11, tw + 10, 15);
           ctx.fillStyle = pal.get("--ag-ink");
           ctx.textAlign = "center";
@@ -518,7 +540,7 @@ export function drawDistribution(cv: HTMLCanvasElement, dist: BlackSwanDistribut
   const mineBin = Math.min(dist.bins.length - 1, Math.floor(dist.score / dist.binSize));
   dist.bins.forEach((n, i) => {
     const h = (n / tallest) * (base - top);
-    ctx.fillStyle = i === mineBin ? pal.get("--ag-bs-gold") : pal.get("--ag-line-soft");
+    ctx.fillStyle = i === mineBin ? pal.get("--ag-bs-you") : pal.get("--ag-line-soft");
     ctx.fillRect(padX + i * barW + 1, base - h, Math.max(1, barW - 2), h);
   });
   // Normal curve, scaled so its area matches the histogram's.
@@ -563,13 +585,15 @@ export function drawDistribution(cv: HTMLCanvasElement, dist: BlackSwanDistribut
   ctx.lineTo(mx, base);
   ctx.stroke();
   ctx.setLineDash([]);
-  dot(ctx, mx, top - 6, 6, pal.get("--ag-bs-gold"), pal.get("--ag-ink"));
+  glow(ctx, pal, () =>
+    dot(ctx, mx, top - 6, 6, pal.get("--ag-bs-you"), pal.get("--ag-bs-you-ring")),
+  );
   const z = dist.sd > 0 ? (dist.score - dist.mean) / dist.sd : 0;
   const label = `YOU · ${dist.score} · z = ${z >= 0 ? "+" : "−"}${Math.abs(z).toFixed(1)}`;
   ctx.font = `900 11px ${pal.font}`;
   const tw = ctx.measureText(label).width;
   const lx = Math.min(Math.max(mx, tw / 2 + 6), w - tw / 2 - 6);
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.fillStyle = pal.get("--ag-bs-label");
   ctx.fillRect(lx - tw / 2 - 5, 2, tw + 10, 15);
   ctx.fillStyle = pal.get("--ag-ink");
   ctx.textAlign = "center";

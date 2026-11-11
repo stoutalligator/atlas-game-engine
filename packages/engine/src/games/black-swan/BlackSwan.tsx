@@ -4,6 +4,7 @@ import { useCompletion, useDailyProgress, usePuzzleDate } from "../../core/progr
 import { shareText } from "../../core/share.js";
 import type { DailyGameProps, GameResult } from "../../core/types.js";
 import { Button, GameLoading, GameShell, ResultPanel } from "../../ui/Shell.js";
+import { Starfield, type StarfieldHandle } from "./Starfield.js";
 import {
   type ChartHit,
   type RevealHandle,
@@ -13,6 +14,16 @@ import {
   drawGhost,
   runReveal,
 } from "./chart.js";
+import {
+  LANDMARKS,
+  type Landmark,
+  TIER_REGION,
+  distanceForScore,
+  formatDistance,
+  journeyFraction,
+  landmarkAt,
+  landmarksBetween,
+} from "./journey.js";
 import {
   BLACK_SWAN_MAX_SCORE,
   BLACK_SWAN_SECONDS,
@@ -88,9 +99,18 @@ export function BlackSwan({ api, date: dateProp, storage, onComplete }: BlackSwa
 type Phase =
   | { kind: "intro" }
   | { kind: "prompt"; slot: number; deadline: number }
+  | { kind: "jump"; slot: number }
   | { kind: "reveal"; slot: number }
   | { kind: "summary" };
 
+/** How hard the starfield warps for each tier. */
+const WARP: Record<BlackSwanTierKey, number> = {
+  mode: 0.25,
+  expected: 0.45,
+  sigma: 0.65,
+  tail: 0.85,
+  swan: 1,
+};
 const tierInfo = (key: BlackSwanTierKey) =>
   BLACK_SWAN_TIERS.find((t) => t.key === key) ?? BLACK_SWAN_TIERS[0];
 const count = (n: number, one: string, many = `${one}s`) =>
@@ -116,6 +136,9 @@ function BlackSwanGame({
   const [results, setResults] = useState<Array<BlackSwanSlotResult | undefined>>([]);
   const [phase, setPhase] = useState<Phase>({ kind: "intro" });
   const [dist, setDist] = useState<BlackSwanDistribution | null>(null);
+  const starsRef = useRef<StarfieldHandle>(null);
+  /** Landmarks passed on the latest jump, for the reveal. */
+  const [passed, setPassed] = useState<Landmark[]>([]);
   const progress = useDailyProgress<{ started: boolean }>("black-swan", date, storage, () => ({
     started: false,
   }));
@@ -126,7 +149,7 @@ function BlackSwanGame({
       .load(date)
       .then((d) => {
         if (cancelled) return;
-        if (!d) return setError("Today's Black Swan isn't available. Try again shortly.");
+        if (!d) return setError("Today's Outlier isn't available. Try again shortly.");
         setDay(d);
         setResults(d.slots.map((s) => s.result));
         const open = d.slots.find((s) => s.status === "open");
@@ -138,7 +161,7 @@ function BlackSwanGame({
             deadline: Date.now() + (open.remainingMs ?? 0),
           });
       })
-      .catch(() => !cancelled && setError("Couldn't load today's Black Swan."));
+      .catch(() => !cancelled && setError("Couldn't load today's Outlier."));
     return () => {
       cancelled = true;
     };
@@ -158,7 +181,8 @@ function BlackSwanGame({
       durationSec: 0,
       stats: [
         { label: "Score", value: `${summary.score}/${BLACK_SWAN_MAX_SCORE}` },
-        { label: "Black Swans", value: String(summary.blackSwans) },
+        { label: "Outliers", value: String(summary.blackSwans) },
+        { label: "Distance", value: formatDistance(distanceForScore(summary.score)) },
         { label: "Answered", value: `${done.filter((r) => r.label).length}/${done.length}` },
       ],
       score: { points: summary.score, rarity: summary.rarity },
@@ -181,6 +205,7 @@ function BlackSwanGame({
     };
   }, [allDone, api, date]);
   const better = betterThan(dist);
+  const reachedLandmark = landmarkAt(distanceForScore(summary.score));
 
   const nextSlot = day ? day.prompts.findIndex((_, i) => !results[i]) : -1;
 
@@ -198,16 +223,24 @@ function BlackSwanGame({
     setResults((prev) => {
       const next = [...prev];
       next[slot] = r;
+      const before = summarizeDay(prev.filter(Boolean) as BlackSwanSlotResult[]).score;
+      const after = summarizeDay(next.filter(Boolean) as BlackSwanSlotResult[]).score;
+      setPassed(landmarksBetween(distanceForScore(before), distanceForScore(after)));
       return next;
     });
-    setPhase({ kind: "reveal", slot });
+    // The jump: rarer answers warp farther.
+    const strength = r.tier ? WARP[r.tier] : 0;
+    if (strength) starsRef.current?.warp(strength, 900 + 1700 * strength);
+    setPhase({ kind: "jump", slot });
   }, []);
 
   if (error) return <div className="ag-root ag-error">{error}</div>;
   if (!day || progress.state === null) return <GameLoading />;
 
   const prompt =
-    phase.kind === "prompt" || phase.kind === "reveal" ? day.prompts[phase.slot] : null;
+    phase.kind === "prompt" || phase.kind === "reveal" || phase.kind === "jump"
+      ? day.prompts[phase.slot]
+      : null;
 
   return (
     <GameShell
@@ -219,10 +252,12 @@ function BlackSwanGame({
           value: `${Math.min(done.length + (phase.kind === "prompt" ? 1 : 0), day.prompts.length)}/${day.prompts.length}`,
         },
         { label: "Score", value: String(summary.score) },
+        { label: "Distance", value: formatDistance(distanceForScore(summary.score)) },
       ]}
     >
       <div className="ag-bs">
-        {phase.kind !== "summary" && phase.kind !== "intro" && prompt && (
+        <Starfield ref={starsRef} />
+        {(phase.kind === "prompt" || phase.kind === "reveal") && prompt && (
           <div className="ag-bs__head">
             <Pips results={results} count={day.prompts.length} current={phase.slot} />
             <span className="ag-pill">{prompt.category}</span>
@@ -249,6 +284,19 @@ function BlackSwanGame({
           />
         )}
 
+        {phase.kind === "jump" && results[phase.slot] && (
+          <Jump
+            key={phase.slot}
+            result={results[phase.slot] as BlackSwanSlotResult}
+            before={summary.score - (results[phase.slot]?.points ?? 0)}
+            after={summary.score}
+            passed={passed}
+            last={nextSlot === -1}
+            onNext={() => (nextSlot === -1 ? setPhase({ kind: "summary" }) : openSlot(nextSlot))}
+            onCrowd={() => setPhase({ kind: "reveal", slot: phase.slot })}
+          />
+        )}
+
         {phase.kind === "reveal" && prompt && results[phase.slot] && (
           <Reveal
             key={phase.slot}
@@ -262,11 +310,14 @@ function BlackSwanGame({
         {phase.kind === "summary" && result && (
           <ResultPanel
             solved
-            headline={`${summary.score} points`}
+            headline={
+              reachedLandmark ? `You reached ${reachedLandmark.name}` : "You never left orbit"
+            }
             detail={[
+              `${formatDistance(distanceForScore(summary.score))} from Earth · ${summary.score} points.`,
               summary.blackSwans
-                ? `${count(summary.blackSwans, "Black Swan")} today.`
-                : "No Black Swans today. Hunt the tail tomorrow.",
+                ? `${count(summary.blackSwans, "Outlier")} found.`
+                : "No Outliers today. Aim for the tail tomorrow.",
               better !== null ? `Better than ${better}% of today's players.` : "",
             ]
               .filter(Boolean)
@@ -275,6 +326,7 @@ function BlackSwanGame({
             shareText={result.shareText}
             history={progress.stats}
           >
+            <JourneyArt reached={distanceForScore(summary.score)} />
             <Recap prompts={day.prompts} results={results} dist={dist} />
           </ResultPanel>
         )}
@@ -313,10 +365,27 @@ function Intro({
 }: { started: boolean; count: number; categories: string[]; onStart: () => void }) {
   return (
     <div className="ag-bs__intro">
-      <p className="ag-bs__lede">
-        {word(n).replace(/^./, (c) => c.toUpperCase())} prompts, 25 seconds each. The obvious answer
-        sits at the Mode; the obscure ones live out in the tail.
-      </p>
+      <div className="ag-bs__hero">
+        <span className="ag-bs__eyebrow">
+          {word(n).replace(/^./, (c) => c.toUpperCase())} prompts · {BLACK_SWAN_SECONDS} seconds
+          each
+        </span>
+        <h2 className="ag-bs__title">Outlier</h2>
+        <p className="ag-bs__lede">
+          Name the answer nobody else will. The rarer it is, the farther from Earth it takes you:
+          past the planets, out through the stars, maybe all the way to Andromeda.
+        </p>
+      </div>
+      <JourneyArt />
+      <div className="ag-bs__tiers">
+        {BLACK_SWAN_TIERS.map((t) => (
+          <div key={t.key} className="ag-bs__tier" data-tier={t.key}>
+            <b>{caps(t.name)}</b>
+            <span>{t.points} pts</span>
+            <small>{TIER_REGION[t.key]}</small>
+          </div>
+        ))}
+      </div>
       <div className="ag-bs__cats">
         {categories.map((c, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: categories can repeat; the list never reorders
@@ -325,24 +394,102 @@ function Intro({
           </span>
         ))}
       </div>
-      <div className="ag-bs__tiers">
-        {BLACK_SWAN_TIERS.map((t) => (
-          <div key={t.key} className="ag-bs__tier" data-tier={t.key}>
-            <b>{t.name}</b>
-            <span>{t.points} pts</span>
-            <small>{t.blurb}</small>
-          </div>
-        ))}
-      </div>
-      <div className="ag-row ag-row--end">
-        <span className="ag-bs__hint">
-          {BLACK_SWAN_SECONDS} seconds per prompt · typos are forgiven · made-up answers don't count
-        </span>
+      <div className="ag-bs__go">
         <Button variant="primary" onClick={onStart}>
-          {started ? "Continue →" : `Play today's ${word(n)} →`}
+          {started ? "Continue the journey →" : "Launch →"}
         </Button>
+        <span className="ag-bs__hint">Typos are forgiven · made-up answers don't count</span>
       </div>
     </div>
+  );
+}
+
+/** Landmarks named on the route (the rest are drawn as small ticks). */
+const ROUTE_LABELS = new Set([
+  "moon",
+  "jupiter",
+  "voyager",
+  "proxima",
+  "betelgeuse",
+  "core",
+  "andromeda",
+]);
+
+/**
+ * The route out from Earth on a log scale, with real landmarks along it. With
+ * `reached`, the travelled part lights up and a marker shows where you are.
+ */
+function JourneyArt({ reached }: { reached?: number }) {
+  const W = 640;
+  const H = 96;
+  const y0 = 52;
+  const x = (ly: number) => 24 + journeyFraction(ly) * (W - 48);
+  const at = reached !== undefined ? x(reached) : null;
+  let labelIndex = 0;
+  return (
+    <svg className="ag-bs__route" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+      <defs>
+        <linearGradient id="ag-bs-route" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stopColor="var(--ag-bs-mode)" />
+          <stop offset="0.3" stopColor="var(--ag-bs-expected)" />
+          <stop offset="0.55" stopColor="var(--ag-bs-sigma)" />
+          <stop offset="0.8" stopColor="var(--ag-bs-tail)" />
+          <stop offset="1" stopColor="var(--ag-bs-swan)" />
+        </linearGradient>
+      </defs>
+      <line className="ag-bs__route-track" x1="24" x2={W - 24} y1={y0} y2={y0} />
+      <line
+        className="ag-bs__route-lit"
+        x1="24"
+        x2={at ?? W - 24}
+        y1={y0}
+        y2={y0}
+        stroke="url(#ag-bs-route)"
+      />
+      <circle className="ag-bs__route-earth" cx="14" cy={y0} r="6" />
+      <text className="ag-bs__route-earthlabel" x="14" y={y0 + 22} textAnchor="middle">
+        Earth
+      </text>
+      {LANDMARKS.map((l) => {
+        const lx = x(l.ly);
+        const labelled = ROUTE_LABELS.has(l.id);
+        const up = labelled && labelIndex++ % 2 === 0;
+        const passed = reached === undefined || l.ly <= reached;
+        return (
+          <g key={l.id} className="ag-bs__route-stop" data-passed={passed}>
+            <circle cx={lx} cy={y0} r={labelled ? 4 : 2.2} fill={l.color} />
+            {labelled && (
+              <text x={lx} y={up ? y0 - 14 : y0 + 22} textAnchor="middle">
+                {l.name.replace(/^The /, "")}
+              </text>
+            )}
+          </g>
+        );
+      })}
+      {at !== null && (
+        <g className="ag-bs__route-you" transform={`translate(${at} ${y0})`}>
+          <circle r="10" />
+          <circle r="4.5" />
+        </g>
+      )}
+    </svg>
+  );
+}
+
+/** A landmark reached on this jump: a tiny drawing, its distance and one fact. */
+function LandmarkCard({ landmark, passed }: { landmark: Landmark; passed: number }) {
+  return (
+    <aside className="ag-bs__landmark" style={{ "--lm": landmark.color } as React.CSSProperties}>
+      <span className="ag-bs__lmicon" data-kind={landmark.kind} aria-hidden="true" />
+      <div>
+        <span className="ag-bs__lmkicker">
+          {passed > 1 ? `Passed ${passed} landmarks · now at` : "You've reached"}
+        </span>
+        <b>{landmark.name}</b>
+        <span className="ag-bs__lmdist">{landmark.distance} from Earth</span>
+        <p>{landmark.fact}</p>
+      </div>
+    </aside>
   );
 }
 
@@ -449,6 +596,9 @@ function PromptView({
 
   return (
     <div className="ag-bs__prompt" ref={rootRef}>
+      <div className="ag-bs__clock" data-low={left < 6000} aria-hidden="true">
+        {Math.ceil(left / 1000)}
+      </div>
       <p className="ag-bs__question">{prompt.prompt}</p>
       <div className="ag-bs__timer" aria-hidden="true">
         <i
@@ -516,6 +666,103 @@ function PromptView({
       </p>
       <div className="ag-bs__stage ag-bs__stage--ghost" aria-hidden="true">
         <canvas ref={ghostRef} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The moment after an answer: the sky has just jumped (farther for rarer
+ * answers); centre screen shows the tier, the points, how far you now are,
+ * and whatever you've reached out there. The crowd chart is one tap away.
+ */
+function Jump({
+  result,
+  before,
+  after,
+  passed,
+  last,
+  onNext,
+  onCrowd,
+}: {
+  result: BlackSwanSlotResult;
+  before: number;
+  after: number;
+  passed: Landmark[];
+  last: boolean;
+  onNext: () => void;
+  onCrowd: () => void;
+}) {
+  const tier = result.tier ? tierInfo(result.tier) : null;
+  const [n, setN] = useState(0);
+  const [ly, setLy] = useState(distanceForScore(before));
+  useEffect(() => {
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const from = Math.log10(Math.max(distanceForScore(before), 1e-9));
+    const to = Math.log10(Math.max(distanceForScore(after), 1e-9));
+    if (reduce) {
+      setN(result.points);
+      setLy(distanceForScore(after));
+      return;
+    }
+    const start = performance.now();
+    const ms = 1400;
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / ms);
+      const e = 1 - (1 - t) ** 3;
+      setN(Math.round(result.points * e));
+      setLy(after > 0 ? 10 ** (from + (to - from) * e) : 0);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [before, after, result.points]);
+
+  const reached = passed[passed.length - 1] ?? null;
+  const next = LANDMARKS.find((l) => l.ly > distanceForScore(after)) ?? null;
+
+  return (
+    <div className="ag-bs__jump" data-tier={result.tier ?? "miss"} aria-live="polite">
+      <span className="ag-bs__badge" data-tier={result.tier ?? "miss"}>
+        {tier ? caps(tier.name) : result.input ? "NOT ON THE LIST" : "TIME'S UP"}
+      </span>
+      <b className="ag-bs__jumpanswer">
+        {result.label ?? (result.input ? `“${result.input}”` : "No answer")}
+      </b>
+      <div className="ag-bs__jumppts">
+        +{n}
+        <small>points</small>
+      </div>
+      <span className="ag-bs__jumpsub">
+        {result.label && tier
+          ? `${(result.picks ?? 0) > 1 ? `${count(result.picks ?? 0, "player")} chose this` : "Only you chose this"} · ${TIER_REGION[result.tier as BlackSwanTierKey]}`
+          : "No jump this time."}
+      </span>
+      <span className="ag-bs__jumpdist">
+        <i>Now</i> {formatDistance(ly)} <i>from Earth</i>
+      </span>
+      {reached ? (
+        <LandmarkCard landmark={reached} passed={passed.length} />
+      ) : (
+        next && (
+          <span className="ag-bs__nextstop">
+            Next stop: <b>{next.name}</b> · {next.distance}
+          </span>
+        )
+      )}
+      {result.tier !== "swan" && result.swan && (
+        <span className="ag-bs__jumpswan">
+          🌠 Today's Outlier was <b>{result.swan.label}</b>
+        </span>
+      )}
+      <div className="ag-bs__jumpgo">
+        <Button variant="ghost" onClick={onCrowd}>
+          See how everyone answered
+        </Button>
+        <Button variant="primary" onClick={onNext}>
+          {last ? "See where you ended up →" : "Continue →"}
+        </Button>
       </div>
     </div>
   );
@@ -800,7 +1047,7 @@ function Recap({
   );
 }
 
-/** The prompt's Black Swan, revealed once the player has answered. */
+/** The prompt's Outlier, revealed once the player has answered. */
 function SwanCard({ result }: { result: BlackSwanSlotResult }) {
   const mine = result.tier === "swan";
   // The result card already names the swan the player found; only its fact is new.
@@ -808,7 +1055,7 @@ function SwanCard({ result }: { result: BlackSwanSlotResult }) {
   return (
     <aside className="ag-bs__swan" data-mine={mine}>
       <span className="ag-bs__chip" data-tier="swan">
-        🦢 {mine ? "YOU FOUND THE BLACK SWAN" : "TODAY'S BLACK SWAN"}
+        🌠 {mine ? "YOU FOUND THE OUTLIER" : "TODAY'S OUTLIER"}
       </span>
       <b>{result.swan.label}</b>
       {result.swan.fact && <p>{result.swan.fact}</p>}
