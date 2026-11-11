@@ -2772,6 +2772,110 @@
   }
 }
 
+/* fit one screen: tighten on short viewports (laptops, phones in landscape) */
+.ag-root[data-game="black-swan"] .ag-bs__title {
+  font-size: clamp(36px, min(9vw, 8.5vh), 78px);
+}
+.ag-root[data-game="black-swan"] .ag-bs__question {
+  font-size: clamp(22px, min(5vw, 5vh), 40px);
+}
+.ag-root[data-game="black-swan"] .ag-bs__jumppts {
+  font-size: clamp(48px, min(12vw, 11vh), 96px);
+}
+@media (max-height: 820px) {
+  .ag-root[data-game="black-swan"] {
+    padding: 14px 18px;
+  }
+  .ag-root[data-game="black-swan"] .ag-bar {
+    padding-bottom: 8px;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__intro,
+  .ag-root[data-game="black-swan"] .ag-bs__prompt {
+    gap: 10px;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__jump {
+    gap: 6px;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__lede {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__tier {
+    padding: 6px 4px;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__go .ag-btn {
+    padding: 12px 36px;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__field input,
+  .ag-root[data-game="black-swan"] .ag-bs__form > .ag-btn {
+    height: 50px;
+  }
+  .ag-bs__clock {
+    width: 40px;
+    height: 40px;
+    line-height: 36px;
+    font-size: 14px;
+  }
+}
+@media (max-height: 700px) {
+  .ag-root[data-game="black-swan"] .ag-bs__cats,
+  .ag-root[data-game="black-swan"] .ag-bs__lede,
+  .ag-root[data-game="black-swan"] .ag-bs__go .ag-bs__hint,
+  .ag-root[data-game="black-swan"] .ag-bs__tier small {
+    display: none;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__route {
+    max-height: 72px;
+  }
+}
+
+/* phones: one compact header row, unbroken tier cards */
+@container (max-width: 560px) {
+  .ag-root[data-game="black-swan"] .ag-bar {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .ag-root[data-game="black-swan"] .ag-bar__id,
+  .ag-root[data-game="black-swan"] .ag-chip:nth-child(3) {
+    display: none;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__form > .ag-btn {
+    padding: 0 14px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__field input {
+    padding: 0 36px 0 14px;
+    font-size: 18px;
+  }
+  .ag-root[data-game="black-swan"] .ag-chips {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .ag-root[data-game="black-swan"] .ag-chip {
+    padding: 1px 6px;
+  }
+  .ag-root[data-game="black-swan"] .ag-bar__actions .ag-btn {
+    padding: 4px 8px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__tiers {
+    gap: 4px;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__tier {
+    padding: 6px 2px;
+  }
+  .ag-root[data-game="black-swan"] .ag-bs__tier span {
+    font-size: 11px;
+    white-space: nowrap;
+  }
+}
+
 /* ── Word Web ───────────────────────────────────────────────────────────── */
 
 .ag-sr {
