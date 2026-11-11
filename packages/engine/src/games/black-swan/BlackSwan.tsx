@@ -417,7 +417,7 @@ function JourneyArt({ reached }: { reached?: number }) {
         y2={y0}
         stroke="url(#ag-bs-route)"
       />
-      <circle className="ag-bs__route-earth" cx="14" cy={y0} r="6" />
+      <rect className="ag-bs__route-earth" x="8" y={y0 - 6} width="12" height="12" />
       <text className="ag-bs__route-earthlabel" x="14" y={y0 + 22} textAnchor="middle">
         Earth
       </text>
@@ -428,7 +428,13 @@ function JourneyArt({ reached }: { reached?: number }) {
         const passed = reached === undefined || l.ly <= reached;
         return (
           <g key={l.id} className="ag-bs__route-stop" data-passed={passed}>
-            <circle cx={lx} cy={y0} r={labelled ? 4 : 2.2} fill={l.color} />
+            <rect
+              x={Math.round(lx - (labelled ? 4 : 2))}
+              y={y0 - (labelled ? 4 : 2)}
+              width={labelled ? 8 : 4}
+              height={labelled ? 8 : 4}
+              fill={l.color}
+            />
             {labelled && (
               <text x={lx} y={up ? y0 - 14 : y0 + 22} textAnchor="middle">
                 {l.name.replace(/^The /, "")}

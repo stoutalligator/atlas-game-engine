@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { LANDMARKS, type Landmark } from "./journey.js";
+import { drawSprite } from "./pixelSprites.js";
 
 /** Drive the sky from the game. Positions are log10(light-years) from Earth. */
 export interface StarfieldHandle {
@@ -72,7 +73,8 @@ export const Starfield = forwardRef<StarfieldHandle, { startLog: number }>(funct
     const ctx = cv.getContext("2d");
     if (!ctx) return;
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    const font = getComputedStyle(cv).fontFamily || "system-ui, sans-serif";
+    // Labels in a monospace, arcade-style face to match the 8-bit objects.
+    const font = 'ui-monospace, "Geist Mono", "SF Mono", Menlo, Consolas, monospace';
     const stars: Star[] = Array.from({ length: COUNT }, () => {
       const z = Math.random() * DEPTH;
       return {
@@ -152,10 +154,10 @@ export const Starfield = forwardRef<StarfieldHandle, { startLog: number }>(funct
           ctx.lineTo(x, y);
           ctx.stroke();
         } else {
+          // Square pixel stars: 1px far away, 2–3px up close.
+          const p = r < 1 ? 1 : r < 1.8 ? 2 : 3;
           ctx.fillStyle = `rgba(${col},${a})`;
-          ctx.beginPath();
-          ctx.arc(x, y, r, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.fillRect(Math.round(x - p / 2), Math.round(y - p / 2), p, p);
         }
       }
 
@@ -174,18 +176,18 @@ export const Starfield = forwardRef<StarfieldHandle, { startLog: number }>(funct
         const fadeOut = d < 0 ? Math.max(0, 1 + d / BEHIND) : 1;
         const alpha = Math.min(fadeIn, fadeOut);
         if (alpha <= 0.01) continue;
-        const sz = Math.min(160, BASE[m.l.kind] * k ** 0.85);
+        const sz = Math.min(200, BASE[m.l.kind] * Math.max(k, 0.25) ** 0.7);
         ctx.globalAlpha = alpha;
-        drawLandmark(ctx, m.l, x, y, sz);
+        const drawn = drawSprite(ctx, m.l, x, y, sz);
         if (d > -0.15 && sz > 3) {
           ctx.globalAlpha = alpha * Math.max(0, Math.min(1, (AHEAD - 0.3 - d) / 0.6));
           ctx.textAlign = "center";
-          ctx.fillStyle = "rgba(235,240,255,0.92)";
-          ctx.font = `600 ${Math.round(Math.min(15, 10 + sz / 14))}px ${font}`;
-          ctx.fillText(m.l.name, x, y + sz / 2 + 15);
+          ctx.fillStyle = "rgba(235,240,255,0.95)";
+          ctx.font = `700 ${Math.round(Math.min(13, 9 + sz / 18))}px ${font}`;
+          ctx.fillText(m.l.name.toUpperCase(), Math.round(x), Math.round(y + drawn / 2 + 15));
           ctx.fillStyle = "rgba(160,175,220,0.85)";
-          ctx.font = `500 ${Math.round(Math.min(12, 9 + sz / 20))}px ${font}`;
-          ctx.fillText(m.l.distance, x, y + sz / 2 + 29);
+          ctx.font = `500 ${Math.round(Math.min(11, 8 + sz / 24))}px ${font}`;
+          ctx.fillText(m.l.distance, Math.round(x), Math.round(y + drawn / 2 + 28));
         }
         ctx.globalAlpha = 1;
       }
@@ -204,145 +206,12 @@ export const Starfield = forwardRef<StarfieldHandle, { startLog: number }>(funct
 
 /** Size (px) of each kind of object when it is level with the camera. */
 const BASE: Record<Landmark["kind"], number> = {
-  moon: 46,
-  planet: 42,
-  belt: 70,
-  craft: 22,
+  moon: 52,
+  planet: 54,
+  belt: 84,
+  craft: 40,
   cloud: 90,
-  star: 34,
-  nebula: 80,
-  galaxy: 96,
+  star: 40,
+  nebula: 96,
+  galaxy: 110,
 };
-
-function drawLandmark(ctx: CanvasRenderingContext2D, l: Landmark, x: number, y: number, s: number) {
-  const r = s / 2;
-  const glow = (radius: number, inner: string, a = 0.35) => {
-    const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    g.addColorStop(0, hexA(inner, a));
-    g.addColorStop(1, hexA(inner, 0));
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fill();
-  };
-  switch (l.kind) {
-    case "moon":
-    case "planet": {
-      glow(r * 1.8, l.color, 0.25);
-      const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
-      g.addColorStop(0, "#ffffff");
-      g.addColorStop(0.35, l.color);
-      g.addColorStop(1, shade(l.color, 0.25));
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-      if (l.id === "saturn") {
-        ctx.strokeStyle = hexA(l.color, 0.8);
-        ctx.lineWidth = Math.max(1, r * 0.12);
-        ctx.beginPath();
-        ctx.ellipse(x, y, r * 1.9, r * 0.55, -0.35, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      break;
-    }
-    case "star": {
-      glow(r * 2.2, l.color, 0.5);
-      glow(r * 0.7, "#ffffff", 0.95);
-      ctx.strokeStyle = hexA("#ffffff", 0.7);
-      ctx.lineWidth = Math.max(0.8, r * 0.06);
-      ctx.beginPath();
-      ctx.moveTo(x - r * 1.6, y);
-      ctx.lineTo(x + r * 1.6, y);
-      ctx.moveTo(x, y - r * 1.6);
-      ctx.lineTo(x, y + r * 1.6);
-      ctx.stroke();
-      break;
-    }
-    case "nebula": {
-      const blobs: Array<[number, number, number, string]> = [
-        [-0.3, -0.1, 0.9, l.color],
-        [0.35, 0.2, 0.75, "#7d8cff"],
-        [0, 0.3, 0.6, "#c56bff"],
-      ];
-      for (const [dx, dy, k, col] of blobs) {
-        const g = ctx.createRadialGradient(
-          x + dx * r,
-          y + dy * r,
-          0,
-          x + dx * r,
-          y + dy * r,
-          r * k,
-        );
-        g.addColorStop(0, hexA(col, 0.45));
-        g.addColorStop(1, hexA(col, 0));
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(x + dx * r, y + dy * r, r * k, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      break;
-    }
-    case "galaxy": {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(-0.5);
-      ctx.scale(1, 0.42);
-      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-      g.addColorStop(0, "rgba(255,255,255,0.95)");
-      g.addColorStop(0.18, hexA(l.color, 0.75));
-      g.addColorStop(0.55, hexA(l.color, 0.2));
-      g.addColorStop(1, hexA(l.color, 0));
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      break;
-    }
-    case "belt":
-    case "cloud": {
-      glow(r, l.color, 0.12);
-      ctx.fillStyle = hexA(l.color, 0.85);
-      for (let i = 0; i < 26; i++) {
-        const a = i * 0.9;
-        const rr = r * (0.55 + ((i * 37) % 10) / 25);
-        ctx.beginPath();
-        ctx.arc(
-          x + Math.cos(a) * rr,
-          y + Math.sin(a) * rr * 0.5,
-          Math.max(0.6, r * 0.035),
-          0,
-          Math.PI * 2,
-        );
-        ctx.fill();
-      }
-      break;
-    }
-    case "craft": {
-      ctx.strokeStyle = hexA(l.color, 0.95);
-      ctx.lineWidth = Math.max(1, r * 0.12);
-      ctx.beginPath();
-      ctx.moveTo(x - r, y);
-      ctx.lineTo(x + r, y);
-      ctx.moveTo(x, y);
-      ctx.lineTo(x, y + r * 0.8);
-      ctx.stroke();
-      ctx.fillStyle = l.color;
-      ctx.beginPath();
-      ctx.arc(x, y - r * 0.15, r * 0.45, Math.PI, 0);
-      ctx.fill();
-      break;
-    }
-  }
-}
-
-function hexA(hex: string, a: number) {
-  const n = Number.parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
-}
-function shade(hex: string, f: number) {
-  const n = Number.parseInt(hex.slice(1), 16);
-  const c = (v: number) => Math.round(v * f);
-  return `rgb(${c((n >> 16) & 255)},${c((n >> 8) & 255)},${c(n & 255)})`;
-}
