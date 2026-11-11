@@ -215,6 +215,11 @@ export function distanceForScore(score: number): number {
   return 10 ** (LOG_MIN + (LOG_MAX - LOG_MIN) * f);
 }
 
+/** Where the sky's camera sits for a score: log10(light-years), a little short of the Moon at 0. */
+export function logForScore(score: number): number {
+  return score <= 0 ? LOG_MIN - 0.35 : Math.log10(distanceForScore(score));
+}
+
 /** 0–1 along the journey for a distance (for drawing the route). */
 export function journeyFraction(ly: number): number {
   if (ly <= 0) return 0;
