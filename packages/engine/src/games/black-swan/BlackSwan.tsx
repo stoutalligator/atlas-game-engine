@@ -5,24 +5,15 @@ import { shareText } from "../../core/share.js";
 import type { DailyGameProps, GameResult } from "../../core/types.js";
 import { Button, GameLoading, GameShell, ResultPanel } from "../../ui/Shell.js";
 import { Starfield, type StarfieldHandle } from "./Starfield.js";
-import {
-  type ChartHit,
-  type RevealHandle,
-  burst,
-  drawDayChart,
-  drawDistribution,
-  drawGhost,
-  runReveal,
-} from "./chart.js";
+import { drawDistribution } from "./chart.js";
 import {
   LANDMARKS,
-  type Landmark,
   TIER_REGION,
   distanceForScore,
   formatDistance,
   journeyFraction,
   landmarkAt,
-  landmarksBetween,
+  logForScore,
 } from "./journey.js";
 import {
   BLACK_SWAN_MAX_SCORE,
@@ -100,7 +91,6 @@ type Phase =
   | { kind: "intro" }
   | { kind: "prompt"; slot: number; deadline: number }
   | { kind: "jump"; slot: number }
-  | { kind: "reveal"; slot: number }
   | { kind: "summary" };
 
 /** How hard the starfield warps for each tier. */
@@ -137,8 +127,8 @@ function BlackSwanGame({
   const [phase, setPhase] = useState<Phase>({ kind: "intro" });
   const [dist, setDist] = useState<BlackSwanDistribution | null>(null);
   const starsRef = useRef<StarfieldHandle>(null);
-  /** Landmarks passed on the latest jump, for the reveal. */
-  const [passed, setPassed] = useState<Landmark[]>([]);
+  const resultsRef = useRef(results);
+  resultsRef.current = results;
   const progress = useDailyProgress<{ started: boolean }>("black-swan", date, storage, () => ({
     started: false,
   }));
@@ -220,27 +210,20 @@ function BlackSwanGame({
   );
 
   const onLocked = useCallback((slot: number, r: BlackSwanSlotResult) => {
-    setResults((prev) => {
-      const next = [...prev];
-      next[slot] = r;
-      const before = summarizeDay(prev.filter(Boolean) as BlackSwanSlotResult[]).score;
-      const after = summarizeDay(next.filter(Boolean) as BlackSwanSlotResult[]).score;
-      setPassed(landmarksBetween(distanceForScore(before), distanceForScore(after)));
-      return next;
-    });
-    // The jump: rarer answers warp farther.
+    const next = [...resultsRef.current];
+    next[slot] = r;
+    setResults(next);
+    // The jump: the camera flies out to the new total distance; rarer answers warp harder.
+    const after = summarizeDay(next.filter(Boolean) as BlackSwanSlotResult[]).score;
     const strength = r.tier ? WARP[r.tier] : 0;
-    if (strength) starsRef.current?.warp(strength, 900 + 1700 * strength);
+    if (strength) starsRef.current?.travel(logForScore(after), strength, 1100 + 1900 * strength);
     setPhase({ kind: "jump", slot });
   }, []);
 
   if (error) return <div className="ag-root ag-error">{error}</div>;
   if (!day || progress.state === null) return <GameLoading />;
 
-  const prompt =
-    phase.kind === "prompt" || phase.kind === "reveal" || phase.kind === "jump"
-      ? day.prompts[phase.slot]
-      : null;
+  const prompt = phase.kind === "prompt" ? day.prompts[phase.slot] : null;
 
   return (
     <GameShell
@@ -256,8 +239,8 @@ function BlackSwanGame({
       ]}
     >
       <div className="ag-bs">
-        <Starfield ref={starsRef} />
-        {(phase.kind === "prompt" || phase.kind === "reveal") && prompt && (
+        <Starfield ref={starsRef} startLog={logForScore(summary.score)} />
+        {phase.kind === "prompt" && prompt && (
           <div className="ag-bs__head">
             <Pips results={results} count={day.prompts.length} current={phase.slot} />
             <span className="ag-pill">{prompt.category}</span>
@@ -290,18 +273,6 @@ function BlackSwanGame({
             result={results[phase.slot] as BlackSwanSlotResult}
             before={summary.score - (results[phase.slot]?.points ?? 0)}
             after={summary.score}
-            passed={passed}
-            last={nextSlot === -1}
-            onNext={() => (nextSlot === -1 ? setPhase({ kind: "summary" }) : openSlot(nextSlot))}
-            onCrowd={() => setPhase({ kind: "reveal", slot: phase.slot })}
-          />
-        )}
-
-        {phase.kind === "reveal" && prompt && results[phase.slot] && (
-          <Reveal
-            key={phase.slot}
-            prompt={prompt}
-            result={results[phase.slot] as BlackSwanSlotResult}
             last={nextSlot === -1}
             onNext={() => (nextSlot === -1 ? setPhase({ kind: "summary" }) : openSlot(nextSlot))}
           />
@@ -476,23 +447,6 @@ function JourneyArt({ reached }: { reached?: number }) {
   );
 }
 
-/** A landmark reached on this jump: a tiny drawing, its distance and one fact. */
-function LandmarkCard({ landmark, passed }: { landmark: Landmark; passed: number }) {
-  return (
-    <aside className="ag-bs__landmark" style={{ "--lm": landmark.color } as React.CSSProperties}>
-      <span className="ag-bs__lmicon" data-kind={landmark.kind} aria-hidden="true" />
-      <div>
-        <span className="ag-bs__lmkicker">
-          {passed > 1 ? `Passed ${passed} landmarks · now at` : "You've reached"}
-        </span>
-        <b>{landmark.name}</b>
-        <span className="ag-bs__lmdist">{landmark.distance} from Earth</span>
-        <p>{landmark.fact}</p>
-      </div>
-    </aside>
-  );
-}
-
 function PromptView({
   api,
   date,
@@ -515,7 +469,6 @@ function PromptView({
   const lockedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  const ghostRef = useRef<HTMLCanvasElement>(null);
   const state = useRef({ text, pending });
   state.current = { text, pending };
 
@@ -553,16 +506,7 @@ function PromptView({
 
   useEffect(() => {
     inputRef.current?.focus({ preventScroll: true });
-    const draw = () =>
-      ghostRef.current &&
-      drawGhost(
-        ghostRef.current,
-        `${prompt.answerCount.toLocaleString("en-US")} accepted answers · the crowd fills in after you lock in`,
-      );
-    draw();
-    window.addEventListener("resize", draw);
-    return () => window.removeEventListener("resize", draw);
-  }, [prompt.answerCount]);
+  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -662,51 +606,44 @@ function PromptView({
         ))}
       </div>
       <p className="ag-bs__hint">
-        Obscure and correct beats obvious. Not on the list? Try again until time runs out.
+        {prompt.answerCount.toLocaleString("en-US")} accepted answers · the rarer yours, the farther
+        you fly. Not on the list? Try again until time runs out.
       </p>
-      <div className="ag-bs__stage ag-bs__stage--ghost" aria-hidden="true">
-        <canvas ref={ghostRef} />
-      </div>
     </div>
   );
 }
 
 /**
- * The moment after an answer: the sky has just jumped (farther for rarer
- * answers); centre screen shows the tier, the points, how far you now are,
- * and whatever you've reached out there. The crowd chart is one tap away.
+ * The moment after an answer: the sky is flying out (farther for rarer
+ * answers) while centre screen shows the tier and the points earned.
  */
 function Jump({
   result,
   before,
   after,
-  passed,
   last,
   onNext,
-  onCrowd,
 }: {
   result: BlackSwanSlotResult;
   before: number;
   after: number;
-  passed: Landmark[];
   last: boolean;
   onNext: () => void;
-  onCrowd: () => void;
 }) {
   const tier = result.tier ? tierInfo(result.tier) : null;
   const [n, setN] = useState(0);
   const [ly, setLy] = useState(distanceForScore(before));
   useEffect(() => {
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    const from = Math.log10(Math.max(distanceForScore(before), 1e-9));
-    const to = Math.log10(Math.max(distanceForScore(after), 1e-9));
+    const from = logForScore(before);
+    const to = logForScore(after);
     if (reduce) {
       setN(result.points);
       setLy(distanceForScore(after));
       return;
     }
     const start = performance.now();
-    const ms = 1400;
+    const ms = 1600;
     let raf = 0;
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / ms);
@@ -719,254 +656,29 @@ function Jump({
     return () => cancelAnimationFrame(raf);
   }, [before, after, result.points]);
 
-  const reached = passed[passed.length - 1] ?? null;
-  const next = LANDMARKS.find((l) => l.ly > distanceForScore(after)) ?? null;
-
   return (
     <div className="ag-bs__jump" data-tier={result.tier ?? "miss"} aria-live="polite">
       <span className="ag-bs__badge" data-tier={result.tier ?? "miss"}>
         {tier ? caps(tier.name) : result.input ? "NOT ON THE LIST" : "TIME'S UP"}
       </span>
+      <div className="ag-bs__jumppts">+{n}</div>
       <b className="ag-bs__jumpanswer">
         {result.label ?? (result.input ? `“${result.input}”` : "No answer")}
       </b>
-      <div className="ag-bs__jumppts">
-        +{n}
-        <small>points</small>
-      </div>
       <span className="ag-bs__jumpsub">
         {result.label && tier
           ? `${(result.picks ?? 0) > 1 ? `${count(result.picks ?? 0, "player")} chose this` : "Only you chose this"} · ${TIER_REGION[result.tier as BlackSwanTierKey]}`
           : "No jump this time."}
       </span>
-      <span className="ag-bs__jumpdist">
-        <i>Now</i> {formatDistance(ly)} <i>from Earth</i>
-      </span>
-      {reached ? (
-        <LandmarkCard landmark={reached} passed={passed.length} />
-      ) : (
-        next && (
-          <span className="ag-bs__nextstop">
-            Next stop: <b>{next.name}</b> · {next.distance}
-          </span>
-        )
-      )}
+      <span className="ag-bs__jumpdist">{formatDistance(ly)} from Earth</span>
       {result.tier !== "swan" && result.swan && (
         <span className="ag-bs__jumpswan">
-          🌠 Today's Outlier was <b>{result.swan.label}</b>
+          Today's Outlier: <b>{result.swan.label}</b>
         </span>
       )}
-      <div className="ag-bs__jumpgo">
-        <Button variant="ghost" onClick={onCrowd}>
-          See how everyone answered
-        </Button>
-        <Button variant="primary" onClick={onNext}>
-          {last ? "See where you ended up →" : "Continue →"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function Reveal({
-  prompt,
-  result,
-  last,
-  onNext,
-}: {
-  prompt: BlackSwanPrompt;
-  result: BlackSwanSlotResult;
-  last: boolean;
-  onNext: () => void;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fxRef = useRef<HTMLCanvasElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [lit, setLit] = useState(-1);
-  const [shown, setShown] = useState(false);
-  const [points, setPoints] = useState(0);
-  const [effect, setEffect] = useState<"" | "tail" | "swan">("");
-  const [hit, setHit] = useState<ChartHit | null>(null);
-  const chartRef = useRef<RevealHandle | null>(null);
-  const top = result.tier ? BLACK_SWAN_TIERS.findIndex((t) => t.key === result.tier) : -1;
-
-  useEffect(() => {
-    const cv = canvasRef.current;
-    if (!cv) return;
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    const timers: number[] = [];
-    const chart = runReveal(cv, {
-      p: result.p,
-      label: result.label,
-      tier: result.tier,
-      answers: result.ranking,
-      reduceMotion: reduce,
-      onLand: (at) => {
-        if (top < 0) {
-          setShown(true);
-          return;
-        }
-        // The rarity climb: one tier per beat, points jumping 10 → 25 → 50 → 100 → 200.
-        for (let i = 0; i <= top; i++)
-          timers.push(
-            window.setTimeout(
-              () => {
-                setLit(i);
-                setPoints(BLACK_SWAN_TIERS[i].points);
-                if (i === top) {
-                  const key = BLACK_SWAN_TIERS[i].key;
-                  if (key === "tail") setEffect("tail");
-                  if (key === "swan") setEffect("swan");
-                  const fx = fxRef.current;
-                  if (fx && at && !reduce) {
-                    const cs = getComputedStyle(fx);
-                    const tierColor = cs.getPropertyValue(`--ag-bs-${key}`).trim();
-                    const gold = cs.getPropertyValue("--ag-bs-gold").trim();
-                    burst(
-                      fx,
-                      at,
-                      [0, 6, 14, 30, 80][i],
-                      key === "swan" ? [gold, "#ffffff", gold] : [tierColor, gold],
-                    );
-                  }
-                  timers.push(window.setTimeout(() => setShown(true), reduce ? 0 : 250));
-                }
-              },
-              reduce ? 0 : i * 340,
-            ),
-          );
-      },
-    });
-    chartRef.current = chart;
-    return () => {
-      chart.cancel();
-      chartRef.current = null;
-      timers.forEach(window.clearTimeout);
-    };
-  }, [result, top]);
-
-  // Hover (or tap) a dot to see the answer it stands for.
-  const onPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const chart = chartRef.current;
-    if (!chart) return;
-    const box = e.currentTarget.getBoundingClientRect();
-    const h = chart.hitTest(e.clientX - box.left, e.clientY - box.top);
-    chart.highlight(h?.column ?? null);
-    setHit((prev) => (prev?.column === h?.column ? prev : h));
-  };
-  const clearHit = () => {
-    chartRef.current?.highlight(null);
-    setHit(null);
-  };
-
-  const tier = result.tier ? tierInfo(result.tier) : null;
-
-  return (
-    <div className="ag-bs__reveal">
-      <p className="ag-bs__question ag-bs__question--small">{prompt.prompt}</p>
-      <div ref={stageRef} className="ag-bs__stage" data-effect={effect}>
-        <canvas
-          ref={canvasRef}
-          role="img"
-          aria-label="Where your answer fell among everyone's guesses"
-          data-hover={hit !== null}
-          onPointerMove={onPointer}
-          onPointerDown={onPointer}
-          onPointerLeave={clearHit}
-        />
-        {hit && (
-          <div
-            className="ag-bs__tip"
-            style={{ left: hit.x, top: hit.y }}
-            data-flip={hit.y < 110}
-            data-edge={
-              hit.x < 120
-                ? "left"
-                : hit.x > (canvasRef.current?.clientWidth ?? 0) - 120
-                  ? "right"
-                  : undefined
-            }
-            aria-hidden="true"
-          >
-            {hit.answers.map((a) => (
-              <span key={a.label} className="ag-bs__tiprow">
-                <span className="ag-bs__chip" data-tier={a.tier}>
-                  {caps(tierInfo(a.tier).name)}
-                </span>
-                <b>
-                  {a.label}
-                  {a.mine && <em> · you</em>}
-                </b>
-                <small>{count(a.picks, "pick")}</small>
-              </span>
-            ))}
-            {hit.more > 0 && (
-              <span className="ag-bs__tipmore">+{hit.more} more in this column</span>
-            )}
-          </div>
-        )}
-        <div className="ag-bs__fx" aria-hidden="true">
-          <canvas ref={fxRef} />
-        </div>
-      </div>
-      <div className="ag-bs__legend">
-        <span>
-          <i data-dot="crowd" /> everyone's guesses
-        </span>
-        <span>
-          <i data-dot="you" /> you
-        </span>
-        <span>Best-known answers on the left; the tail runs right.</span>
-      </div>
-      <div className="ag-bs__steps" aria-hidden="true">
-        {BLACK_SWAN_TIERS.map((t, i) => (
-          <div
-            key={t.key}
-            className="ag-bs__step"
-            data-tier={t.key}
-            data-on={i <= lit}
-            style={{ height: `${22 + (BLACK_SWAN_TIERS.length - 1 - i) * 9}px` }}
-          >
-            <i />
-            <em>{caps(t.name)}</em>
-          </div>
-        ))}
-      </div>
-      <div
-        className="ag-bs__result"
-        data-tier={result.tier ?? "miss"}
-        data-shown={shown}
-        aria-live="polite"
-      >
-        <span className="ag-bs__badge" data-tier={result.tier ?? "miss"}>
-          {tier ? caps(tier.name) : "NOT ON THE LIST"}
-        </span>
-        <div className="ag-bs__what">
-          <b>{result.label ?? (result.input ? `“${result.input}”` : "No answer")}</b>
-          <span>
-            {result.label && tier
-              ? `${(result.picks ?? 0) > 1 ? `${count(result.picks ?? 0, "player")} chose` : "Only you chose"} this today. ${tier.blurb}`
-              : result.input
-                ? "Not an accepted answer, so it scores 0."
-                : "Time ran out."}
-          </span>
-        </div>
-        <div className="ag-bs__points">
-          <span>{shown ? result.points : points}</span>
-          <small>points</small>
-        </div>
-      </div>
-      {shown && <SwanCard result={result} />}
-      {shown && <AnswerList result={result} />}
-      <div className="ag-row ag-row--between">
-        <span className="ag-bs__hint">
-          {count(result.answerCount, "accepted answer")} · {count(result.players, "player")}{" "}
-          answered so far
-        </span>
-        <Button variant="primary" onClick={onNext} disabled={!shown}>
-          {last ? "See today's result →" : "Next prompt →"}
-        </Button>
-      </div>
+      <Button variant="primary" onClick={onNext}>
+        {last ? "See where you ended up →" : "Continue →"}
+      </Button>
     </div>
   );
 }
@@ -980,22 +692,16 @@ function Recap({
   results: Array<BlackSwanSlotResult | undefined>;
   dist: BlackSwanDistribution | null;
 }) {
-  const chartRef = useRef<HTMLCanvasElement>(null);
   const distRef = useRef<HTMLCanvasElement>(null);
   const showDist = !!dist && dist.players > 1;
   useEffect(() => {
     const draw = () => {
-      if (chartRef.current)
-        drawDayChart(
-          chartRef.current,
-          results.map((r) => r?.p ?? null),
-        );
       if (distRef.current && dist && showDist) drawDistribution(distRef.current, dist);
     };
     draw();
     window.addEventListener("resize", draw);
     return () => window.removeEventListener("resize", draw);
-  }, [results, dist, showDist]);
+  }, [dist, showDist]);
   return (
     <div className="ag-bs__recap">
       {showDist && dist && (
@@ -1013,13 +719,6 @@ function Recap({
           </figcaption>
         </figure>
       )}
-      <div className="ag-bs__stage">
-        <canvas
-          ref={chartRef}
-          role="img"
-          aria-label={`Where your ${word(prompts.length)} answers fell on the rarity curve`}
-        />
-      </div>
       <table>
         <tbody>
           {prompts.map((p, i) => {
@@ -1044,22 +743,6 @@ function Recap({
         </tbody>
       </table>
     </div>
-  );
-}
-
-/** The prompt's Outlier, revealed once the player has answered. */
-function SwanCard({ result }: { result: BlackSwanSlotResult }) {
-  const mine = result.tier === "swan";
-  // The result card already names the swan the player found; only its fact is new.
-  if (mine && !result.swan.fact) return null;
-  return (
-    <aside className="ag-bs__swan" data-mine={mine}>
-      <span className="ag-bs__chip" data-tier="swan">
-        🌠 {mine ? "YOU FOUND THE OUTLIER" : "TODAY'S OUTLIER"}
-      </span>
-      <b>{result.swan.label}</b>
-      {result.swan.fact && <p>{result.swan.fact}</p>}
-    </aside>
   );
 }
 
