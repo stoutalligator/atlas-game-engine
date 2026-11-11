@@ -1,6 +1,6 @@
 {
   "name": "@stoutalligator/engine",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "ATLAS daily games — Assumption Drift, Cube Rush, Box Plot, Risk Pool, Black Swan and Word Web as themed React components",
   "type": "module",
   "main": "./dist/index.cjs",

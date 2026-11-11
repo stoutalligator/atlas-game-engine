@@ -2671,6 +2671,33 @@
   }
 }
 
+/* summary badges and stats, re-lit for space */
+.ag-root[data-game="black-swan"] .ag-result__tag {
+  border: 1px solid var(--ag-accent-line);
+  background: rgba(111, 227, 255, 0.1);
+  color: var(--ag-accent-ink);
+}
+.ag-root[data-game="black-swan"] .ag-result__tag[data-kind="best"] {
+  border-color: rgba(255, 207, 74, 0.6);
+  background: rgba(255, 207, 74, 0.12);
+  color: #ffe3a1;
+}
+.ag-root[data-game="black-swan"] .ag-result__tag[data-kind="clean"] {
+  border-color: rgba(94, 234, 212, 0.55);
+  background: rgba(94, 234, 212, 0.1);
+  color: #b6f5e9;
+}
+.ag-root[data-game="black-swan"] .ag-result__tag[data-kind="streak"] {
+  border-color: rgba(255, 140, 90, 0.6);
+  background: rgba(255, 140, 90, 0.12);
+  color: #ffd2bd;
+}
+.ag-root[data-game="black-swan"] .ag-stat__value {
+  font-size: 16px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* the prompt's Outlier */
 .ag-root[data-game="black-swan"] .ag-bs__swan {
   border: 1px solid rgba(255, 207, 74, 0.45);
