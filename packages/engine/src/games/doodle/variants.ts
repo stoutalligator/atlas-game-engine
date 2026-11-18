@@ -329,7 +329,8 @@ function tune(
   for (let i = 0; i < 22; i++) {
     const t = (lo + hi) / 2;
     best = strategy(b, t, source.height);
-    const v = measureVariant(source, best).metrics.visibility;
+    // Only visibility matters here (the full metrics also measure the region's area, which is slow).
+    const v = cutPaths(source.paths, clampRects(best, DOODLE_WIDTH, source.height)).visibility;
     if (v > target) lo = t;
     else hi = t;
   }
