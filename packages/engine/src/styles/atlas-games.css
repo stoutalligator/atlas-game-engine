@@ -3384,10 +3384,14 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  cursor: crosshair;
+  /* Our own crosshair (dark with a white outline): the system one is drawn by
+     inverting the pixels under it, so it can turn white or vanish on the tint. */
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg stroke='%23ffffff' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M12 2v6M12 16v6M2 12h6M16 12h6'/%3E%3C/g%3E%3Cg stroke='%230f172a' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 2v6M12 16v6M2 12h6M16 12h6'/%3E%3C/g%3E%3Ccircle cx='12' cy='12' r='1.6' fill='%230284c7' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E")
+    12 12, crosshair;
 }
 .ag-dd__board[data-tool="eraser"] {
-  cursor: cell;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Ccircle cx='14' cy='14' r='11' fill='none' stroke='%23ffffff' stroke-width='4'/%3E%3Ccircle cx='14' cy='14' r='11' fill='none' stroke='%23e11d48' stroke-width='2'/%3E%3C/svg%3E")
+    14 14, cell;
 }
 .ag-dd__board[data-locked="true"] {
   cursor: default;
@@ -3407,7 +3411,8 @@
 }
 .ag-dd__label {
   fill: var(--ag-muted);
-  font-size: 26px;
+  /* Canvas units: about 12px on a phone, 24px on a desktop. */
+  font-size: 34px;
   font-weight: 700;
 }
 .ag-dd__visible {

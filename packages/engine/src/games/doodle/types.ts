@@ -82,6 +82,12 @@ export interface DoodleSource {
   labels?: DoodleLabel[];
   /** Trend sources: the numbers the chart was drawn from. */
   series?: DoodleSeries;
+  /**
+   * Only these cut strategies (e.g. ["side-left", "side-right"] for a
+   * mirror-symmetric object, where only a half is objectively inferable).
+   * Default: every strategy for the type.
+   */
+  cuts?: string[];
   provenance: DoodleProvenance;
 }
 

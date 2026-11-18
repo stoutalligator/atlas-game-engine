@@ -53,6 +53,15 @@ export interface DoodleProps extends DailyGameProps {
 
 /** How long the answer takes to trace itself in. */
 const REVEAL_MS = 2000;
+/** The eraser is at least this many screen pixels across its radius, so it's finger-sized on a phone. */
+const ERASER_MIN_PX = 16;
+
+/** True when a key press belongs to a text field elsewhere on the page (its own undo wins there). */
+function isEditable(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || typeof el.closest !== "function") return false;
+  return !!el.closest("input, textarea, select, [contenteditable=''], [contenteditable='true']");
+}
 
 export function Doodle({ api, date: dateProp, storage, onComplete }: DoodleProps) {
   const date = usePuzzleDate(dateProp);
@@ -273,6 +282,11 @@ function Board({ puzzle, initial, done, onDraft, submit, onRevealed, renderDone 
   const liveRef = useRef<DoodlePath | null>(null);
   const toolRef = useRef(tool);
   toolRef.current = tool;
+  /** The tool for the stroke in progress (a stylus's eraser end erases whatever tool is picked). */
+  const strokeToolRef = useRef<Tool>(tool);
+  const submittingRef = useRef(false);
+  const onRevealedRef = useRef(onRevealed);
+  onRevealedRef.current = onRevealed;
   const locked = !!reveal || submitting;
 
   // Save the unfinished drawing (not after submitting).
@@ -295,28 +309,41 @@ function Board({ puzzle, initial, done, onDraft, submit, onRevealed, renderDone 
     return [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10];
   }, []);
 
+  /** Eraser radius in canvas units: never under ERASER_MIN_PX on screen. */
+  const eraserRadius = useCallback(() => {
+    const m = svgRef.current?.getScreenCTM();
+    const scale = m ? Math.hypot(m.a, m.b) : 1; // screen px per canvas unit
+    return Math.max(DOODLE_ERASER_RADIUS, scale > 0 ? ERASER_MIN_PX / scale : 0);
+  }, []);
+
   const commit = useCallback(() => {
     const pts = liveRef.current;
     liveRef.current = null;
     pointerRef.current = null;
     setLive(null);
     if (!pts || pts.length === 0) return;
-    if (toolRef.current === "pen") dispatch({ kind: "pen", points: pts, region: puzzle.region });
-    else dispatch({ kind: "erase", points: pts });
-  }, [puzzle.region]);
+    if (strokeToolRef.current === "pen")
+      dispatch({ kind: "pen", points: pts, region: puzzle.region });
+    else dispatch({ kind: "erase", points: pts, radius: eraserRadius() });
+  }, [puzzle.region, eraserRadius]);
+
+  const cancelStroke = useCallback(() => {
+    liveRef.current = null;
+    pointerRef.current = null;
+    setLive(null);
+  }, []);
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     if (locked) return;
+    // Stylus eraser end (button 5) erases; otherwise only the main button draws.
+    const stylusEraser = e.pointerType === "pen" && (e.button === 5 || (e.buttons & 32) !== 0);
     if (e.pointerType === "mouse" && e.button !== 0) return;
     if (pointerRef.current) {
       // A second finger while drawing is a pinch or a palm: drop the stroke.
-      if (e.pointerType === "touch" && pointerRef.current.type === "touch") {
-        liveRef.current = null;
-        pointerRef.current = null;
-        setLive(null);
-      }
+      if (e.pointerType === "touch" && pointerRef.current.type === "touch") cancelStroke();
       return;
     }
+    strokeToolRef.current = stylusEraser ? "eraser" : toolRef.current;
     const p = toUnits(e.clientX, e.clientY);
     if (!p) return;
     e.preventDefault();
@@ -353,19 +380,36 @@ function Board({ puzzle, initial, done, onDraft, submit, onRevealed, renderDone 
   const onPointerEnd = (e: ReactPointerEvent<SVGSVGElement>) => {
     if (!pointerRef.current || e.pointerId !== pointerRef.current.id) return;
     if (e.type === "pointercancel") {
-      liveRef.current = null;
-      pointerRef.current = null;
-      setLive(null);
+      cancelStroke();
       return;
     }
     commit();
   };
 
+  // If the browser wouldn't capture the pointer, a release outside the board
+  // never reaches it: finish the stroke from the window instead of leaving it stuck.
+  const drawingNow = live !== null;
+  useEffect(() => {
+    if (!drawingNow) return;
+    const onUp = (e: PointerEvent) => {
+      if (pointerRef.current && e.pointerId === pointerRef.current.id) {
+        if (e.type === "pointercancel") cancelStroke();
+        else commit();
+      }
+    };
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [drawingNow, commit, cancelStroke]);
+
   // Ctrl/Cmd+Z undoes.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (locked) return;
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      if (locked || isEditable(e.target)) return;
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
         e.preventDefault();
         dispatch({ kind: "undo" });
       }
@@ -377,21 +421,28 @@ function Board({ puzzle, initial, done, onDraft, submit, onRevealed, renderDone 
   // While erasing, preview the strokes without what's under the eraser.
   const shownStrokes = useMemo(() => {
     if (reveal) return reveal.result.strokes;
-    if (tool === "eraser" && live)
-      return drawingReducer(drawing, { kind: "erase", points: live }).strokes;
+    if (strokeToolRef.current === "eraser" && live)
+      return drawingReducer(drawing, { kind: "erase", points: live, radius: eraserRadius() })
+        .strokes;
     return drawing.strokes;
-  }, [reveal, tool, live, drawing]);
+  }, [reveal, live, drawing, eraserRadius]);
+  const liveTool = live ? strokeToolRef.current : null;
 
   const canSubmit = !locked && hasInk(drawing.strokes, puzzle.region);
 
   const onSubmit = async () => {
-    if (!canSubmit) return;
+    // A quick double tap fires twice before the button re-renders as disabled.
+    if (!canSubmit || submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setSubmitError(null);
     const r = await submit(strokesForSubmit(drawing.strokes)).catch(() => null);
+    submittingRef.current = false;
     setSubmitting(false);
     if (!r) {
-      setSubmitError("Couldn't submit. Check your connection and try again.");
+      setSubmitError(
+        "Couldn't submit. Check your connection and try again; if it keeps failing, reload the page (your drawing is kept).",
+      );
       return;
     }
     setReveal({ result: r, shown: false });
@@ -405,12 +456,12 @@ function Board({ puzzle, initial, done, onDraft, submit, onRevealed, renderDone 
     const id = window.setTimeout(
       () => {
         setReveal((r) => (r ? { ...r, shown: true } : r));
-        onRevealed?.(reveal.result);
+        onRevealedRef.current?.(reveal.result);
       },
       reduce ? 0 : REVEAL_MS + 250,
     );
     return () => window.clearTimeout(id);
-  }, [reveal, onRevealed]);
+  }, [reveal]);
 
   const { width, height } = puzzle;
   const toD = (p: DoodlePath) => (p.length ? `M${p.map(([x, y]) => `${x} ${y}`).join("L")}` : "");
@@ -432,7 +483,7 @@ function Board({ puzzle, initial, done, onDraft, submit, onRevealed, renderDone 
         <svg
           ref={svgRef}
           className="ag-dd__board"
-          data-tool={tool}
+          data-tool={liveTool ?? tool}
           data-locked={locked}
           viewBox={`0 0 ${width} ${height}`}
           role="img"
@@ -492,13 +543,15 @@ function Board({ puzzle, initial, done, onDraft, submit, onRevealed, renderDone 
               d={toD(p)}
             />
           ))}
-          {live && tool === "pen" && <path className="ag-dd__ink ag-dd__ink--live" d={toD(live)} />}
-          {live && tool === "eraser" && (
+          {live && liveTool === "pen" && (
+            <path className="ag-dd__ink ag-dd__ink--live" d={toD(live)} />
+          )}
+          {live && liveTool === "eraser" && (
             <circle
               className="ag-dd__eraser"
               cx={live[live.length - 1][0]}
               cy={live[live.length - 1][1]}
-              r={DOODLE_ERASER_RADIUS}
+              r={eraserRadius()}
             />
           )}
           {reference.map((p, i) => (
