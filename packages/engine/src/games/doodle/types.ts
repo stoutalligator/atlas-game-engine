@@ -88,6 +88,12 @@ export interface DoodleSource {
    * Default: every strategy for the type.
    */
   cuts?: string[];
+  /**
+   * Families of closely related sources (e.g. ["japan"] for Honshu, Hokkaido
+   * and Japan's population chart; ["stars"] for every star). The scheduler
+   * keeps a family's puzzles well apart, not just each source's.
+   */
+  family?: string[];
   provenance: DoodleProvenance;
 }
 

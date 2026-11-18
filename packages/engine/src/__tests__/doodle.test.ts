@@ -686,3 +686,46 @@ describe("Doodle eraser", () => {
     expect(big.strokes).toHaveLength(2);
   });
 });
+
+describe("Doodle family spacing", () => {
+  it("keeps related sources 45 days apart", () => {
+    const pool = bank(300);
+    // Every third source belongs to the same family (e.g. one country's map, islands and charts).
+    const fam = pool.map((v) => ({
+      ...v,
+      family: Number(v.sourceId.slice(3)) % 3 === 0 ? ["nz"] : undefined,
+    }));
+    const plan = planDoodleSchedule(fam, { start: "2026-11-16", days: 120 });
+    const byId = new Map(fam.map((v) => [v.id, v]));
+    const nzDays = Object.entries(plan.schedule)
+      .filter(([, id]) => must(byId.get(id)).family?.includes("nz"))
+      .map(([d]) => Date.parse(d) / 86_400_000);
+    expect(nzDays.length).toBeGreaterThan(1);
+    expect(plan.warnings).toEqual([]);
+    for (let i = 1; i < nzDays.length; i++)
+      expect(nzDays[i] - nzDays[i - 1]).toBeGreaterThanOrEqual(45);
+  });
+
+  it("counts families from history (since-retired puzzles too)", () => {
+    const pool = bank(30).map((v) => ({
+      ...v,
+      family: v.sourceId === "src4" ? ["japan"] : undefined,
+    }));
+    const plan = planDoodleSchedule(pool, {
+      start: "2026-11-16",
+      days: 14,
+      history: { "2026-11-10": "old~x" },
+      metaOf: { "old~x": { category: "geo", type: "shape", family: ["japan"] } },
+    });
+    expect(plan.added.map((d) => plan.schedule[d]).some((id) => id.startsWith("src4~"))).toBe(
+      false,
+    );
+  });
+
+  it("relaxes spacing (with a warning) rather than leaving a day empty", () => {
+    const pool = bank(4, 3).map((v) => ({ ...v, family: ["same"] }));
+    const plan = planDoodleSchedule(pool, { start: "2026-11-16", days: 3, cooldownDays: 1 });
+    expect(plan.added).toHaveLength(3);
+    expect(plan.warnings.join()).toMatch(/spacing relaxed/);
+  });
+});

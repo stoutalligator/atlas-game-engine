@@ -12,7 +12,13 @@ export const DOODLE_SCHEDULE_DAYS = 14;
 /** A source can't run again within this many days. */
 export const DOODLE_SOURCE_COOLDOWN = 120;
 /** A category shouldn't repeat within this many days (soft). */
-export const DOODLE_CATEGORY_GAP = 3;
+export const DOODLE_CATEGORY_GAP = 4;
+/**
+ * Related sources (the same family: one country's map, islands and charts;
+ * every star; the Great Lakes) stay this many days apart. Relaxed, with a
+ * warning, only when nothing else is left.
+ */
+export const DOODLE_FAMILY_GAP = 45;
 
 /**
  * Allowed difficulties per weekday (0 = Sunday), easiest first. Monday and
@@ -40,6 +46,8 @@ export interface DoodlePoolItem {
   type: DoodleType;
   /** ISO timestamp; older approvals go first when otherwise equal. */
   approvedAt: string;
+  /** The source's families (see DoodleSource.family). */
+  family?: string[];
 }
 
 export interface DoodlePlanOptions {
@@ -55,8 +63,9 @@ export interface DoodlePlanOptions {
   /** Variant id → source id for history entries that are no longer in the pool. */
   sourceOf?: Record<string, string>;
   /** Variant id → category/type for history entries no longer in the pool. */
-  metaOf?: Record<string, { category: string; type: DoodleType }>;
+  metaOf?: Record<string, { category: string; type: DoodleType; family?: string[] }>;
   cooldownDays?: number;
+  familyGapDays?: number;
 }
 
 export interface DoodlePlan {
@@ -86,10 +95,12 @@ export function planDoodleSchedule(
   if (!isDateKey(start)) throw new Error(`Bad start date ${start}`);
   const days = opts.days ?? DOODLE_SCHEDULE_DAYS;
   const cooldown = opts.cooldownDays ?? DOODLE_SOURCE_COOLDOWN;
+  const familyGap = opts.familyGapDays ?? DOODLE_FAMILY_GAP;
   const byId = new Map(pool.map((v) => [v.id, v]));
   const schedule: Record<string, string> = { ...(opts.history ?? {}) };
   const usedVariants = new Set(Object.values(schedule));
   const sourceDays = new Map<string, number[]>();
+  const familyDays = new Map<string, number[]>();
   const dayMeta = new Map<number, { category: string; type: DoodleType }>();
   const note = (id: string, day: number) => {
     const v = byId.get(id);
@@ -99,8 +110,9 @@ export function planDoodleSchedule(
       list.push(day);
       sourceDays.set(src, list);
     }
-    const meta = v ? { category: v.category, type: v.type } : opts.metaOf?.[id];
+    const meta = v ? { category: v.category, type: v.type, family: v.family } : opts.metaOf?.[id];
     if (meta) dayMeta.set(day, meta);
+    for (const f of meta?.family ?? []) familyDays.set(f, [...(familyDays.get(f) ?? []), day]);
   };
   for (const [date, id] of Object.entries(schedule)) note(id, dayIndex(date));
 
@@ -113,7 +125,17 @@ export function planDoodleSchedule(
     const today = dayIndex(date);
     const rested = (v: DoodlePoolItem) =>
       (sourceDays.get(v.sourceId) ?? []).every((d) => Math.abs(d - today) >= cooldown);
-    const eligible = pool.filter((v) => !usedVariants.has(v.id) && rested(v));
+    const familyRested = (v: DoodlePoolItem) =>
+      (v.family ?? []).every((f) =>
+        (familyDays.get(f) ?? []).every((d) => Math.abs(d - today) >= familyGap),
+      );
+    const fresh = pool.filter((v) => !usedVariants.has(v.id) && rested(v));
+    // Related puzzles (same family) stay apart; only relaxed when nothing else is left.
+    let eligible = fresh.filter(familyRested);
+    if (eligible.length === 0 && fresh.length > 0) {
+      eligible = fresh;
+      warnings.push(`${date}: every remaining puzzle is related to a recent one; spacing relaxed.`);
+    }
     const wanted = doodleDifficultiesFor(date);
     let candidates = eligible.filter((v) => wanted.includes(v.difficulty));
     if (candidates.length === 0 && eligible.length > 0) {

@@ -211,6 +211,8 @@ export function validateDoodleSource(source: DoodleSource): ValidationResult {
   if (!DOODLE_TYPES.includes(source.type)) problems.push(`unknown type "${source.type}"`);
   if (!source.category?.trim()) problems.push("category is missing");
   if (!source.title?.trim()) problems.push("title is missing");
+  if (source.family && !source.family.every((f) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(f)))
+    problems.push("family entries must be lowercase slugs");
   if (source.cuts) {
     const known = Object.keys(strategiesFor(source.type));
     const bad = source.cuts.filter((c) => !known.includes(c));
