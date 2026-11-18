@@ -65,12 +65,34 @@ import { GAME_CATALOG, GameIcon, isGameId, parseAssumptionDriftPack } from "@sto
 
 | Prop | Default | |
 |---|---|---|
-| `game` | — | `"assumption-drift" \| "risk-pool" \| "box-plot" \| "cube-rush" \| "black-swan" \| "wordweb"` |
+| `game` | — | `"assumption-drift" \| "risk-pool" \| "box-plot" \| "cube-rush" \| "black-swan" \| "wordweb" \| "doodle"` |
 | `date` | player's local date | `"YYYY-MM-DD"` — pin a date for previews |
 | `storage` | `localStorageAdapter` | any `{ load, save, remove }` (e.g. API-backed, for cross-device sync) |
 | `onComplete` | — | fires with a `GameResult` (stats + share text) when today's puzzle is finished |
 | `packs` | `[]` | Assumption Drift: raw pack JSON in rotation order. Word Web: validated puzzles for the days around today |
 | `resultTags` | `[]` | Tags for today's finish from the host's records ("Personal best!", "No hints!", "🔥 5-day streak"), shown in the result panel |
+
+### Doodle
+
+Doodle's answer never reaches the browser before the player submits, so the host passes `doodleApi`
+(`load(date)` → today's `DoodlePuzzle` and any saved result; `submit(date, puzzleId, strokes)` → the
+server-scored `DoodleResult`). Everything the host needs on the server comes from
+`@stoutalligator/engine/server`:
+
+- `buildDoodlePuzzle(source, variant)` / `doodleReference(source, variant)`: what the player sees, and the hidden answer.
+- `parseStrokes` + `scoreDoodle(reference, strokes, region, width, height)`: the authoritative score.
+  Both drawings are rasterized on a 4-unit grid in the shared 1000-wide canvas; precision (ink near the
+  answer) and coverage (answer near the ink) use full credit within 20 units fading to 0 at 55, and the
+  score is their harmonic mean. Difficulty never changes the tolerance.
+- `validateDoodleSource`, `pickDoodleVariants`, `validateDoodleVariant`: the content pipeline (20–50%
+  visible, phone-sized region, anchored gaps, no slivers or fine detail, provenance, not too similar).
+- `planDoodleSchedule`, `doodleInventoryLevel`: weekday difficulty (Mon/Tue easy → Sun hard), no repeated
+  variant, 120-day source cooldown, category/type spread, reserve health.
+- `trendSource(...)`: builds a trend chart source from its numbers.
+
+The board is one SVG with Pointer Events (mouse, touch, stylus), `touch-action: none` on the board only,
+strokes clipped to the drawing region as they're drawn, and a built-in practice round (a circle, scored
+in the browser, never saved).
 
 The games inherit the host's font. Colours follow the ATLAS Tailwind palette (slate, violet, emerald, cyan,
 amber), and the components draw no outer panel, so the host wraps them in its own.

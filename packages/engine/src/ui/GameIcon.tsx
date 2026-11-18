@@ -52,6 +52,14 @@ const PATHS: Record<GameId, React.ReactNode> = {
       <path d="M18 11.5h3M10.5 19v2" strokeDasharray="1 2" />
     </>
   ),
+  // Doodle: a pencil finishing a dashed curve.
+  doodle: (
+    <>
+      <path d="M3 17c2-6 5-9 9-9" />
+      <path d="M12 8c2 0 3.5.6 4.6 1.6" strokeDasharray="1.5 2.5" />
+      <path d="M14.5 19.5l6-6-2-2-6 6-.8 2.8z" />
+    </>
+  ),
 };
 
 /** Line icons in the same 24px / 2px-stroke style as the ATLAS dashboard tiles. */

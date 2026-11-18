@@ -28,6 +28,21 @@ export type {
   BlackSwanTierKey,
   GuessMatch,
 } from "./games/black-swan/logic.js";
+export {
+  Doodle,
+  type DoodleApi,
+  type DoodleDay,
+  type DoodleProps,
+} from "./games/doodle/Doodle.js";
+export type {
+  DoodleDifficulty,
+  DoodlePath,
+  DoodlePoint,
+  DoodlePuzzle,
+  DoodleRect,
+  DoodleResult,
+  DoodleType,
+} from "./games/doodle/types.js";
 export { BoxPlot } from "./games/box-plot/BoxPlot.js";
 export { CubeRush } from "./games/cube-rush/CubeRush.js";
 export { cubeRushForDate } from "./games/cube-rush/daily.js";

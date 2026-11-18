@@ -1,7 +1,7 @@
 import type { GameId } from "./core/types.js";
 
 /** Accent colours map to the ATLAS Tailwind palette. */
-export type GameAccent = "violet" | "amber" | "cyan" | "emerald" | "slate" | "rose";
+export type GameAccent = "violet" | "amber" | "cyan" | "emerald" | "slate" | "rose" | "sky";
 
 export interface GameInfo {
   id: GameId;
@@ -116,6 +116,24 @@ export const GAME_CATALOG: readonly GameInfo[] = [
     ],
     accent: "rose",
     minutes: "3–6 min",
+    needsContent: true,
+  },
+  {
+    id: "doodle",
+    title: "Doodle",
+    tagline: "Draw what's missing.",
+    description:
+      "Part of a real shape, path or chart is hidden. Draw the missing part freehand and see how close you got. Everyone gets the same puzzle, and you get one try.",
+    howToPlay: [
+      "Read the prompt: it says what the whole picture is.",
+      "The shaded box is the hidden part. You can only draw inside it.",
+      "Use the pen to draw what's missing. Eraser, Undo and Clear fix mistakes; draw as many strokes as you like.",
+      "Submit when you're happy. You get one submission a day, and it's final.",
+      "The real answer traces itself over your drawing, then you see your % match: right place and the whole missing part both count. Speed doesn't.",
+      "Monday is easy; the weekend is hard. Harder days show less, they aren't marked more strictly.",
+    ],
+    accent: "sky",
+    minutes: "1–2 min",
     needsContent: true,
   },
 ];

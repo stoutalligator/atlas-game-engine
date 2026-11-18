@@ -43,3 +43,18 @@ export {
   wordWebForDate,
 } from "./games/wordweb/logic.js";
 export type { WordWebPuzzle, WordWebQueue, WordWebRecord } from "./games/wordweb/logic.js";
+export {
+  DOODLE_INVENTORY,
+  DOODLE_SCHEDULE_DAYS,
+  doodleDifficultyLabel,
+  doodleInventoryLevel,
+} from "./games/doodle/logic.js";
+export type {
+  DoodleDifficulty,
+  DoodleInventoryLevel,
+  DoodlePath,
+  DoodlePuzzle,
+  DoodleRect,
+  DoodleSource,
+  DoodleType,
+} from "./games/doodle/logic.js";
