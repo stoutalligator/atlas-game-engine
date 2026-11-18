@@ -9,7 +9,13 @@ import {
 } from "@stoutalligator/engine";
 import { useEffect, useState } from "react";
 import { blackSwanMock, resetBlackSwanMock } from "./blackSwanMock";
-import { doodleMock, resetDoodleMock } from "./doodleMock";
+import {
+  DOODLE_SANDBOX_START,
+  doodleMock,
+  doodleSandboxPick,
+  doodleSandboxStats,
+  resetDoodleMock,
+} from "./doodleMock";
 import pack1 from "./packs/sample_pack_1.json";
 import pack2 from "./packs/sample_pack_2.json";
 import pack3 from "./packs/sample_pack_3.json";
@@ -49,9 +55,13 @@ export function App() {
   }, [game, date, wwSource]);
 
   const resetDay = () => {
-    for (const key of Object.keys(localStorage))
-      if (key.startsWith(`atlas-games:v2:${game}:`) && !key.endsWith(":help-seen"))
-        localStorage.removeItem(key);
+    try {
+      for (const key of Object.keys(localStorage))
+        if (key.startsWith(`atlas-games:v2:${game}:`) && !key.endsWith(":help-seen"))
+          localStorage.removeItem(key);
+    } catch {
+      // storage unavailable (e.g. a sandboxed frame)
+    }
     if (game === "black-swan") resetBlackSwanMock(date);
     if (game === "doodle") resetDoodleMock(date);
     setLast(null);
@@ -109,6 +119,7 @@ export function App() {
       <section className="pg-panel" data-accent={info.accent}>
         <div className="pg-tab">{info.title.toUpperCase()}</div>
         <p className="pg-desc">{info.description}</p>
+        {game === "doodle" && <DoodleSandboxNote date={date} />}
         {game === "wordweb" && wwPuzzles === null ? (
           <p className="pg-desc">Generating…</p>
         ) : (
@@ -138,3 +149,21 @@ function shiftDate(date: string, days: number): string {
 
 /** Stand-ins for the tags ATLAS computes from a player's saved plays. */
 const SAMPLE_TAGS = ["Personal best!", "No hints!", "🔥 5-day streak"];
+
+/** What the Doodle sandbox is playing, without naming the subject (no spoilers). */
+function DoodleSandboxNote({ date }: { date: string }) {
+  const { variant, source, planned } = doodleSandboxPick(date);
+  const s = doodleSandboxStats;
+  return (
+    <p className="pg-desc">
+      <strong>Sandbox bank:</strong> {s.sources} ATLAS sources → {s.variants} variants, all treated
+      as approved. Scheduled with the real rules from {DOODLE_SANDBOX_START} through{" "}
+      {s.plannedThrough}
+      {planned
+        ? ""
+        : "; this date is outside the plan, so it's a stable pick of the weekday's difficulty"}
+      . Today: {variant.difficulty}, {source.type}, {Math.round(variant.metrics.visibility * 100)}%
+      shown.
+    </p>
+  );
+}
