@@ -21,9 +21,9 @@ import {
 } from "@stoutalligator/engine/server";
 import bank from "./packs/doodle_bank.json";
 
-/** The sandbox schedule starts on this Monday and is planned this many days ahead. */
-export const DOODLE_SANDBOX_START = "2026-11-16";
-const PLANNED_DAYS = 120;
+/** The sandbox plans every day of 2026 and 2027 with the real rules (spacing included). */
+export const DOODLE_SANDBOX_START = "2026-01-01";
+const PLANNED_DAYS = 730;
 
 // Variants are cut when the bank is synced (pickDoodleVariants), not in the browser.
 const SNAPSHOT = bank as unknown as { sources: DoodleSource[]; variants: DoodleVariant[] };
@@ -42,6 +42,7 @@ const POOL: DoodlePoolItem[] = [...VARIANTS.values()].map(({ source, variant }) 
   category: source.category,
   type: source.type,
   approvedAt: "2026-11-01T00:00:00.000Z",
+  family: source.family,
 }));
 
 /** What the scheduler planned (until the bank runs dry under the 120-day source cooldown). */
