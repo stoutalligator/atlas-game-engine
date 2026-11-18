@@ -38,6 +38,8 @@ apps/playground/            Vite page that mimics the ATLAS exam page
 ```bash
 pnpm install
 pnpm dev          # playground at http://localhost:5173 (?game=risk-pool&date=2026-10-14)
+                  # Doodle plays ATLAS's real bank day by day: ?game=doodle&date=2026-11-16
+pnpm --filter playground sync:doodle ../atlas   # refresh that bank from an ATLAS checkout
 pnpm test         # vitest: rules, generators, every Box Plot / Cube Rush puzzle verified
 pnpm typecheck
 pnpm lint

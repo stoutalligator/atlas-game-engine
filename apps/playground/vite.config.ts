@@ -4,6 +4,8 @@ import { defineConfig } from "vite";
 
 // Uses the engine straight from source so edits hot-reload.
 export default defineConfig({
+  // Relative asset paths, so a build can be hosted from any folder.
+  base: "./",
   plugins: [react()],
   resolve: {
     alias: [

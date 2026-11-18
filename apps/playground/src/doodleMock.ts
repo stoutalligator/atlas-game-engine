@@ -1,95 +1,96 @@
-// An in-memory stand-in for the host's Doodle server, so the game can be
-// played in the playground. A real host keeps the answer server-side and
-// scores the submission there (see ATLAS's src/app/games/doodleActions.ts).
+// An in-memory stand-in for ATLAS's Doodle server, so the game can be played
+// day by day in the playground. It uses a snapshot of ATLAS's real bank
+// (packs/doodle_bank.json: atlas content/doodle/sources/*.json plus their cut
+// variants; refresh it with `pnpm --filter playground sync:doodle`), treats every generated
+// variant as approved, and plans days with the real scheduler — so each date
+// shows the puzzle that weekday's rules would pick. A real host keeps the
+// answer server-side and scores the submission there (ATLAS:
+// src/lib/doodleSubmissions.ts).
 import type { DoodleApi, DoodlePath, DoodleResult } from "@stoutalligator/engine";
 import {
+  type DoodlePoolItem,
   type DoodleSource,
   type DoodleVariant,
   buildDoodlePuzzle,
   doodleCredit,
+  doodleDifficultiesFor,
   doodleReference,
   parseStrokes,
-  pickDoodleVariants,
+  planDoodleSchedule,
   scoreDoodle,
-  trendSource,
 } from "@stoutalligator/engine/server";
+import bank from "./packs/doodle_bank.json";
 
-const provenance = {
-  method: "manual" as const,
-  source: "Playground sample",
-  license: "Original (ATLAS)",
-  checkedBy: "playground",
+/** The sandbox schedule starts on this Monday and is planned this many days ahead. */
+export const DOODLE_SANDBOX_START = "2026-11-16";
+const PLANNED_DAYS = 120;
+
+// Variants are cut when the bank is synced (pickDoodleVariants), not in the browser.
+const SNAPSHOT = bank as unknown as { sources: DoodleSource[]; variants: DoodleVariant[] };
+const SOURCES = SNAPSHOT.sources;
+const byId = new Map(SOURCES.map((s) => [s.id, s]));
+const VARIANTS = new Map<string, { source: DoodleSource; variant: DoodleVariant }>();
+for (const variant of SNAPSHOT.variants) {
+  const source = byId.get(variant.sourceId);
+  if (source) VARIANTS.set(variant.id, { source, variant });
+}
+
+const POOL: DoodlePoolItem[] = [...VARIANTS.values()].map(({ source, variant }) => ({
+  id: variant.id,
+  sourceId: source.id,
+  difficulty: variant.difficulty,
+  category: source.category,
+  type: source.type,
+  approvedAt: "2026-11-01T00:00:00.000Z",
+}));
+
+/** What the scheduler planned (until the bank runs dry under the 120-day source cooldown). */
+const PLAN = planDoodleSchedule(POOL, { start: DOODLE_SANDBOX_START, days: PLANNED_DAYS });
+
+const hash = (s: string) => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0;
+  return h;
 };
 
-const SOURCES: DoodleSource[] = [
-  {
-    id: "sample-apple",
-    type: "shape",
-    category: "food",
-    title: "an apple",
-    height: 900,
-    paths: [
-      [
-        [500, 260],
-        [580, 220],
-        [680, 225],
-        [760, 290],
-        [800, 400],
-        [790, 530],
-        [740, 650],
-        [660, 740],
-        [580, 760],
-        [500, 730],
-        [420, 760],
-        [340, 740],
-        [260, 650],
-        [210, 530],
-        [200, 400],
-        [240, 290],
-        [320, 225],
-        [420, 220],
-        [500, 260],
-      ],
-      [
-        [500, 260],
-        [505, 200],
-        [520, 150],
-      ],
-    ],
-    provenance,
-  },
-  trendSource({
-    id: "sample-seasonal",
-    category: "trends",
-    title: "a seasonal search trend (sample data)",
-    series: {
-      measure: "Sample seasonal interest",
-      points: Array.from({ length: 48 }, (_, i) => [
-        `${2021 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`,
-        Math.round(30 + 60 * Math.max(0, Math.sin((((i % 12) - 2) / 12) * Math.PI * 2))),
-      ]) as Array<[string, number]>,
-    },
-    provenance,
-  }),
-];
+/** The day's variant: the plan, or (outside it) a stable pick of the weekday's difficulty. */
+export function doodleSandboxPick(date: string): {
+  source: DoodleSource;
+  variant: DoodleVariant;
+  planned: boolean;
+} {
+  const planned = PLAN.schedule[date];
+  if (planned)
+    return {
+      ...(VARIANTS.get(planned) as { source: DoodleSource; variant: DoodleVariant }),
+      planned: true,
+    };
+  const wanted = doodleDifficultiesFor(date);
+  const list = POOL.filter((v) => wanted.includes(v.difficulty));
+  const pick = list[hash(date) % list.length];
+  return {
+    ...(VARIANTS.get(pick.id) as { source: DoodleSource; variant: DoodleVariant }),
+    planned: false,
+  };
+}
 
-const VARIANTS: Array<{ source: DoodleSource; variant: DoodleVariant }> = SOURCES.flatMap(
-  (source) => pickDoodleVariants(source).map((variant) => ({ source, variant })),
-);
+export const doodleSandboxStats = {
+  sources: SOURCES.length,
+  variants: POOL.length,
+  plannedThrough: PLAN.added[PLAN.added.length - 1] ?? DOODLE_SANDBOX_START,
+};
 
-const dayNum = (date: string) => Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
-const forDate = (date: string) => VARIANTS[dayNum(date) % VARIANTS.length];
 const results = new Map<string, DoodleResult>();
 
 export const doodleMock: DoodleApi = {
   async load(date) {
-    const { source, variant } = forDate(date);
+    const { source, variant } = doodleSandboxPick(date);
     return { date, puzzle: buildDoodlePuzzle(source, variant), result: results.get(date) };
   },
   async submit(date, puzzleId, strokes: DoodlePath[]) {
     const prior = results.get(date);
     if (prior) return prior;
-    const { source, variant } = forDate(date);
+    const { source, variant } = doodleSandboxPick(date);
     if (variant.id !== puzzleId) return null;
     const puzzle = buildDoodlePuzzle(source, variant);
     const parsed = parseStrokes(strokes, puzzle.width, puzzle.height);
