@@ -152,6 +152,12 @@ const TREND_STRATEGIES: Record<string, Strategy> = {
 export const strategiesFor = (type: DoodleSource["type"]) =>
   type === "trend" ? TREND_STRATEGIES : SHAPE_STRATEGIES;
 
+/** The strategies a source allows: its `cuts`, or all of its type's. */
+function sourceStrategies(source: DoodleSource): Array<[string, Strategy]> {
+  const all = Object.entries(strategiesFor(source.type));
+  return source.cuts ? all.filter(([name]) => source.cuts?.includes(name)) : all;
+}
+
 /** Measures a mask against its source. */
 export function measureVariant(source: DoodleSource, rects: readonly DoodleRect[]) {
   const region = clampRects(rects, DOODLE_WIDTH, source.height);
@@ -205,6 +211,14 @@ export function validateDoodleSource(source: DoodleSource): ValidationResult {
   if (!DOODLE_TYPES.includes(source.type)) problems.push(`unknown type "${source.type}"`);
   if (!source.category?.trim()) problems.push("category is missing");
   if (!source.title?.trim()) problems.push("title is missing");
+  if (source.cuts) {
+    const known = Object.keys(strategiesFor(source.type));
+    const bad = source.cuts.filter((c) => !known.includes(c));
+    if (!source.cuts.length || bad.length)
+      problems.push(
+        `cuts must be some of: ${known.join(", ")}${bad.length ? ` (unknown: ${bad.join(", ")})` : ""}`,
+      );
+  }
   if (!(source.height >= 300 && source.height <= 1400)) problems.push("height must be 300–1400");
   if (!Array.isArray(source.paths) || source.paths.length === 0) problems.push("no paths");
   const all = [...(source.paths ?? []), ...(source.guides ?? [])];
@@ -330,7 +344,7 @@ export function doodleCandidates(source: DoodleSource): DoodleCandidate[] {
   const b = bounds(source.paths);
   if (!b) return [];
   const out: DoodleCandidate[] = [];
-  for (const [name, strategy] of Object.entries(strategiesFor(source.type))) {
+  for (const [name, strategy] of sourceStrategies(source)) {
     for (const d of DOODLE_DIFFICULTIES) {
       const target = DOODLE_BANDS[d].target;
       const rects = tune(source, strategy, b, target);

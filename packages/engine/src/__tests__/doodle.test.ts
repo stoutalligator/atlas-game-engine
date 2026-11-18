@@ -658,3 +658,31 @@ describe("Doodle scheduling", () => {
     expect(doodleInventoryLevel(10)).toBe("critical");
   });
 });
+
+describe("Doodle source cuts", () => {
+  it("limits a source to its allowed cuts", () => {
+    const mirror = { ...ring, id: "ring-mirror", cuts: ["side-left", "side-right"] };
+    const vs = pickDoodleVariants(mirror);
+    expect(vs.length).toBeGreaterThan(0);
+    for (const v of vs) expect(["side-left", "side-right"]).toContain(v.mask.strategy);
+    expect(validateDoodleSource({ ...ring, cuts: ["sideways"] }).ok).toBe(false);
+  });
+});
+
+describe("Doodle eraser", () => {
+  it("takes a larger radius when the board is small on screen", () => {
+    const region: DoodleRect[] = [{ x: 0, y: 0, w: 1000, h: 800 }];
+    const base = drawingReducer(emptyDrawing(), {
+      kind: "pen",
+      points: [
+        [100, 400],
+        [900, 400],
+      ],
+      region,
+    });
+    const small = drawingReducer(base, { kind: "erase", points: [[500, 440]] });
+    expect(small).toBe(base); // 40 units away: outside the default radius
+    const big = drawingReducer(base, { kind: "erase", points: [[500, 440]], radius: 48 });
+    expect(big.strokes).toHaveLength(2);
+  });
+});

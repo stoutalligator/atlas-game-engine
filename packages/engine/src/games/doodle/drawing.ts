@@ -20,7 +20,11 @@ export const emptyDrawing = (): DrawingState => ({ strokes: [], undo: [] });
 
 export type DrawingAction =
   | { kind: "pen"; points: DoodlePath; region: readonly DoodleRect[] }
-  | { kind: "erase"; points: DoodlePath }
+  | {
+      kind: "erase";
+      points: DoodlePath /** Canvas units; defaults to DOODLE_ERASER_RADIUS. */;
+      radius?: number;
+    }
   | { kind: "undo" }
   | { kind: "clear" };
 
@@ -47,7 +51,11 @@ export function drawingReducer(state: DrawingState, action: DrawingAction): Draw
     case "erase": {
       if (action.points.length === 0 || state.strokes.length === 0) return state;
       const dense = state.strokes.map((s) => densify(s, STEP));
-      const next = eraseStrokes(dense, densify(action.points, STEP), DOODLE_ERASER_RADIUS);
+      const next = eraseStrokes(
+        dense,
+        densify(action.points, STEP),
+        Math.max(DOODLE_ERASER_RADIUS, action.radius ?? 0),
+      );
       const changed =
         next.length !== state.strokes.length ||
         next.reduce((n, s) => n + s.length, 0) !== dense.reduce((n, s) => n + s.length, 0);
