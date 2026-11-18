@@ -106,6 +106,9 @@ export function verifyGameResult({
         const replay = replayLog(puzzle, proof.log);
         return replay ? { solved: true, hints: replay.hintsUsed, moves: replay.guessCount } : null;
       }
+      case "doodle":
+        // Scored on the host's server from the submitted strokes (see scoreDoodle).
+        return null;
       case "black-swan":
         // Scored on the host's server as each answer is locked in (see scoreGuess):
         // there is no client proof to replay.
@@ -134,6 +137,7 @@ export function minPlausibleSeconds(game: GameId, score: VerifiedScore): number 
       return 8;
     case "assumption-drift":
     case "black-swan":
+    case "doodle":
       return 1;
   }
 }
@@ -202,3 +206,7 @@ export type { GameId };
 // difficulty, safety, recurrence, queue) and the player-state rules the
 // server replays. Hosts run the pipeline in scripts or scheduled jobs.
 export * from "./games/wordweb/logic.js";
+
+// Doodle: geometry, scoring, variant generation and validation, scheduling.
+// Hosts score submissions and run the content pipeline with these.
+export * from "./games/doodle/logic.js";

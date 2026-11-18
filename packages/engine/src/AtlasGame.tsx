@@ -3,6 +3,7 @@ import { AssumptionDrift } from "./games/assumption-drift/AssumptionDrift.js";
 import { BlackSwan, type BlackSwanApi } from "./games/black-swan/BlackSwan.js";
 import { BoxPlot } from "./games/box-plot/BoxPlot.js";
 import { CubeRush } from "./games/cube-rush/CubeRush.js";
+import { Doodle, type DoodleApi } from "./games/doodle/Doodle.js";
 import { RiskPool } from "./games/risk-pool/RiskPool.js";
 import { WordWeb } from "./games/wordweb/WordWeb.js";
 import { ResultTagsContext } from "./ui/Shell.js";
@@ -16,6 +17,8 @@ export interface AtlasGameProps extends DailyGameProps {
   packs?: readonly unknown[];
   /** Black Swan only: the host's server calls (answers and rarity stay server-side). */
   blackSwanApi?: BlackSwanApi;
+  /** Doodle only: the host's server calls (the answer stays server-side until submitting). */
+  doodleApi?: DoodleApi;
   /**
    * Tags for today's finish, from the host's records ("Personal best!",
    * "No hints!", "🔥 5-day streak"). Shown in the result panel once the
@@ -33,7 +36,13 @@ export function AtlasGame({ resultTags = [], ...props }: AtlasGameProps) {
   );
 }
 
-function Game({ game, packs = [], blackSwanApi, ...props }: Omit<AtlasGameProps, "resultTags">) {
+function Game({
+  game,
+  packs = [],
+  blackSwanApi,
+  doodleApi,
+  ...props
+}: Omit<AtlasGameProps, "resultTags">) {
   switch (game) {
     case "assumption-drift":
       return <AssumptionDrift packs={packs} {...props} />;
@@ -50,6 +59,12 @@ function Game({ game, packs = [], blackSwanApi, ...props }: Omit<AtlasGameProps,
         <BlackSwan api={blackSwanApi} {...props} />
       ) : (
         <div className="ag-root ag-error">Black Swan needs a blackSwanApi from the host.</div>
+      );
+    case "doodle":
+      return doodleApi ? (
+        <Doodle api={doodleApi} {...props} />
+      ) : (
+        <div className="ag-root ag-error">Doodle needs a doodleApi from the host.</div>
       );
   }
 }

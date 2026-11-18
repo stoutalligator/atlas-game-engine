@@ -27,6 +27,12 @@ body {
 .pg-panel[data-accent="amber"] {
   border-color: #fcd34d;
 }
+.pg-panel[data-accent="sky"] {
+  border-color: #7dd3fc;
+}
+.pg-game[data-accent="sky"] svg {
+  color: #0284c7;
+}
 .pg-panel[data-accent="rose"] {
   border-color: #fda4af;
 }

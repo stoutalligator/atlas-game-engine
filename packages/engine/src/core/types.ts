@@ -4,7 +4,8 @@ export type GameId =
   | "box-plot"
   | "risk-pool"
   | "black-swan"
-  | "wordweb";
+  | "wordweb"
+  | "doodle";
 
 export interface GameStat {
   label: string;
@@ -41,6 +42,8 @@ export interface GameScore {
   /** Black Swan: points out of 1000, and mean rarity percentile (tie-break). */
   points?: number;
   rarity?: number;
+  /** Doodle: 0–100 match. */
+  match?: number;
 }
 
 /**
