@@ -220,10 +220,14 @@ export function eraseStrokes(
   return out;
 }
 
-/** Total absolute turning (radians) along a path, ignoring tiny segments. */
-export function turning(path: DoodlePath, minSeg = 6): number {
-  const pts = simplify(path, 1.5).filter(
-    (p, i, arr) => i === 0 || dist(arr[i - 1], p) >= minSeg || i === arr.length - 1,
+/**
+ * Total absolute turning (radians) along a path at finger scale: wiggles
+ * smaller than `scale` units (well inside the scoring tolerance) are smoothed
+ * away first, since nobody is marked on them.
+ */
+export function turning(path: DoodlePath, scale = 8): number {
+  const pts = simplify(path, scale).filter(
+    (p, i, arr) => i === 0 || dist(arr[i - 1], p) >= scale * 1.5 || i === arr.length - 1,
   );
   let total = 0;
   for (let i = 2; i < pts.length; i++) {

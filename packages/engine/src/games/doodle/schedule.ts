@@ -106,6 +106,7 @@ export function planDoodleSchedule(
 
   const added: string[] = [];
   const warnings: string[] = [];
+  const unfilled: string[] = [];
   for (let i = 0; i < days; i++) {
     const date = addDays(start, i);
     if (schedule[date]) continue;
@@ -128,9 +129,7 @@ export function planDoodleSchedule(
       );
     }
     if (candidates.length === 0) {
-      warnings.push(
-        `${date}: no eligible Doodle (every approved variant is used or its source is cooling down).`,
-      );
+      unfilled.push(date);
       continue;
     }
     const recent = (k: number) => dayMeta.get(today - k);
@@ -155,6 +154,11 @@ export function planDoodleSchedule(
     note(pick.id, today);
     added.push(date);
   }
+  if (unfilled.length)
+    warnings.push(
+      `${unfilled.length === 1 ? unfilled[0] : `${unfilled.length} days (${unfilled[0]} to ${unfilled[unfilled.length - 1]})`}: ` +
+        `no eligible Doodle (${pool.length === 0 ? "nothing is approved yet" : "every approved variant is used or its source is cooling down"}).`,
+    );
   const sorted = Object.fromEntries(
     Object.entries(schedule).sort(([a], [b]) => a.localeCompare(b)),
   );

@@ -442,7 +442,7 @@ describe("Doodle content", () => {
     expect(
       validateDoodleSource({ ...ring, provenance: { ...provenance, method: "open-data" } })
         .problems,
-    ).toContain("non-manual provenance needs a url or attribution");
+    ).toContain("public-domain and open-data sources need a url or attribution");
     expect(
       validateDoodleSource({
         ...ring,

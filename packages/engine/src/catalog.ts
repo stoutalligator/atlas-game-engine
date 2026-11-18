@@ -131,6 +131,7 @@ export const GAME_CATALOG: readonly GameInfo[] = [
       "Submit when you're happy. You get one submission a day, and it's final.",
       "The real answer traces itself over your drawing, then you see your % match: right place and the whole missing part both count. Speed doesn't.",
       "Monday is easy; the weekend is hard. Harder days show less, they aren't marked more strictly.",
+      "New here? Press Practice for a quick round on a circle. It never counts.",
     ],
     accent: "sky",
     minutes: "1–2 min",

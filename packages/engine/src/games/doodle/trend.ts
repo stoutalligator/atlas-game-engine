@@ -27,8 +27,13 @@ export interface TrendSourceInput {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-/** "2019-01" → "2019", "2019-07" stays; anything else is shown as given. */
-const shortPeriod = (p: string) => (/^\d{4}-01(-01)?$/.test(p) ? p.slice(0, 4) : p);
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** Axis label for a period: "2019" for January (or a bare year), "Jul 2019" otherwise. */
+export function shortPeriod(p: string): string {
+  const m = /^(\d{4})-(\d{2})/.exec(p);
+  if (!m) return p;
+  return m[2] === "01" ? m[1] : `${MONTHS[Number(m[2]) - 1] ?? m[2]} ${m[1]}`;
+}
 
 const fmt = (n: number) =>
   Math.abs(n) >= 1000 ? n.toLocaleString("en-US", { maximumFractionDigits: 0 }) : String(round1(n));

@@ -320,7 +320,12 @@ function Board({ puzzle, initial, done, onDraft, submit, onRevealed, renderDone 
     const p = toUnits(e.clientX, e.clientY);
     if (!p) return;
     e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      // Keeps the stroke going when the finger leaves the board; strokes are clipped anyway.
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Some browsers refuse capture for pen/emulated pointers; drawing still works without it.
+    }
     pointerRef.current = { id: e.pointerId, type: e.pointerType };
     liveRef.current = [p];
     setLive([p]);

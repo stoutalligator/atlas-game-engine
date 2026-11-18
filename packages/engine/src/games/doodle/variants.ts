@@ -60,7 +60,7 @@ export const DOODLE_LIMITS = {
   /** Turning per 100 units of missing geometry above which it's too detailed to draw. */
   maxDetail: 3.2,
   /** Detail at which a cut counts one level harder than its visibility says. */
-  hardDetail: 1.6,
+  hardDetail: 2.0,
   /** Two variants of a source whose masks overlap more than this are too similar. */
   maxMaskOverlap: 0.6,
   /** Most points in a source (more = unnecessary complexity; simplify first). */
@@ -171,8 +171,15 @@ export function measureVariant(source: DoodleSource, rects: readonly DoodleRect[
   return { region, cut, metrics };
 }
 
-/** Difficulty from visibility, one level harder when the missing part is intricate. */
-export function difficultyFor(metrics: DoodleVariantMetrics): DoodleDifficulty | null {
+/**
+ * Difficulty from visibility, one level harder when the missing part is
+ * intricate. A trend that isn't smooth is never easy: it leans on knowing the
+ * data, not just on geometry.
+ */
+export function difficultyFor(
+  metrics: DoodleVariantMetrics,
+  type?: DoodleSource["type"],
+): DoodleDifficulty | null {
   const v = metrics.visibility;
   const band = DOODLE_DIFFICULTIES.find(
     (d) => v >= DOODLE_BANDS[d].min - 1e-9 && v <= DOODLE_BANDS[d].max + 1e-9,
@@ -180,6 +187,7 @@ export function difficultyFor(metrics: DoodleVariantMetrics): DoodleDifficulty |
   if (!band) return null;
   if (metrics.detail >= DOODLE_LIMITS.hardDetail && band !== "hard")
     return band === "easy" ? "medium" : "hard";
+  if (type === "trend" && band === "easy" && metrics.detail >= 1) return "medium";
   return band;
 }
 
@@ -215,8 +223,13 @@ export function validateDoodleSource(source: DoodleSource): ValidationResult {
   const pv = source.provenance;
   if (!pv?.method || !pv.source?.trim() || !pv.license?.trim())
     problems.push("provenance needs method, source and license");
-  if (pv && pv.method !== "manual" && !pv.url && !pv.attribution)
-    problems.push("non-manual provenance needs a url or attribution");
+  if (
+    pv &&
+    (pv.method === "public-domain" || pv.method === "open-data") &&
+    !pv.url &&
+    !pv.attribution
+  )
+    problems.push("public-domain and open-data sources need a url or attribution");
   if (!pv?.checkedBy?.trim())
     problems.push("V1 sources must be human-checked (provenance.checkedBy)");
   if (source.type === "trend" && (!source.series || source.series.points.length < 8))
@@ -322,7 +335,7 @@ export function doodleCandidates(source: DoodleSource): DoodleCandidate[] {
       const target = DOODLE_BANDS[d].target;
       const rects = tune(source, strategy, b, target);
       const check = validateDoodleVariant(source, rects);
-      const difficulty = difficultyFor(check.metrics);
+      const difficulty = difficultyFor(check.metrics, source.type);
       const problems = [...check.problems];
       if (!difficulty) problems.push("visibility doesn't fit a difficulty band");
       out.push({
