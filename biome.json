@@ -23,6 +23,6 @@
     }
   },
   "files": {
-    "ignore": ["node_modules", "dist", "*.d.ts"]
+    "ignore": ["node_modules", "dist", "*.d.ts", "apps/playground/src/packs/doodle_bank.json"]
   }
 }
