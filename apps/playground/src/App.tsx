@@ -5,6 +5,7 @@ import {
   type GameId,
   type GameResult,
   getGameInfo,
+  isGameId,
   localDateKey,
 } from "@stoutalligator/engine";
 import { useEffect, useState } from "react";
@@ -26,7 +27,11 @@ const PACKS = [pack1, pack2, pack3];
 /** Mimics the ATLAS exam page so games can be checked in context. */
 export function App() {
   const params = new URLSearchParams(window.location.search);
-  const [game, setGame] = useState<GameId>((params.get("game") as GameId) ?? "risk-pool");
+  // ?game=… locally; #doodle-style hashes too, for hosted copies where only a hash survives.
+  const hashGame = window.location.hash.slice(1);
+  const [game, setGame] = useState<GameId>(
+    (params.get("game") as GameId) ?? (isGameId(hashGame) ? hashGame : "risk-pool"),
+  );
   const [date, setDate] = useState(params.get("date") ?? localDateKey());
   const [nonce, setNonce] = useState(0);
   const [last, setLast] = useState<GameResult | null>(null);
