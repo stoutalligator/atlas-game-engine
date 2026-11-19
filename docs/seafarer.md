@@ -161,7 +161,7 @@ break the symmetry.
 
 | Days | Focus |
 |---|---|
-| 1–5 | Voyages around islands and reefs (tips: every move is final; the straight line isn't always quickest; returning to harbor costs a day). From day 3 the obvious route loses 1–2 days. |
+| 1–5 | Voyages with the **base mechanic, shallows, from day 1** (user decision 2026-11-19: no day is trivial). Shallows add 1–3 days to the best route; the obvious route loses 1–2 days (at most 2 on days 1–3) and always arrives. Every pack does the same on its first days. |
 | 6–10 | Shallows in the way (they add 1–2 days to the best route); cutting straight through is the lure (+2–3). |
 | 11–15 | Currents save 1–2 days; the wrong one carries you off (+1–3). Days 14–15 may trap the obvious route. |
 | 16–20 | Rounds: 2 then 3 ports, a round trip; nearest-first is a trap (+2–4). |
