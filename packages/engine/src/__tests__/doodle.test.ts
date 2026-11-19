@@ -13,6 +13,7 @@ import {
   clipStrokes,
   cutPaths,
   doodleInventoryLevel,
+  doodleMirrorAxis,
   doodleReference,
   doodleShareText,
   drawingReducer,
@@ -661,10 +662,10 @@ describe("Doodle scheduling", () => {
 
 describe("Doodle source cuts", () => {
   it("limits a source to its allowed cuts", () => {
-    const mirror = { ...ring, id: "ring-mirror", cuts: ["side-left", "side-right"] };
+    const mirror = { ...ring, id: "ring-top", cuts: ["side-top", "side-bottom"] };
     const vs = pickDoodleVariants(mirror);
     expect(vs.length).toBeGreaterThan(0);
-    for (const v of vs) expect(["side-left", "side-right"]).toContain(v.mask.strategy);
+    for (const v of vs) expect(["side-top", "side-bottom"]).toContain(v.mask.strategy);
     expect(validateDoodleSource({ ...ring, cuts: ["sideways"] }).ok).toBe(false);
   });
 });
@@ -765,5 +766,47 @@ describe("Doodle: too obvious", () => {
   it("keeps curvy outlines", () => {
     expect(pickDoodleVariants(ring).length).toBeGreaterThan(0);
     expect(pickDoodleVariants(apple).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Doodle: symmetric shapes keep their middle visible", () => {
+  // A bell: symmetric about x = 500.
+  const right: DoodlePath = [
+    [500, 120],
+    [560, 130],
+    [610, 200],
+    [630, 350],
+    [650, 520],
+    [720, 640],
+    [760, 680],
+    [500, 680],
+  ];
+  const outline: DoodlePath = [
+    ...right,
+    ...right
+      .slice(1, -1)
+      .reverse()
+      .map(([x, y]) => [1000 - x, y] as [number, number]),
+    [500, 120],
+  ];
+  const bell: DoodleSource = { ...ring, id: "bell", height: 800, paths: [outline] };
+  it("detects the axis", () => {
+    expect(doodleMirrorAxis(bell)).toBe(500);
+    expect(
+      doodleMirrorAxis({
+        ...bell,
+        paths: [outline.map(([x, y]) => [x + (y > 400 ? 60 : 0), y] as [number, number])],
+      }),
+    ).toBeNull();
+  });
+  it("rejects a side cut past the middle", () => {
+    const past = validateDoodleVariant(bell, [{ x: 420, y: 0, w: 580, h: 800 }]);
+    expect(past.problems.join()).toMatch(/middle is hidden/);
+  });
+  it("keeps a cut that leaves some of both sides visible", () => {
+    const corner = validateDoodleVariant(bell, [{ x: 520, y: 0, w: 480, h: 450 }]);
+    expect(corner.problems.join()).not.toMatch(/middle is hidden/);
+    for (const v of pickDoodleVariants(bell))
+      expect(validateDoodleVariant(bell, v.mask.rects).ok).toBe(true);
   });
 });

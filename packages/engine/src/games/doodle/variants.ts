@@ -16,6 +16,7 @@ import {
   inRects,
   isClosed,
   maskIoU,
+  mirrorAxis,
   pathLength,
   pointDistance,
   segmentDistance,
@@ -76,7 +77,21 @@ export const DOODLE_LIMITS = {
   minTrendBend: 50,
   /** Outlines and lines: some hidden piece, simplified at this tolerance (units), must be more than three straight edges. */
   cornerTolerance: 12,
+  /**
+   * Mirror-symmetric outlines: the visible part must reach at least this share
+   * of the width past the axis on both sides, so the player can see where the
+   * middle is (and so how wide the hidden half is).
+   */
+  axisReach: 0.06,
 } as const;
+
+const axisCache = new WeakMap<readonly DoodlePath[], number | null>();
+/** The source's vertical mirror axis, if it has one (shapes and lines only). */
+export function sourceMirrorAxis(source: DoodleSource): number | null {
+  if (source.type === "trend") return null;
+  if (!axisCache.has(source.paths)) axisCache.set(source.paths, mirrorAxis(source.paths));
+  return axisCache.get(source.paths) ?? null;
+}
 
 /** Margin (units) the mask extends past the source, so the region has room around the answer. */
 const PAD = 45;
@@ -159,9 +174,24 @@ const TREND_STRATEGIES: Record<string, Strategy> = {
 export const strategiesFor = (type: DoodleSource["type"]) =>
   type === "trend" ? TREND_STRATEGIES : SHAPE_STRATEGIES;
 
-/** The strategies a source allows: its `cuts`, or all of its type's. */
+/** Symmetric shapes also get "draw the other half": the mask's edge on the axis. */
+const HALF_STRATEGIES: Record<string, Strategy> = {
+  "half-left": (b, _t, h) => {
+    const s = span(b, h);
+    return [rect(s.x0, s.y0, b.x + b.w / 2, s.y1)];
+  },
+  "half-right": (b, _t, h) => {
+    const s = span(b, h);
+    return [rect(b.x + b.w / 2, s.y0, s.x1, s.y1)];
+  },
+};
+
+/** The strategies a source allows: its `cuts`, or all of its type's (plus halves when symmetric). */
 function sourceStrategies(source: DoodleSource): Array<[string, Strategy]> {
-  const all = Object.entries(strategiesFor(source.type));
+  const all = Object.entries({
+    ...strategiesFor(source.type),
+    ...(sourceMirrorAxis(source) !== null ? HALF_STRATEGIES : {}),
+  });
   return source.cuts ? all.filter(([name]) => source.cuts?.includes(name)) : all;
 }
 
@@ -241,7 +271,10 @@ export function validateDoodleSource(source: DoodleSource): ValidationResult {
   if (source.family && !source.family.every((f) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(f)))
     problems.push("family entries must be lowercase slugs");
   if (source.cuts) {
-    const known = Object.keys(strategiesFor(source.type));
+    const known = [
+      ...Object.keys(strategiesFor(source.type)),
+      ...(source.type === "trend" ? [] : Object.keys(HALF_STRATEGIES)),
+    ];
     const bad = source.cuts.filter((c) => !known.includes(c));
     if (!source.cuts.length || bad.length)
       problems.push(
@@ -316,6 +349,22 @@ export function validateDoodleVariant(
     } else if (cut.missing.every((m) => simplify(m, L.cornerTolerance).length <= 4)) {
       problems.push("too obvious: the missing part is just a few straight edges");
     }
+  }
+  // Symmetric outlines invite mirroring what's visible, which only works when
+  // the player can see where the middle is: some ink on both sides of the axis.
+  const axis = sourceMirrorAxis(source);
+  if (axis !== null && metrics.missingRuns > 0) {
+    const w = bounds(source.paths)?.w ?? 0;
+    const reach = Math.max(20, L.axisReach * w);
+    const xs = cut.visible.flat().map(([x]) => x);
+    const bothSidesShown = xs.some((x) => x <= axis - reach) && xs.some((x) => x >= axis + reach);
+    // Or exactly one half hidden: the visible half ends on the axis, so mirroring it is the answer.
+    const hidden = cut.missing.flat().map(([x]) => x);
+    const oneSideHidden =
+      hidden.every((x) => x >= axis - L.anchorDistance) ||
+      hidden.every((x) => x <= axis + L.anchorDistance);
+    if (!bothSidesShown && !oneSideHidden)
+      problems.push("its middle is hidden: a symmetric shape needs some of both sides visible");
   }
   // Ambiguity: every missing piece must connect to something the player can see,
   // and a closed outline's gap must be bounded on both sides.
