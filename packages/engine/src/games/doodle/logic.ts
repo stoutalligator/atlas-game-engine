@@ -44,6 +44,7 @@ export {
   doodleVariantId,
   measureVariant as measureDoodleVariant,
   pickDoodleVariants,
+  sourceMirrorAxis as doodleMirrorAxis,
   validateDoodleSource,
   validateDoodleVariant,
 } from "./variants.js";

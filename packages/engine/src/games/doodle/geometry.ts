@@ -175,6 +175,27 @@ export function clipStrokes(
   );
 }
 
+/**
+ * The x of a vertical mirror axis when the outline is left–right symmetric
+ * (every point, flipped about the middle of the bounds, lands within `tol`
+ * units of the outline), else null.
+ */
+export function mirrorAxis(paths: readonly DoodlePath[], tol = 6): number | null {
+  const b = bounds(paths);
+  if (!b || b.w < 1) return null;
+  const cx = b.x + b.w / 2;
+  const segs: Array<[DoodlePoint, DoodlePoint]> = [];
+  for (const p of paths) for (let i = 1; i < p.length; i++) segs.push([p[i - 1], p[i]]);
+  const pts = paths.flatMap((p) => densify(p, 12));
+  let off = 0;
+  for (const [x, y] of pts) {
+    const m: DoodlePoint = [2 * cx - x, y];
+    if (!segs.some(([a, c]) => segmentDistance(m, a, c) <= tol) && ++off > pts.length * 0.03)
+      return null;
+  }
+  return cx;
+}
+
 /** Distance from p to segment ab. */
 export function segmentDistance(p: DoodlePoint, a: DoodlePoint, b: DoodlePoint): number {
   const dx = b[0] - a[0];
