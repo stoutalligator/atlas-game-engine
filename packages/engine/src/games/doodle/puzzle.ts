@@ -147,7 +147,6 @@ export function doodleShareText(date: string, difficulty: DoodleDifficulty, scor
     [
       `ATLAS ${getGameInfo("doodle").title} #${puzzleNumber(date)} · ${DIFFICULTY_LABEL[difficulty]}`,
       `✏️ ${score}% match`,
-      doodleBar(score),
     ].join("\n"),
   );
 }
