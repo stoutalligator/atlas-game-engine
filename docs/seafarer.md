@@ -3,7 +3,7 @@
 Daily expedition game: route-planning puzzles on an illustrated hex sea chart, released as
 monthly packs of 30 challenges. First pack: **The Shattered Isles** (November).
 
-Status (2026-11-18): engine prototype is playable in the playground (`pnpm dev`, then
+Status (2026-11-19): engine prototype is playable in the playground (`pnpm dev`, then
 `?game=seafarer`). The atlas host (progress, unlocks, badges, pack leaderboard) is planned below
 and not built yet. The gameplay should be playtested first.
 
@@ -21,6 +21,7 @@ and not built yet. The gameplay should be playtested first.
 | Charters | Kept (cargo-scored), alongside the days-scored voyages and rounds. |
 | Storms (round 3) | A moving storm front with a forecast. Stormy hexes can't be entered, and **Drop anchor** waits a day. Storm season is days 21–25, plus Storm Coast and the finale. |
 | Daily progression (round 3) | **Expedition chart**: the month is one stitched map. Regions sit on one world hex lattice, linked by sea lanes, and each day departs from where yesterday ended. Opening the game flies from the whole chart into today's region. |
+| Playtest round (2026-11-19) | Every day must earn its place: the day's mechanic changes the answer, and the obvious plan-by-eye route **costs stars** (it looks right and is too slow). Gentle days stay winnable by that route; later days may trap it. Storms show a 3-day forecast. The expedition chart is **one stitched map** with no gaps; each harbor faces yesterday's region; a port name is never reused in a month. |
 | Look | ATLAS frame (slate panels, 2px borders, 4px corners, pressed shadows, uppercase labels, cyan accents) around an illustrated hex-tile chart. |
 
 ## Rules
@@ -36,8 +37,9 @@ and not built yet. The gameplay should be playtested first.
   (`canFinish`).
 - **Return to harbor** restarts the voyage and costs one day in port. That day counts toward
   days at sea and uses a day of provisions.
-- **Storms** cover a few hexes and drift one hex a day in a fixed direction, shown as a dashed
-  forecast of tomorrow. The ship can't arrive in (or drift into) a hex that's stormy on the day
+- **Storms** cover a few hexes and drift one hex a day in a fixed direction. The forecast shows
+  tomorrow as dashed hexes and the two days after as fainter ones marked +2 and +3, so a route
+  can be planned around a front instead of guessed. The ship can't arrive in (or drift into) a hex that's stormy on the day
   it would get there. **Drop anchor** (tap your own ship, the button, or S) waits a day, unless
   the storm will be on that hex tomorrow. The storm clock restarts with each voyage. The solver
   stays exact by searching over (hex, ports visited, day), with anchoring as a move.
@@ -58,24 +60,29 @@ and not built yet. The gameplay should be playtested first.
 
 ## Expedition chart
 
-The month is one journey (`ExpeditionChart.tsx`):
+The month is one journey on **one hex map** (`expedition.ts` lays it out; `ExpeditionChart.tsx`
+draws it):
 
-- All 30 regions sit on **one world hex lattice**, in a snake of 5 per row. Each region keeps
-  its real hexes at a whole-hex offset (even rows, so odd-row shifts line up). The channels
-  between regions are the same open sea, drawn as one repeating hex pattern, so the chart reads
-  as a single map rather than 30 cards.
-- **Continuity**: each day's harbor is named after where the previous day's voyage ended
-  (`voyageExit`, applied by `linkVoyages` in the pack build), and a dotted sea lane joins them.
+- Every region sits in a block of the same size (the pack's largest chart) on one world
+  lattice, in a snake of 5 per row: west to east, then east to west, turning south at the end
+  of each row (`regionSides`). Blocks touch, so there are no channels or frames. The hexes
+  around a smaller region are **filler** sea with the odd island, generated from the pack id
+  and kept a hex clear of every region. The whole month is rendered as a single `Terrain`.
+- **Continuity**: the build places each day's harbor within two hexes of the side facing
+  yesterday's region (`entrySide`), and prefers charts whose voyage ends near the side facing
+  tomorrow's (`exitSide`, a ranking term). The harbor takes the name of where yesterday ended
+  (`voyageExit`: the port; home for round trips and charters; for rounds that end away from
+  home, the last port of the **best route**). A dotted sea lane follows real water between them
+  (`seaLane`).
+- **Names**: `linkVoyages` gives every port a name not used before in the pack (pools of 65
+  per setting); the build fails if a pool runs out.
 - **Arrival**: the game opens on the whole chart, holds a beat, then glides the camera (an
   eased viewBox animation) down to today's region and hands over to the puzzle. "Chart" (in the
   header) and "View expedition chart" (after a voyage) step back out.
 - Finished regions show the player's inked route and stars (the host passes the final taps in
-  `finished`). Today's region has a gold dashed frame and the ship. Future regions sit under a
-  blurred mist that lets faint island shapes show through.
-
-Not done yet: the generator doesn't yet place each day's harbor on the edge facing the
-previous region, so lanes sometimes cross a region rather than meeting at its edge. That's an
-optional constraint for a later pass.
+  `finished`). Today's region has a gold dashed outline and the ship. Everything still ahead,
+  including blocks past the month's last day, sits under **one bank of fog** (one blurred
+  layer, so neighbouring regions merge).
 
 ## Engine layout (`packages/engine/src/games/seafarer/`)
 
@@ -88,7 +95,8 @@ optional constraint for a later pass.
 | `packs/shattered-isles.plan.ts` | One recipe per day (mechanics, size, par range, minimum metrics, title, tip). |
 | `packs/shattered-isles.ts` | **Generated** pack data. Don't edit by hand. |
 | `theme.ts` + `styles/seafarer.css` | Words and palette for a pack (`data-theme`). |
-| `ExpeditionChart.tsx` | The month's stitched chart and the fly-in. |
+| `expedition.ts` | The stitched map: region sides, world layout, filler, sea lanes. Pure. |
+| `ExpeditionChart.tsx` | Draws the stitched chart; the fly-in. |
 | `SeafarerMap.tsx`, `Seafarer.tsx` | The chart (one SVG) and the game screen (track, header, provisions, result). |
 
 Server side, `verifyGameResult({ game: "seafarer", proof: { puzzleId, taps } })` replays the taps
@@ -108,6 +116,13 @@ pnpm --filter @stoutalligator/engine exec tsx scripts/build-seafarer-pack.ts --r
    - **currentGain**: days the currents save (current days require them).
    - **shallowCost**: days the shallows add (shallows days require them).
    - **greedyGap**: how much the obvious nearest-first plan loses (99 = it can't finish at all).
+   - **lureGap**: days the **naive sailor** loses to par (99 = never arrives). `naiveDays`
+     simulates a player who plans by eye: fewest hexes to the nearest port left, aiming
+     straight, not pricing shallows, not riding currents on purpose, not reading the forecast.
+     When the sea pushes back they adapt: re-plan after drifting, wait at anchor for a storm or
+     back away from one, and plan around a current they can't sail up.
+   - **stormCost**: days the storms add to par.
+   - **exitDistance**: hexes from where the voyage ends to the side facing tomorrow's region.
    - **openings**: first moves that stay within a day of par.
    - **openness**: share of open sea.
    - **routes / kinds**: genuinely different viable routes, and how many kinds they cover
@@ -119,11 +134,20 @@ pnpm --filter @stoutalligator/engine exec tsx scripts/build-seafarer-pack.ts --r
    uses the mechanic **and** one that doesn't (`requireKinds` + `minKinds: 2`), so riding the
    current or cutting through the shallows is a choice, not the only way. Charters must make a real choice
    (best < all the cargo, and all cargo is reachable).
-4. Survivors are ranked by an interest score; the top one is used unless a reviewer pinned a
+   Per-day `TUNING` in the plan adds: `minLureGap` (the obvious route must cost that many days,
+   so not thinking costs a star), mechanic minimums (`minShallowCost`, `minCurrentGain`,
+   `minStormCost`: the day's mechanic must change the answer, not just decorate), and
+   `naiveFinishes` (on gentler days the obvious route still arrives within the provisions, so no
+   day is hopeless). A day with no passing chart is reported at the end of the build, and
+   nothing is written.
+4. Survivors are ranked by an interest score (a bigger lure ranks higher; a long lane to
+   tomorrow's region ranks lower); the top one is used unless a reviewer pinned a
    seed with `pick`. `--review` writes the top 6 per day for the playground's **Review
    candidates** page, which shows each chart with its optimal route and metrics.
 5. Tests re-prove every challenge: places on open sea, par = solver optimum, charter best is exact
-   and less than all the cargo, and the reference route scores ★★★ through the server path.
+   and less than all the cargo, the reference route scores ★★★ through the server path, the
+   day's recipe still holds (lure, mechanics), harbors face yesterday's region, port names are
+   unique, and every sea lane on the stitched map connects.
 
 Second lesson: requiring currents to save 3+ days made them *dominate*, leaving one obvious
 route. The fix was the kinds requirement above, plus *guided* currents that start near one
@@ -137,12 +161,12 @@ break the symmetry.
 
 | Days | Focus |
 |---|---|
-| 1–5 | Voyages around islands and reefs (tips teach tapping, dragging and cutting back). |
-| 6–10 | Shallows; provisions tighten (slack 3 → 2). |
-| 11–15 | Currents (each chart's par depends on riding them). |
-| 16–20 | Rounds: 2 then 3 ports, a round trip; nearest-first is a trap. |
-| 21–23 | Four-port rounds, round trips, slack 1–2. |
-| 24–29 | Charters mixed with the hardest rounds. |
+| 1–5 | Voyages around islands and reefs (tips: every move is final; the straight line isn't always quickest; returning to harbor costs a day). From day 3 the obvious route loses 1–2 days. |
+| 6–10 | Shallows in the way (they add 1–2 days to the best route); cutting straight through is the lure (+2–3). |
+| 11–15 | Currents save 1–2 days; the wrong one carries you off (+1–3). Days 14–15 may trap the obvious route. |
+| 16–20 | Rounds: 2 then 3 ports, a round trip; nearest-first is a trap (+2–4). |
+| 21–25 | Storm season: the storm adds days to the best route, and sailing blind into it costs more (+2–3). |
+| 26–29 | Charters (greedy cargo choice loses) mixed with the hardest rounds (+4). |
 | 30 | **The Shattered Crown**: four ports and home, every mechanic. |
 
 ## Packs
@@ -156,6 +180,44 @@ December uses **the same mechanics and difficulty curve**: day N reuses November
 (same validation), with its own seeds, polar names, titles and tips, and slightly larger ice
 islands. Day 31 is a second finale with two blizzards. Every challenge id carries its pack
 (`frozen-passages-07`), so the server's `seafarerPuzzle` finds it in either pack.
+
+### January: The Lantern Sea (planned, decided 2026-11-19)
+
+The third pack adds **one new mechanic** (December re-skinned November; by month 3 the rhythm
+needs something new). Decisions:
+
+- **Setting**: a night voyage. Deep navy water, lighthouses on the islands, glowing shallows,
+  a moon. New `night` art style (lighthouses, bioluminescent shallows, moonlit palette). Pack id
+  `lantern-sea`, 31 challenges, Gold at 31. Tile: night sky, stars and moon glow; icon a
+  sailboat under a crescent moon; tagline "Chart the best course by lantern light."
+- **Mechanic: tides.** Tidal flats (`~`) can be crossed at high tide and are blocked at low tide,
+  on a regular cycle (`tide: { period, high, offset }`; for example high 2 days, low 2). Rules mirror
+  storms: the ship can't *arrive* on flats at low tide, and can't anchor on flats if the tide
+  drops tomorrow; sailing off is always fine. The tide clock follows the voyage day (it restarts
+  with each voyage, like storms). The solver plans by day whenever a chart has tides or storms,
+  so it stays exact, and **Drop anchor** doubles as "wait for the tide".
+- **Forecast**: tides are regular, so the header shows a tide clock (today and the next days,
+  high or low) and the chart marks flats open or closed.
+- **Generator**: flats on coasts and narrow channels; metric `tideCost` (days the tide adds to
+  par); recipe `minTideCost` on tide days. The naive sailor reads flats as open sea and
+  finds out at low tide (waits, or goes around), so the lure is built in.
+- **Difficulty**: every month starts gentle (late joiners start at day 1) and gets harder.
+
+| Days | Focus |
+|---|---|
+| 1–3 | Voyages, a refresher (day 1 rewards the obvious route) |
+| 4–8 | Tides introduced: open/closed flats, then racing the tide |
+| 9–12 | Tides with shallows |
+| 13–16 | Tides with currents |
+| 17–21 | Rounds: nearest-first and ignoring the tide are both traps |
+| 22–26 | Storm season (squalls) on top of the tides |
+| 27–30 | Charters and the hardest rounds |
+| 31 | Finale: everything |
+
+Work: engine rules/solver/generator/UI for tides, the `night` art style, the plan (31 days,
+~65 names, titles, tips), catalog tagline + icon; atlas `SEAFARER_SEASONS["2027-01"]`, three
+badges (definitions, migration, emblem art) and a tile skin. Content built and QA'd by about
+December 20 for a January 1 launch (a month later if November's pack slips to December).
 
 ### Adding a pack
 

@@ -1,20 +1,13 @@
-// The month as one journey: every region of the pack laid out as a winding
-// archipelago on a single chart, joined by sea lanes from each day's
-// destination to the next day's harbor. Finished regions show the player's
-// inked route; future ones sit under fog. On arrival the camera glides from
+// The month as one journey: every region of the pack stitched into one hex
+// map (expedition.ts), with sea lanes from each day's destination to the
+// next day's harbor. Finished regions show the player's inked route; regions
+// still ahead sit under one bank of fog. On arrival the camera glides from
 // the whole chart down to today's region, then hands over to the puzzle.
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  HEX,
-  PlaceMarker,
-  Terrain,
-  cellCenter,
-  chartSize,
-  hexPoints,
-  routeSegments,
-} from "./SeafarerMap.js";
-import { type Board, buildBoard, harborOf, replayRoute, voyageExit } from "./rules.js";
+import { type PointerEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { HEX, PlaceMarker, Terrain, cellCenter, chartSize, routeSegments } from "./SeafarerMap.js";
+import { EXPEDITION_COLS, type ExpeditionWorld, expeditionWorld, seaLane } from "./expedition.js";
+import { harborOf, replayRoute, voyageExit } from "./rules.js";
 import { type SeafarerArt, themeFor } from "./theme.js";
 import type { SeafarerPack, SeafarerPuzzle } from "./types.js";
 
@@ -38,84 +31,68 @@ export interface ExpeditionChartProps {
   onOpen: (n: number) => void;
 }
 
-const COLS = 5;
-/** Each region sits in a block of the world hex lattice (largest chart + a channel). */
-const BLOCK_COLS = 12;
-const BLOCK_ROWS = 14;
-/** Rows of open sea above the regions, for the title. */
-const TITLE_ROWS = 6;
+type Box = [number, number, number, number];
 const SQ3 = Math.sqrt(3);
-const PAD = 10;
 
-interface Tile {
+interface Region {
   puzzle: SeafarerPuzzle;
-  board: Board;
-  /** Offset in world units; regions keep their real scale, aligned to one lattice. */
+  /** Pixel offset and size of the region's own hexes (world units). */
   x: number;
   y: number;
   w: number;
   h: number;
+  /** Pixel bounds of its block (the region plus the filler around it). */
+  block: Box;
 }
+
+/** Pixel offset of a world hex offset (whole hexes, even rows). */
+const px = (col: number, row: number): [number, number] => [col * HEX * SQ3, row * HEX * 1.5];
+
+/** The month as one board (see expedition.ts), with each region's place on it. */
+function layout(pack: SeafarerPack) {
+  const world = expeditionWorld(pack.id, pack.puzzles);
+  const blockBox = (b: { col: number; row: number; cols: number; rows: number }): Box => {
+    const [x, y] = px(b.col, b.row);
+    const size = chartSize(b.cols, b.rows);
+    return [x, y, size.w, size.h];
+  };
+  const regions: Region[] = pack.puzzles.map((puzzle, i) => {
+    const s = world.slots[i];
+    const [x, y] = px(s.col, s.row);
+    const size = chartSize(puzzle.cols, puzzle.rows);
+    return { puzzle, x, y, w: size.w, h: size.h, block: blockBox(s.block) };
+  });
+  // Blocks past the month's last day (a short final row) stay under fog.
+  const empty: Box[] = [];
+  const last = world.slots[world.slots.length - 1].block;
+  const used = pack.puzzles.length % EXPEDITION_COLS;
+  if (used) {
+    const rowIdx = Math.floor((pack.puzzles.length - 1) / EXPEDITION_COLS);
+    for (let k = used; k < EXPEDITION_COLS; k++) {
+      const c = rowIdx % 2 === 0 ? k : EXPEDITION_COLS - 1 - k;
+      empty.push(blockBox({ ...last, col: c * last.cols }));
+    }
+  }
+  const { w, h } = chartSize(world.cols, world.rows);
+  return { world, regions, empty, w, h };
+}
+
+const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
 /**
- * Snake layout on one world hex lattice: every region keeps its own hexes,
- * placed at whole-hex offsets (even rows, so odd-row shifts line up), and the
- * channels between regions are the same sea. The chart reads as one map.
+ * The window onto the month: never the whole chart (too small to read on a
+ * phone), but today's neighbourhood. `blocks` is how many regions wide it is.
  */
-function layout(pack: SeafarerPack): { tiles: Tile[]; w: number; h: number } {
-  const tiles = pack.puzzles.map((puzzle, i) => {
-    const row = Math.floor(i / COLS);
-    const k = i % COLS;
-    const col = row % 2 === 0 ? k : COLS - 1 - k;
-    const oc = col * BLOCK_COLS + Math.floor((BLOCK_COLS - 1 - puzzle.cols) / 2);
-    let orow = TITLE_ROWS + row * BLOCK_ROWS + Math.floor((BLOCK_ROWS - 1 - puzzle.rows) / 2);
-    orow -= orow % 2;
-    const size = chartSize(puzzle.cols, puzzle.rows);
-    return {
-      puzzle,
-      board: buildBoard(puzzle),
-      x: oc * HEX * SQ3,
-      y: orow * HEX * 1.5,
-      w: size.w,
-      h: size.h,
-    };
-  });
-  const rows = Math.ceil(pack.puzzles.length / COLS);
-  const world = chartSize(COLS * BLOCK_COLS, TITLE_ROWS + rows * BLOCK_ROWS);
-  return { tiles, w: world.w, h: world.h };
-}
+const VIEW = {
+  wide: { blocks: 2.6, aspect: 4 / 3 },
+  narrow: { blocks: 1.5, aspect: 4 / 5 },
+} as const;
+const NARROW = "(max-width: 640px)";
 
-function worldPoint(t: Tile, cell: number): [number, number] {
-  const [x, y] = cellCenter(t.puzzle.cols, cell);
-  return [t.x + x, t.y + y];
+/** Keeps a view box inside the chart (shifting it, never changing its size). */
+function clampBox([x, y, bw, bh]: Box, w: number, h: number): Box {
+  return [Math.max(0, Math.min(x, w - bw)), Math.max(0, Math.min(y, h - bh)), bw, bh];
 }
-
-/** The open-sea hex lattice as one repeating pattern (two rows per tile). */
-function SeaPattern() {
-  const w = HEX * SQ3;
-  const pts = (cx: number, cy: number) => hexPoints(cx, cy, HEX - 0.7);
-  return (
-    <pattern
-      id="sf-sea-lattice"
-      width={w}
-      height={HEX * 3}
-      patternUnits="userSpaceOnUse"
-      x={PAD}
-      y={PAD}
-    >
-      <rect width={w} height={HEX * 3} className="sf-lattice-gap" />
-      {/* Row 0 centred in the tile; row 1 shifted half a hex, wrapping top and bottom. */}
-      <polygon points={pts(w / 2, HEX)} className="sf-tile sf-tile--sea1" />
-      <polygon points={pts(0, HEX * 2.5)} className="sf-tile sf-tile--sea0" />
-      <polygon points={pts(w, HEX * 2.5)} className="sf-tile sf-tile--sea0" />
-      <polygon points={pts(0, -HEX * 0.5)} className="sf-tile sf-tile--sea0" />
-      <polygon points={pts(w, -HEX * 0.5)} className="sf-tile sf-tile--sea0" />
-    </pattern>
-  );
-}
-
-type Box = [number, number, number, number];
-const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
 export function ExpeditionChart({
   pack,
@@ -125,22 +102,44 @@ export function ExpeditionChart({
   intro,
   onOpen,
 }: ExpeditionChartProps) {
-  const { tiles, w, h } = useMemo(() => layout(pack), [pack]);
+  const { world, regions, empty, w, h } = useMemo(() => layout(pack), [pack]);
   const art = themeFor(pack.theme).art;
-  const world: Box = [0, 0, w, h];
-  const tileBox = (n: number): Box => {
-    const t = tiles[n - 1];
-    // Pad the region, then widen or heighten it to the chart's shape.
-    let bw = t.w * 1.25;
-    let bh = t.h * 1.25;
-    if (bw / bh > w / h) bh = (bw * h) / w;
-    else bw = (bh * w) / h;
-    return [t.x + t.w / 2 - bw / 2, t.y + t.h / 2 - bh / 2, bw, bh];
+  const [narrow, setNarrow] = useState(() => !!window.matchMedia?.(NARROW).matches);
+  const view = narrow ? VIEW.narrow : VIEW.wide;
+
+  /** Today's neighbourhood: a few regions around day `n`, kept on the chart. */
+  const aroundBox = (n: number): Box => {
+    const [bx, by, bbw, bbh] = regions[n - 1].block;
+    const vw = Math.min(bbw * view.blocks, w);
+    const vh = Math.min(vw / view.aspect, h);
+    return clampBox([bx + bbw / 2 - vw / 2, by + bbh / 2 - vh / 2, vw, vh], w, h);
+  };
+  /** Day `n`'s region, padded, in the frame's shape. */
+  const regionBox = (n: number): Box => {
+    const r = regions[n - 1];
+    let bw = r.w * 1.2;
+    let bh = r.h * 1.2;
+    if (bw / bh > view.aspect) bh = bw / view.aspect;
+    else bw = bh * view.aspect;
+    return [r.x + r.w / 2 - bw / 2, r.y + r.h / 2 - bh / 2, bw, bh];
   };
 
-  const [box, setBox] = useState<Box>(world);
+  const [box, setBox] = useState<Box>(() => aroundBox(focus));
   const [flying, setFlying] = useState(false);
   const raf = useRef(0);
+
+  // Phone <-> desktop: re-frame today's neighbourhood in the new shape.
+  useEffect(() => {
+    const mq = window.matchMedia?.(NARROW);
+    if (!mq) return;
+    const onChange = () => setNarrow(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the frame's shape changes
+  useEffect(() => {
+    if (!flying) setBox(aroundBox(focus));
+  }, [narrow]);
 
   const flyTo = (to: Box, ms: number, then?: () => void) => {
     cancelAnimationFrame(raf.current);
@@ -159,7 +158,7 @@ export function ExpeditionChart({
     raf.current = requestAnimationFrame(step);
   };
 
-  // Arrival: a beat on the whole chart, then glide down to today's region.
+  // Arrival: a beat on today's neighbourhood, then glide down into today's region.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs once on arrival
   useEffect(() => {
     if (!intro) return;
@@ -169,7 +168,7 @@ export function ExpeditionChart({
       return;
     }
     const id = window.setTimeout(
-      () => flyTo(tileBox(focus), 1500, () => window.setTimeout(() => onOpen(focus), 250)),
+      () => flyTo(regionBox(focus), 1300, () => window.setTimeout(() => onOpen(focus), 250)),
       700,
     );
     return () => {
@@ -178,10 +177,49 @@ export function ExpeditionChart({
     };
   }, []);
 
+  // Drag to explore the rest of the chart (fog still hides the days ahead).
+  // The pointer is captured only once it has really moved, so a tap still
+  // reaches the region under it, and a drag never opens one.
+  const svgRef = useRef<SVGSVGElement>(null);
+  const drag = useRef<{ x: number; y: number; from: Box; id: number } | null>(null);
+  const dragged = useRef(false);
+  const [dragging, setDragging] = useState(false);
+  const onPointerDown = (e: PointerEvent<SVGSVGElement>) => {
+    if (flying || intro) return;
+    drag.current = { x: e.clientX, y: e.clientY, from: box, id: e.pointerId };
+    dragged.current = false;
+  };
+  const onPointerMove = (e: PointerEvent<SVGSVGElement>) => {
+    const d = drag.current;
+    const el = svgRef.current;
+    if (!d || !el || d.id !== e.pointerId) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!dragged.current && Math.hypot(dx, dy) < 6) return;
+    if (!dragged.current) {
+      dragged.current = true;
+      setDragging(true);
+      el.setPointerCapture(e.pointerId);
+    }
+    const scale = d.from[2] / el.clientWidth;
+    setBox(clampBox([d.from[0] - dx * scale, d.from[1] - dy * scale, d.from[2], d.from[3]], w, h));
+  };
+  const onPointerEnd = (e: PointerEvent<SVGSVGElement>) => {
+    if (drag.current?.id !== e.pointerId) return;
+    drag.current = null;
+    setDragging(false);
+    if (svgRef.current?.hasPointerCapture(e.pointerId))
+      svgRef.current.releasePointerCapture(e.pointerId);
+  };
+
   /** Fly into a region, then open its puzzle. */
   const openRegion = (n: number) => {
     if (flying) return;
-    flyTo(tileBox(n), 900, () => onOpen(n));
+    if (dragged.current) {
+      dragged.current = false;
+      return;
+    }
+    flyTo(regionBox(n), 900, () => onOpen(n));
   };
 
   // The world layer is memoised, so the fly-in only changes the viewBox each
@@ -190,28 +228,40 @@ export function ExpeditionChart({
   openRef.current = openRegion;
   const onRegion = useCallback((n: number) => openRef.current(n), []);
   const charted = Object.keys(finished).length;
+  const stars = Object.values(finished).reduce((sum, f) => sum + f.stars, 0);
+  const home = aroundBox(focus);
+  const away = !flying && !intro && box.some((v, i) => Math.abs(v - home[i]) > 1);
 
   return (
     <section className="sf-panel sf-expedition">
-      <div className="sf-expedition-frame" style={{ aspectRatio: `${w} / ${h}` }}>
+      <header className="sf-expedition-head">
+        <strong>{pack.title}</strong>
+        <span>
+          {charted} of {pack.puzzles.length} charted · {stars}★
+        </span>
+      </header>
+      <div className="sf-expedition-frame" style={{ aspectRatio: `${view.aspect}` }}>
         <svg
+          ref={svgRef}
           className="sf-expedition-map"
           viewBox={box.map((v) => v.toFixed(1)).join(" ")}
           role="img"
           aria-label={`${pack.title}: ${charted} of ${pack.puzzles.length} regions charted`}
+          data-dragging={dragging}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerEnd}
+          onPointerCancel={onPointerEnd}
         >
           <defs>
-            <filter id="sf-erode" x="-10%" y="-10%" width="120%" height="120%">
-              <feMorphology operator="erode" radius="5.5" />
-            </filter>
-            <SeaPattern />
-            <filter id="sf-mist" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="16" />
+            <filter id="sf-mist" x="-10%" y="-10%" width="120%" height="120%">
+              <feGaussianBlur stdDeviation="22" />
             </filter>
           </defs>
           <WorldLayer
-            pack={pack}
-            tiles={tiles}
+            world={world}
+            regions={regions}
+            empty={empty}
             w={w}
             h={h}
             finished={finished}
@@ -221,19 +271,31 @@ export function ExpeditionChart({
             onRegion={onRegion}
           />
         </svg>
+        {away && (
+          <button
+            type="button"
+            className="ag-btn ag-btn--ghost sf-expedition-recenter"
+            onClick={() => flyTo(home, 600)}
+          >
+            Back to day {focus}
+          </button>
+        )}
       </div>
       <div className="sf-expedition-foot">
         {intro ? (
           <span className="sf-expedition-status">Charting a course to day {focus}…</span>
         ) : (
-          <button
-            type="button"
-            className="ag-btn ag-btn--accent"
-            disabled={flying || available === null}
-            onClick={() => openRegion(focus)}
-          >
-            {finished[focus] ? `Revisit day ${focus}` : `Set sail · Day ${focus}`}
-          </button>
+          <>
+            <span className="sf-expedition-hint">Drag to explore</span>
+            <button
+              type="button"
+              className="ag-btn ag-btn--accent"
+              disabled={flying || available === null}
+              onClick={() => openRegion(focus)}
+            >
+              {finished[focus] ? `Revisit day ${focus}` : `Set sail · Day ${focus}`}
+            </button>
+          </>
         )}
       </div>
     </section>
@@ -241,8 +303,9 @@ export function ExpeditionChart({
 }
 
 interface WorldLayerProps {
-  pack: SeafarerPack;
-  tiles: Tile[];
+  world: ExpeditionWorld;
+  regions: Region[];
+  empty: Box[];
   w: number;
   h: number;
   finished: Record<number, ChartFinish>;
@@ -252,10 +315,33 @@ interface WorldLayerProps {
   onRegion: (n: number) => void;
 }
 
+/** Path data through world cells. */
+function cellsPath(cols: number, cells: readonly number[]): string {
+  return cells
+    .map((c, i) => {
+      const [x, y] = cellCenter(cols, c);
+      return `${i ? "L" : "M"}${x.toFixed(0)} ${y.toFixed(0)}`;
+    })
+    .join(" ");
+}
+
+/** Fog over one block, drawn into a single blurred bank so neighbouring patches merge. */
+function FogPatch({ box: [x, y, bw, bh] }: { box: Box }) {
+  const m = HEX * 0.6;
+  return (
+    <>
+      <rect x={x - m} y={y - m} width={bw + 2 * m} height={bh + 2 * m} />
+      <circle cx={x + bw * 0.3} cy={y + bh * 0.35} r={bw * 0.28} className="sf-fog-puff" />
+      <circle cx={x + bw * 0.7} cy={y + bh * 0.6} r={bw * 0.3} className="sf-fog-puff" />
+    </>
+  );
+}
+
 /** Everything on the chart except the camera: memoised so the fly-in stays smooth. */
 const WorldLayer = memo(function WorldLayer({
-  pack,
-  tiles,
+  world,
+  regions,
+  empty,
   w,
   h,
   finished,
@@ -264,106 +350,126 @@ const WorldLayer = memo(function WorldLayer({
   art,
   onRegion,
 }: WorldLayerProps) {
-  const openRegion = onRegion;
-  const charted = Object.keys(finished).length;
-  const stars = Object.values(finished).reduce((s, f) => s + f.stars, 0);
-  const focusTile = tiles[focus - 1];
-  const shipAt = focusTile ? worldPoint(focusTile, harborOf(focusTile.puzzle).cell) : null;
+  const wc = world.cols;
+  const stateOf = (n: number) =>
+    finished[n] ? "done" : available !== null && n <= available ? "open" : "fog";
+  const focusRegion = regions[focus - 1];
+  const shipAt = focusRegion
+    ? cellCenter(wc, world.toWorld(focus - 1, harborOf(focusRegion.puzzle).cell))
+    : null;
+  // Lanes depend only on the world: from each day's exit to the next day's harbor.
+  const lanes = useMemo(
+    () =>
+      regions.slice(1).map((r, i) => {
+        const from = world.toWorld(i, voyageExit(regions[i].puzzle).cell);
+        const to = world.toWorld(i + 1, harborOf(r.puzzle).cell);
+        return { n: r.puzzle.number, d: cellsPath(world.cols, seaLane(world.board, from, to)) };
+      }),
+    [world, regions],
+  );
+
   return (
     <g>
       <rect x={-w} y={-h} width={w * 3} height={h * 3} className="sf-ocean" />
-      <rect x={0} y={0} width={w} height={h} fill="url(#sf-sea-lattice)" />
-
-      <g className="sf-cartouche">
-        <text x={w / 2} y={120} textAnchor="middle" className="sf-cartouche-title">
-          {pack.title}
-        </text>
-        <text x={w / 2} y={172} textAnchor="middle" className="sf-cartouche-sub">
-          {charted} of {pack.puzzles.length} regions charted · {stars}★
-        </text>
-      </g>
+      <Terrain board={world.board} art={art} />
 
       {/* Sea lanes: yesterday's destination → today's harbor */}
-      {tiles.slice(1).map((t, i) => {
-        const prev = tiles[i];
-        const [x1, y1] = worldPoint(prev, voyageExit(prev.puzzle).cell);
-        const [x2, y2] = worldPoint(t, harborOf(t.puzzle).cell);
-        const mx = (x1 + x2) / 2 + (y2 - y1) * 0.15;
-        const my = (y1 + y2) / 2 - (x2 - x1) * 0.15;
-        const done = !!finished[t.puzzle.number - 1] && !!finished[t.puzzle.number];
-        return (
+      {lanes.map((l) =>
+        stateOf(l.n) === "fog" ? null : (
           <path
-            key={t.puzzle.id}
-            d={`M${x1.toFixed(0)} ${y1.toFixed(0)} Q${mx.toFixed(0)} ${my.toFixed(0)} ${x2.toFixed(0)} ${y2.toFixed(0)}`}
+            key={l.n}
+            d={l.d}
             className="sf-lane"
-            data-done={done}
+            data-done={!!finished[l.n - 1] && !!finished[l.n]}
           />
+        ),
+      )}
+
+      {/* Inked routes and places of the regions already open */}
+      {regions.map((r, i) => {
+        const n = r.puzzle.number;
+        const f = finished[n];
+        if (stateOf(n) === "fog") return null;
+        const toW = (c: number) => world.toWorld(i, c);
+        const legs = f?.taps
+          ? replayRoute({ ...r.puzzle, provisions: 999 }, f.taps, 0)?.legs
+          : null;
+        const ink = legs
+          ? routeSegments(
+              wc,
+              toW(harborOf(r.puzzle).cell),
+              legs.map((l) => ({ ...l, to: toW(l.to), path: l.path.map(toW) })),
+            )
+          : null;
+        return (
+          <g key={r.puzzle.id}>
+            {ink && (
+              <g className="sf-ink">
+                <path d={ink.sailed} />
+                <path d={ink.drift} />
+              </g>
+            )}
+            {r.puzzle.places.map((pl) => {
+              const [x, y] = cellCenter(wc, toW(pl.cell));
+              return <PlaceMarker key={pl.id} place={pl} x={x} y={y} done={!!f} />;
+            })}
+          </g>
         );
       })}
 
-      {tiles.map((t) => {
-        const n = t.puzzle.number;
+      {/* One bank of fog over everything still ahead */}
+      <g className="sf-fog" filter="url(#sf-mist)">
+        {regions.map((r) =>
+          stateOf(r.puzzle.number) === "fog" ? <FogPatch key={r.puzzle.id} box={r.block} /> : null,
+        )}
+        {empty.map((b) => (
+          <FogPatch key={`e${b[0]}-${b[1]}`} box={b} />
+        ))}
+      </g>
+
+      {regions.map((r) => {
+        const n = r.puzzle.number;
         const f = finished[n];
-        const unlocked = available !== null && n <= available;
-        const state = f ? "done" : unlocked ? "open" : "fog";
-        const inked = f?.taps
-          ? replayRoute({ ...t.puzzle, provisions: 999 }, f.taps, 0)?.legs
-          : null;
-        const ink = inked ? routeSegments(t.puzzle.cols, harborOf(t.puzzle).cell, inked) : null;
+        const state = stateOf(n);
+        const open = state !== "fog";
         return (
           <g
-            key={t.puzzle.id}
+            key={r.puzzle.id}
             className="sf-region"
             data-state={state}
             data-focus={n === focus}
-            transform={`translate(${t.x.toFixed(1)} ${t.y.toFixed(1)})`}
-            onClick={state === "fog" ? undefined : () => openRegion(n)}
+            onClick={open ? () => onRegion(n) : undefined}
             onKeyDown={(e) => {
-              if (state !== "fog" && (e.key === "Enter" || e.key === " ")) {
+              if (open && (e.key === "Enter" || e.key === " ")) {
                 e.preventDefault();
-                openRegion(n);
+                onRegion(n);
               }
             }}
-            tabIndex={state === "fog" ? undefined : 0}
-            aria-label={state === "fog" ? undefined : `Day ${n}: ${t.puzzle.title}`}
+            tabIndex={open ? 0 : undefined}
+            aria-label={open ? `Day ${n}: ${r.puzzle.title}` : undefined}
           >
-            <g>
-              <Terrain board={t.board} art={art} />
-              {ink && (
-                <g className="sf-ink">
-                  <path d={ink.sailed} />
-                  <path d={ink.drift} />
-                </g>
-              )}
-              {t.puzzle.places.map((pl) => {
-                const [x, y] = cellCenter(t.puzzle.cols, pl.cell);
-                return <PlaceMarker key={pl.id} place={pl} x={x} y={y} done={!!f} />;
-              })}
-            </g>
-            {state === "fog" && (
-              <g className="sf-fog" filter="url(#sf-mist)">
-                <rect x={14} y={14} width={t.w - 28} height={t.h - 28} rx="40" />
-                <circle cx={t.w * 0.3} cy={t.h * 0.35} r={t.w * 0.24} />
-                <circle cx={t.w * 0.68} cy={t.h * 0.5} r={t.w * 0.27} />
-                <circle cx={t.w * 0.42} cy={t.h * 0.74} r={t.w * 0.22} />
-              </g>
-            )}
+            {/* Hit area, and an outline only for today: the chart stays one map. */}
             <rect
-              x={4}
-              y={4}
-              width={t.w - 8}
-              height={t.h - 8}
+              x={r.x + 4}
+              y={r.y + 4}
+              width={r.w - 8}
+              height={r.h - 8}
               rx="14"
               className="sf-region-frame"
             />
-            <g transform={`translate(${t.w / 2} 6)`} className="sf-region-label">
+            <g transform={`translate(${r.x + r.w / 2} ${r.y + 6})`} className="sf-region-label">
               <rect x={-120} y={-24} width={240} height={40} rx="5" />
               <text y={1} textAnchor="middle">
-                {state === "fog" ? `Day ${n}` : `${n} · ${t.puzzle.title}`}
+                {open ? `${n} · ${r.puzzle.title}` : `Day ${n}`}
               </text>
             </g>
             {f && (
-              <text x={t.w / 2} y={t.h + 30} textAnchor="middle" className="sf-region-stars">
+              <text
+                x={r.x + r.w / 2}
+                y={r.y + r.h + 30}
+                textAnchor="middle"
+                className="sf-region-stars"
+              >
                 {"★".repeat(f.stars)}
                 {"☆".repeat(3 - f.stars)}
               </text>

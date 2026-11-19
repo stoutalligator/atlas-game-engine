@@ -8,7 +8,9 @@ import {
   type Board,
   FLOW_CHAR,
   HEX_DIRS,
+  type Leg,
   OPPOSITE,
+  anchor,
   buildBoard,
   harborOf,
   isNavigable,
@@ -17,9 +19,18 @@ import {
   sail,
   stormAt,
   twoStarSlack,
+  voyageExit,
 } from "./rules.js";
 import { alternativeRoutes, solve } from "./solver.js";
-import type { HexDir, Objective, Place, RouteKind, SeafarerPuzzle, Storm } from "./types.js";
+import type {
+  ChartSide,
+  HexDir,
+  Objective,
+  Place,
+  RouteKind,
+  SeafarerPuzzle,
+  Storm,
+} from "./types.js";
 
 // ── Recipes ────────────────────────────────────────────────────────────────
 
@@ -72,6 +83,39 @@ export interface Recipe {
   storms?: [number, number];
   stormSize?: [number, number];
   minStormCost?: number;
+  /**
+   * The obvious route must cost at least this many days over par: a sailor
+   * who plans by eye (see naiveDays) loses stars for not thinking it through.
+   */
+  minLureGap?: number;
+  /** ...and at most this many: on the first days the obvious route should still do well. */
+  maxLureGap?: number;
+  /** Hard but never hopeless: that sailor still gets there within the provisions. */
+  naiveFinishes?: boolean;
+  /**
+   * Where the region meets its neighbours on the expedition chart (set by the
+   * build from the day's position, not by the plan). The harbor sits within
+   * two hexes of `entrySide`; candidates whose voyage ends near `exitSide`
+   * rank higher, so the sea lane to tomorrow's region stays short.
+   */
+  entrySide?: ChartSide;
+  exitSide?: ChartSide;
+}
+
+/** Hexes from a cell to one side of its chart (0 = on the edge row/column). */
+export function sideDistance(cols: number, rows: number, cell: number, side: ChartSide): number {
+  const row = Math.floor(cell / cols);
+  const col = cell % cols;
+  switch (side) {
+    case "n":
+      return row;
+    case "s":
+      return rows - 1 - row;
+    case "w":
+      return col;
+    case "e":
+      return cols - 1 - col;
+  }
 }
 
 export interface Metrics {
@@ -96,6 +140,10 @@ export interface Metrics {
   altGap: number;
   /** Days the storms add to par (charter: cargo they cost). */
   stormCost: number;
+  /** Days the obvious, plan-by-eye route loses to par (99: it never gets there). */
+  lureGap: number;
+  /** Hexes from where the voyage ends to the region's exit side (0 without one). */
+  exitDistance: number;
 }
 
 export interface Candidate {
@@ -264,6 +312,7 @@ export interface PlaceNames {
   cargo: readonly string[];
 }
 
+/** Enough for a whole pack: no port name is used twice in a month (see linkVoyages). */
 export const PORT_NAMES = [
   "Gull's Rest",
   "Saltmarsh",
@@ -283,6 +332,53 @@ export const PORT_NAMES = [
   "Windward",
   "Cobalt Cove",
   "Fairhaven",
+  "Palm Reach",
+  "Conch Harbor",
+  "Sandpiper Cay",
+  "Turtle Bay",
+  "Mango Wharf",
+  "Frigate Rock",
+  "Lagoon's End",
+  "Heron Isle",
+  "Pearlwater",
+  "Sunfall Quay",
+  "Cinnamon Cove",
+  "Starfish Point",
+  "Dolphin Sound",
+  "Breaker's Hold",
+  "Hibiscus Bay",
+  "Ironwood Pier",
+  "Bluefin Cay",
+  "Parrot Key",
+  "Saltwind",
+  "Moonrise Cove",
+  "Cutlass Point",
+  "Lighthouse Rock",
+  "Rumrunner's Rest",
+  "Kelp Harbor",
+  "Osprey Bay",
+  "Opal Lagoon",
+  "Marlin Quay",
+  "Wreckers' Cove",
+  "Seahorse Isle",
+  "Sunken Bell",
+  "Cayenne Wharf",
+  "Albatross Point",
+  "Jade Shoals",
+  "Spindrift",
+  "Cutter's Landing",
+  "Nautilus Cove",
+  "Gannet Rock",
+  "Tamarind Bay",
+  "Barnacle Pier",
+  "Calypso Cay",
+  "Halcyon Harbor",
+  "Coralline",
+  "Mangrove Run",
+  "Driftglass Bay",
+  "Sandbar Quay",
+  "Galleon Rest",
+  "Trade Wind Isle",
 ];
 export const HARBOR_NAMES = [
   "Home Port",
@@ -320,7 +416,23 @@ export function generateCandidate(recipe: Recipe, seed: string): Candidate | nul
   const isCharter = recipe.objective.type === "charter";
   const needed = 1 + (isCharter ? (recipe.cargo ?? 4) : recipe.ports);
   if (coast.length < needed) return null;
-  const harborCell = coast[0];
+  // On the expedition chart the harbor faces yesterday's region: within two
+  // hexes of that side (on the coast if possible, else open sea by the edge).
+  let harborCell = coast[0];
+  if (recipe.entrySide) {
+    const side = recipe.entrySide;
+    const near = (c: number) => sideDistance(cols, rows, c, side) <= 2;
+    const edgeSea = shuffle(
+      rng,
+      g.map((_, i) => i).filter((i) => g[i] === "." && sideDistance(cols, rows, i, side) <= 1),
+    );
+    const at = coast.find(near) ?? edgeSea[0];
+    if (at === undefined) return null;
+    harborCell = at;
+    const idx = coast.indexOf(harborCell);
+    if (idx >= 0) coast.splice(idx, 1);
+    coast.unshift(harborCell);
+  }
   const chosen: number[] = [harborCell];
   const minGap = isCharter ? 2 : recipe.ports === 1 ? Math.floor((cols + rows) / 3) : 3;
   for (const c of coast.slice(1)) {
@@ -490,6 +602,166 @@ function greedyDays(
   return { days, value };
 }
 
+/** Rough position of a hex centre (for "which way looks straighter"). */
+function centre(cols: number, idx: number): [number, number] {
+  const row = Math.floor(idx / cols);
+  return [(idx % cols) + 0.5 * (row & 1), row * 0.866];
+}
+
+/**
+ * Days for a sailor who plans by eye. They head for the port that looks
+ * nearest (then home, if the round trip needs it), steering straight at it
+ * while each hex brings them closer; only when nothing does (a bay that
+ * closes, an island in the way) do they stop and plan the fewest hexes from
+ * there. They don't price shallows, ride currents on purpose or read the
+ * storm forecast; they find out when the sea pushes back:
+ * - a current carries them off course → they carry on from where they end up;
+ * - a move is refused (a storm, or straight up a current) → they wait at
+ *   anchor a day or two for a storm, then plan around what's blocking them.
+ * Returns Infinity if they never get there (a one-way current trap, or far
+ * too long). Voyage and rounds only.
+ */
+export function naiveDays(p: SeafarerPuzzle): number {
+  if (p.objective.type === "charter") return Number.NaN;
+  const board = buildBoard(p);
+  const home = harborOf(p).cell;
+  const returnHome = p.objective.type === "rounds" && p.objective.returnHome;
+  const ports = p.places.filter((pl) => pl.kind === "port");
+  const portAt = new Map(ports.map((pl) => [pl.cell, pl.id]));
+  const left = new Set(ports.map((pl) => pl.id));
+  const n = board.cells.length;
+  const limit = Math.max(40, (p.par || 20) * 3);
+  // Cells the sailor has learnt to avoid: currents for good, storm hexes until they next move.
+  const avoid = new Set<number>();
+  const stormAvoid = new Set<number>();
+  const blocked = (c: number) => avoid.has(c) || stormAvoid.has(c);
+
+  /** Hex steps to `target` from every cell, by eye (every open hex costs the same). */
+  const stepsTo = (target: number): number[] => {
+    const d = new Array(n).fill(Number.POSITIVE_INFINITY);
+    d[target] = 0;
+    const queue = [target];
+    for (let i = 0; i < queue.length; i++) {
+      const c = queue[i];
+      for (const dir of HEX_DIRS) {
+        const m = neighbor(board, c, dir);
+        if (m < 0 || !isNavigable(board.cells[m]) || blocked(m) || d[m] <= d[c] + 1) continue;
+        d[m] = d[c] + 1;
+        queue.push(m);
+      }
+    }
+    return d;
+  };
+
+  let at = home;
+  let day = 0;
+  let waits = 0;
+  // Steering straight at the goal, until that stops working for this goal.
+  let careful = false;
+  let lastGoal = -1;
+  while (day <= limit) {
+    // Next goal: the port that looks nearest (straight-line), then home.
+    let goal = -1;
+    if (left.size) {
+      const fromHere = stepsTo(at);
+      let bestD = Number.POSITIVE_INFINITY;
+      for (const pl of ports) {
+        if (!left.has(pl.id) || !Number.isFinite(fromHere[pl.cell])) continue;
+        const looks = hexDistance(p.cols, at, pl.cell);
+        if (looks < bestD) [bestD, goal] = [looks, pl.cell];
+      }
+    } else if (returnHome && at !== home) goal = home;
+    else return day;
+    if (goal !== lastGoal) [careful, lastGoal] = [false, goal];
+
+    const dist = goal >= 0 ? stepsTo(goal) : null;
+    if (!dist || !Number.isFinite(dist[at])) {
+      // Walled in by a storm: wait for it to move on, or, if it's coming
+      // here, back off to the nearest safe hex and look again.
+      if (!stormAvoid.size) return Number.POSITIVE_INFINITY;
+      stormAvoid.clear();
+      if (waits < 4 && anchor(board, at, day)) {
+        day += 1;
+        waits++;
+        continue;
+      }
+      const toGoal = goal >= 0 ? stepsTo(goal) : null;
+      let retreat: Leg | null = null;
+      for (const d of HEX_DIRS) {
+        const l = sail(board, at, d, day);
+        const end = l?.path[l.path.length - 1];
+        if (!l || end === undefined || stormAt(board, day + l.days + 1).has(end)) continue;
+        if (
+          !retreat ||
+          (toGoal?.[end] ?? 0) < (toGoal?.[retreat.path[retreat.path.length - 1]] ?? 0)
+        )
+          retreat = l;
+      }
+      if (!retreat) return Number.POSITIVE_INFINITY;
+      day += retreat.days;
+      for (const c of retreat.path) {
+        const id = portAt.get(c);
+        if (id) left.delete(id);
+      }
+      at = retreat.path[retreat.path.length - 1];
+      continue;
+    }
+    // Straight at it while a hex brings them closer; else the fewest hexes from here.
+    const [gx, gy] = centre(p.cols, goal);
+    const pickStep = (ok: (m: number) => boolean) => {
+      let best = -1;
+      let bestAim = Number.POSITIVE_INFINITY;
+      for (const dir of HEX_DIRS) {
+        const m = neighbor(board, at, dir);
+        if (m < 0 || !ok(m)) continue;
+        const [x, y] = centre(p.cols, m);
+        const aim = (x - gx) ** 2 + (y - gy) ** 2;
+        if (aim < bestAim) [bestAim, best] = [aim, m];
+      }
+      return best;
+    };
+    const here = hexDistance(p.cols, at, goal);
+    let next = careful
+      ? -1
+      : pickStep(
+          (m) =>
+            isNavigable(board.cells[m]) &&
+            !blocked(m) &&
+            Number.isFinite(dist[m]) &&
+            hexDistance(p.cols, m, goal) < here,
+        );
+    if (next < 0) {
+      careful = true;
+      next = pickStep((m) => dist[m] === dist[at] - 1);
+    }
+    const dir = HEX_DIRS.find((d) => neighbor(board, at, d) === next) as HexDir;
+    const leg = sail(board, at, dir, day);
+    if (!leg) {
+      const stormy = stormAt(board, day + 1).has(next) || stormAt(board, day + 2).has(next);
+      if (stormy) {
+        // A storm in the way: wait a little, then go around it.
+        if (waits < 2 && anchor(board, at, day)) {
+          day += 1;
+          waits++;
+          continue;
+        }
+        for (const c of stormAt(board, day + 1)) stormAvoid.add(c);
+        stormAvoid.add(next);
+      } else avoid.add(next); // straight up a current
+      continue;
+    }
+    day += leg.days;
+    waits = 0;
+    stormAvoid.clear();
+    for (const c of leg.path) {
+      const id = portAt.get(c);
+      if (id) left.delete(id);
+    }
+    at = leg.path[leg.path.length - 1];
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
 export function measure(p: SeafarerPuzzle): Metrics | null {
   const board = buildBoard(p);
   const sol = solve(p);
@@ -553,8 +825,13 @@ export function measure(p: SeafarerPuzzle): Metrics | null {
   const calm = p.storms?.length ? solve({ ...p, storms: undefined }) : sol;
   const stormCost = charter ? (calm.best ?? 0) - (sol.best ?? 0) : sol.days - calm.days;
 
+  const naive = charter ? sol.days : naiveDays({ ...p, par: sol.days });
+  const lureGap = charter ? 0 : Number.isFinite(naive) ? naive - sol.days : 99;
+
   return {
     stormCost,
+    lureGap,
+    exitDistance: 0,
     routes: 0,
     kinds: 0,
     altGap: 0,
@@ -597,6 +874,9 @@ function evaluate(draft: SeafarerPuzzle, recipe: Recipe): Candidate | null {
   if (recipe.minGreedyGap !== undefined && m.greedyGap < recipe.minGreedyGap) return null;
   if (recipe.minShallowCost !== undefined && m.shallowCost < recipe.minShallowCost) return null;
   if (recipe.minStormCost !== undefined && m.stormCost < recipe.minStormCost) return null;
+  if (recipe.minLureGap !== undefined && m.lureGap < recipe.minLureGap) return null;
+  if (recipe.maxLureGap !== undefined && m.lureGap > recipe.maxLureGap) return null;
+  if (recipe.naiveFinishes && m.par + m.lureGap > p.provisions) return null;
   if (charter && (m.best <= 0 || m.best >= totalCargo(p))) return null;
   // Every port must be a real stop: reject charts where a current loop or
   // dead end makes a place unreachable (solve above already proves reachability).
@@ -625,6 +905,8 @@ function evaluate(draft: SeafarerPuzzle, recipe: Recipe): Candidate | null {
     };
     m.provisions = p.provisions;
   }
+  if (recipe.exitSide)
+    m.exitDistance = sideDistance(p.cols, p.rows, voyageExit(p).cell, recipe.exitSide);
 
   const interest =
     Math.min(m.detour, 2) * 3 +
@@ -632,6 +914,10 @@ function evaluate(draft: SeafarerPuzzle, recipe: Recipe): Candidate | null {
     Math.min(m.greedyGap, 6) * 1.2 +
     (m.openings >= 2 && m.openings <= 3 ? 1.5 : 0) +
     (1 - Math.abs(m.openness - 0.55)) * 2 +
+    // The obvious route costs stars (but isn't a dead end on its own).
+    (charter ? 0 : Math.min(m.lureGap, 5) * 0.8) -
+    // Keep the sea lane to tomorrow's region short.
+    Math.max(0, m.exitDistance - 2) * 0.7 +
     // Close tradeoffs make the best puzzles: a different route 1–2 days behind.
     (charter ? 0 : m.routes * 1.5 + m.kinds * 1.5 + (m.altGap >= 1 && m.altGap <= 2 ? 2 : 0));
 

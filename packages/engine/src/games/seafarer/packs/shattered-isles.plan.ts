@@ -12,7 +12,7 @@
 //   26–29 Charters and the hardest rounds, storms included.
 //   30    The Shattered Crown: every mechanic, four ports and home, and a storm.
 
-import { CARGO_NAMES, HARBOR_NAMES, PORT_NAMES } from "../generator.js";
+import { CARGO_NAMES, HARBOR_NAMES, PORT_NAMES, type Recipe } from "../generator.js";
 import type { PackPlan, PlannedDay } from "./plan.js";
 
 export type { PlannedDay };
@@ -33,13 +33,12 @@ export const rounds = { type: "rounds", returnHome: false } as const;
 export const roundTrip = { type: "rounds", returnHome: true } as const;
 export const charter = { type: "charter" } as const;
 
-export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
+const DAYS: PlannedDay[] = [
   // ── 1–5 Voyages ──
   {
     title: "First Light",
     difficulty: 1,
-    pick: "shattered-isles-01-439",
-    tip: "Tap the glowing water beside your ship to plot a course, then set sail.",
+    tip: "Tap the glowing water beside your ship to sail there. Every move is final.",
     recipe: {
       ...base,
       objective: voyage,
@@ -55,8 +54,7 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Gull's Passage",
     difficulty: 1,
-    pick: "shattered-isles-02-291",
-    tip: "Drag from your ship to draw a course in one go.",
+    tip: "Look before you sail: the straightest line on the chart isn't always the quickest.",
     recipe: {
       ...base,
       objective: voyage,
@@ -72,8 +70,7 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "The Coral Gate",
     difficulty: 1,
-    pick: "shattered-isles-03-168",
-    tip: "Tap any point on your course to cut it back there.",
+    tip: "Sailed into trouble? Return to harbor to start over, but the day in port counts.",
     recipe: {
       ...base,
       objective: voyage,
@@ -89,7 +86,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Lantern Rocks",
     difficulty: 2,
-    pick: "shattered-isles-04-570",
     recipe: {
       ...base,
       objective: voyage,
@@ -105,7 +101,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Broken Shoreline",
     difficulty: 2,
-    pick: "shattered-isles-05-288",
     recipe: {
       ...base,
       objective: voyage,
@@ -122,7 +117,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Sandbar Bay",
     difficulty: 2,
-    pick: "shattered-isles-06-318",
     tip: "Pale water is shallow: each shallow cell costs 2 days. Is the long way round quicker?",
     recipe: {
       ...base,
@@ -141,7 +135,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "The Salt Flats",
     difficulty: 2,
-    pick: "shattered-isles-07-391",
     recipe: {
       ...base,
       objective: voyage,
@@ -159,7 +152,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Kestrel Narrows",
     difficulty: 2,
-    pick: "shattered-isles-08-398",
     recipe: {
       ...base,
       objective: voyage,
@@ -178,7 +170,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Mistwater",
     difficulty: 3,
-    pick: "shattered-isles-09-501",
     recipe: {
       ...base,
       objective: voyage,
@@ -197,7 +188,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "The Long Reef",
     difficulty: 3,
-    pick: "shattered-isles-10-14",
     recipe: {
       ...base,
       objective: voyage,
@@ -217,7 +207,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "The Turning Tide",
     difficulty: 2,
-    pick: "shattered-isles-11-1109",
     tip: "Currents carry your ship for free, but you can't sail straight against one.",
     attempts: 4000,
     recipe: {
@@ -237,7 +226,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Riptide Run",
     difficulty: 3,
-    pick: "shattered-isles-12-3768",
     attempts: 4000,
     recipe: {
       ...base,
@@ -256,7 +244,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Whirl Strait",
     difficulty: 3,
-    pick: "shattered-isles-13-2627",
     attempts: 4000,
     recipe: {
       ...base,
@@ -276,7 +263,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Drift Ward",
     difficulty: 3,
-    pick: "shattered-isles-14-3142",
     attempts: 4000,
     recipe: {
       ...base,
@@ -298,7 +284,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Cobalt Current",
     difficulty: 3,
-    pick: "shattered-isles-15-1412",
     attempts: 4000,
     recipe: {
       ...base,
@@ -320,7 +305,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Two Harbors",
     difficulty: 3,
-    pick: "shattered-isles-16-918",
     tip: "Call at both ports, in either order. A port counts as soon as you pass it.",
     attempts: 4000,
     recipe: {
@@ -339,7 +323,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Trader's Triangle",
     difficulty: 3,
-    pick: "shattered-isles-17-1955",
     attempts: 3000,
     recipe: {
       ...base,
@@ -357,7 +340,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "The Spice Lanes",
     difficulty: 3,
-    pick: "shattered-isles-18-722",
     attempts: 3000,
     recipe: {
       ...base,
@@ -376,7 +358,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Pelican Circuit",
     difficulty: 4,
-    pick: "shattered-isles-19-1750",
     attempts: 3000,
     recipe: {
       ...base,
@@ -397,7 +378,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Tidewater Tour",
     difficulty: 4,
-    pick: "shattered-isles-20-319",
     attempts: 3000,
     recipe: {
       ...base,
@@ -419,7 +399,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Gathering Clouds",
     difficulty: 3,
-    pick: "shattered-isles-21-2230",
     tip: "A storm drifts one hex a day: you can't sail into it. Tap your own ship to drop anchor and wait a day, or race past it.",
     attempts: 6000,
     recipe: {
@@ -438,7 +417,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Squall Line",
     difficulty: 4,
-    pick: "shattered-isles-22-2531",
     attempts: 6000,
     recipe: {
       ...base,
@@ -458,7 +436,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Eye of the Storm",
     difficulty: 4,
-    pick: "shattered-isles-23-2108",
     attempts: 6000,
     recipe: {
       ...base,
@@ -479,7 +456,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Stormbound Rounds",
     difficulty: 4,
-    pick: "shattered-isles-24-5325",
     attempts: 6000,
     recipe: {
       ...base,
@@ -501,7 +477,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Thunder Reach",
     difficulty: 5,
-    pick: "shattered-isles-25-7774",
     attempts: 8000,
     recipe: {
       ...base,
@@ -524,7 +499,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "A Merchant's Charter",
     difficulty: 3,
-    pick: "shattered-isles-26-430",
     tip: "Not enough provisions for every crate. Choose your cargo, and be home before the barrels run dry.",
     recipe: {
       ...base,
@@ -543,7 +517,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Storm Coast",
     difficulty: 5,
-    pick: "shattered-isles-27-2914",
     attempts: 6000,
     recipe: {
       ...base,
@@ -568,7 +541,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "The Four Lights",
     difficulty: 4,
-    pick: "shattered-isles-28-5360",
     attempts: 6000,
     recipe: {
       ...base,
@@ -589,7 +561,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "Last Cargo",
     difficulty: 5,
-    pick: "shattered-isles-29-3918",
     attempts: 8000,
     recipe: {
       ...base,
@@ -613,7 +584,6 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
   {
     title: "The Shattered Crown",
     difficulty: 5,
-    pick: "shattered-isles-30-15812",
     attempts: 16000,
     recipe: {
       ...base,
@@ -636,6 +606,101 @@ export const SHATTERED_ISLES_PLAN: PlannedDay[] = [
     },
   },
 ];
+
+/**
+ * What makes each day earn its place (the playtest of 2026-11-19 found the
+ * first half too easy and some mechanics decorative):
+ * - minLureGap: the obvious, plan-by-eye route (generator.ts naiveDays) loses
+ *   at least this many days, so not thinking it through costs a star.
+ * - the day's mechanic must change the answer (shallows in the way, currents
+ *   that save days, storms that add them).
+ * - naiveFinishes: on the gentler days that obvious route still gets there
+ *   within the provisions, so a day is never hopeless.
+ */
+const TUNING: Array<Partial<Recipe>> = [
+  // 1–5 Voyages: the first day rewards the obvious route; then it starts to cost
+  { maxLureGap: 0, naiveFinishes: true },
+  { minLureGap: 1, maxLureGap: 2, naiveFinishes: true },
+  { minLureGap: 1, naiveFinishes: true },
+  { minLureGap: 1, naiveFinishes: true },
+  { minLureGap: 2, naiveFinishes: true },
+  // 6–10 Shallows: cutting straight through the shallows is the trap
+  { minShallowCost: 1, minLureGap: 2, naiveFinishes: true },
+  { minShallowCost: 1, minLureGap: 2, naiveFinishes: true },
+  { minShallowCost: 2, minLureGap: 2, naiveFinishes: true },
+  { minShallowCost: 2, minLureGap: 2, naiveFinishes: true },
+  { minShallowCost: 2, minLureGap: 2, naiveFinishes: true, minDetour: 1.3 },
+  // 11–15 Currents: they save days, and the wrong one carries you off
+  { minCurrentGain: 1, minLureGap: 1, naiveFinishes: true },
+  { minCurrentGain: 1, minLureGap: 2, naiveFinishes: true },
+  { minCurrentGain: 2, minLureGap: 2, naiveFinishes: true },
+  { minCurrentGain: 2, minLureGap: 3 },
+  { minCurrentGain: 1, minLureGap: 3 },
+  // 16–20 Rounds: nearest-first is a trap
+  { minLureGap: 2, naiveFinishes: true },
+  { minLureGap: 3, naiveFinishes: true },
+  { minLureGap: 3 },
+  { minLureGap: 3 },
+  { minLureGap: 4 },
+  // 21–25 Storm season: sailing blind into the weather costs days
+  { minStormCost: 1, minLureGap: 2, naiveFinishes: true },
+  { minStormCost: 2, minLureGap: 2 },
+  { minStormCost: 2, minLureGap: 3 },
+  { minStormCost: 2, minLureGap: 3 },
+  { minStormCost: 2, minLureGap: 3 },
+  // 26–29 Charters and hard rounds
+  { minGreedyGap: 2 },
+  { minStormCost: 1, minLureGap: 4 },
+  { minLureGap: 4 },
+  {},
+  // 30 Finale
+  { minStormCost: 1, minLureGap: 4 },
+];
+
+/**
+ * The reviewed chart for each day (seeds from the --review build), so
+ * rebuilds are exact. Empty: the build takes each day's top-ranked candidate.
+ */
+const PICKS: Array<string | undefined> = [
+  "shattered-isles-01-1447",
+  "shattered-isles-02-2117",
+  "shattered-isles-03-3213",
+  "shattered-isles-04-1253",
+  "shattered-isles-05-1412",
+  "shattered-isles-06-1625",
+  "shattered-isles-07-1888",
+  "shattered-isles-08-1367",
+  "shattered-isles-09-3908",
+  "shattered-isles-10-1637",
+  "shattered-isles-11-2416",
+  "shattered-isles-12-2400",
+  "shattered-isles-13-3959",
+  "shattered-isles-14-1966",
+  "shattered-isles-15-2740",
+  "shattered-isles-16-221",
+  "shattered-isles-17-1771",
+  "shattered-isles-18-2825",
+  "shattered-isles-19-848",
+  "shattered-isles-20-1003",
+  "shattered-isles-21-5938",
+  "shattered-isles-22-1361",
+  "shattered-isles-23-1453",
+  "shattered-isles-24-459",
+  "shattered-isles-25-3729",
+  "shattered-isles-26-883",
+  "shattered-isles-27-2873",
+  "shattered-isles-28-496",
+  "shattered-isles-29-4028",
+  "shattered-isles-30-2419",
+];
+
+export const SHATTERED_ISLES_PLAN: PlannedDay[] = DAYS.map((d, i) => ({
+  ...d,
+  ...(PICKS[i] ? { pick: PICKS[i] } : {}),
+  // Stricter recipes pass less often (and charts are cheap to try).
+  attempts: Math.max(4000, d.attempts ?? 0),
+  recipe: { ...d.recipe, ...TUNING[i] },
+}));
 
 export const SHATTERED_ISLES_PACK_PLAN: PackPlan = {
   id: "shattered-isles",

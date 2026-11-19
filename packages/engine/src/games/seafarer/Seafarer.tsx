@@ -13,6 +13,7 @@ import {
   dirBetween,
   emptyRoute,
   harborOf,
+  isNavigable,
   neighbor,
   reachableNext,
   replayRoute,
@@ -511,6 +512,11 @@ function SeafarerGame({
                 ? {
                     now: stormAt(board, day),
                     next: stormAt(board, day + 1),
+                    // Further ahead, only where a ship could be (not over land or reef).
+                    later: [day + 2, day + 3].map(
+                      (d) =>
+                        new Set([...stormAt(board, d)].filter((c) => isNavigable(board.cells[c]))),
+                    ),
                     drifts: board.storms.map((st) => st.drift),
                   }
                 : null

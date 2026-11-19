@@ -301,17 +301,22 @@ function ShipShape() {
 
 /**
  * Storm clouds over today's stormy hexes (rain, the odd flash of lightning),
- * and a dashed forecast of where the fronts will be tomorrow.
+ * and a dashed forecast of where the fronts will be over the next few days,
+ * fainter the further ahead, so a route can be planned around them.
  */
 function StormLayer({
   storm,
   centers,
 }: {
-  storm: { now: ReadonlySet<number>; next: ReadonlySet<number>; drifts: HexDir[] };
+  storm: StormView;
   centers: Array<[number, number]>;
 }) {
   const now = [...storm.now];
-  const next = [...storm.next].filter((c) => !storm.now.has(c));
+  // Each hex shows the soonest day the storm reaches it (1 = tomorrow).
+  const soonest = new Map<number, number>();
+  [storm.next, ...(storm.later ?? [])].forEach((cells, i) => {
+    for (const c of cells) if (!storm.now.has(c) && !soonest.has(c)) soonest.set(c, i + 1);
+  });
   // One drift arrow at the middle of today's clouds (fronts usually share a wind).
   const mid = now.length
     ? now
@@ -320,9 +325,18 @@ function StormLayer({
     : null;
   return (
     <g className="sf-storm">
-      {next.map((c) => {
+      {[...soonest].map(([c, ahead]) => {
         const [x, y] = centers[c];
-        return <polygon key={`f${c}`} points={hexPoints(x, y, HEX - 3)} className="sf-forecast" />;
+        return (
+          <g key={`f${c}`} className="sf-forecast-hex" data-ahead={ahead}>
+            <polygon points={hexPoints(x, y, HEX - 3)} className="sf-forecast" />
+            {ahead > 1 && (
+              <text x={x} y={y + 4} textAnchor="middle" className="sf-forecast-day">
+                +{ahead}
+              </text>
+            )}
+          </g>
+        );
       })}
       {now.map((c) => {
         const [x, y] = centers[c];
@@ -358,6 +372,15 @@ function StormLayer({
   );
 }
 
+/** Stormy hexes today, tomorrow and the days after (the forecast), and each front's drift. */
+export interface StormView {
+  now: ReadonlySet<number>;
+  next: ReadonlySet<number>;
+  /** Further ahead: the day after tomorrow, then the day after that. */
+  later?: ReadonlySet<number>[];
+  drifts: HexDir[];
+}
+
 export interface Overlay {
   legs: readonly Leg[];
   kind: RouteKind | "mine";
@@ -380,7 +403,7 @@ export interface SeafarerMapProps {
   target: { cell: number; path: readonly number[]; label: string; aimed: boolean } | null;
   overlay?: Overlay | null;
   /** Stormy cells today and tomorrow (the forecast), and which way each front drifts. */
-  storm?: { now: ReadonlySet<number>; next: ReadonlySet<number>; drifts: HexDir[] } | null;
+  storm?: StormView | null;
   /** The ship just dropped anchor (plays a small animation). */
   anchoring?: boolean;
   /** Decoration style for the pack's setting. */

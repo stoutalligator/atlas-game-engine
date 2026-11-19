@@ -144,10 +144,11 @@ export const GAME_CATALOG: readonly GameInfo[] = [
     description:
       "A monthly expedition of route-planning puzzles. Plot a course around islands, reefs, shallows and currents, and reach every port in as few days as you can. One new challenge a day.",
     howToPlay: [
-      "Tap the glowing water next to your ship to plot a course, or drag from the ship to draw one.",
-      "Each cell costs a day of provisions. Shallows cost 2. Islands and reefs block your way.",
+      "Tap the glowing water next to your ship to sail there. Every move is final, so look before you sail.",
+      "Each hex costs a day of provisions. Shallows cost 2. Islands and reefs block your way.",
       "Currents carry your ship along for free, but you can't sail straight against one.",
-      "Tap any point on your course to cut it back there. When the objective is met, set sail.",
+      "Storms drift a hex a day: the forecast shows the next three. Drop anchor to wait one out.",
+      "Sailed into trouble? Return to harbor to start over, but the day in port counts.",
       "Match par (the fewest days possible) for three stars. Every finished voyage earns at least one.",
       "One new challenge unlocks each day. Missing a day only pauses your expedition.",
     ],
@@ -156,6 +157,15 @@ export const GAME_CATALOG: readonly GameInfo[] = [
     needsContent: false,
   },
 ];
+
+/**
+ * How the Seafarer tile reads while a pack is running, by the pack's theme.
+ * Hosts pass the theme as GameIcon's `variant` and show this tagline.
+ */
+export const SEAFARER_TILES: Record<string, { tagline: string }> = {
+  "shattered-isles": { tagline: "Chart the best course through the isles." },
+  "frozen-passages": { tagline: "Chart the best course through the ice." },
+};
 
 export const GAME_IDS: readonly GameId[] = GAME_CATALOG.map((g) => g.id);
 
