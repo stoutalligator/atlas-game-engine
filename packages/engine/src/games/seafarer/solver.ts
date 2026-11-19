@@ -10,6 +10,7 @@ import {
   anchor,
   buildBoard,
   harborOf,
+  isTimed,
   neighbor,
   replayRoute,
   sail,
@@ -63,7 +64,7 @@ interface SearchOptions {
 const STORM_HORIZON = 120;
 
 /**
- * Dijkstra by days over (cell, places visited). With storms the day is part
+ * Dijkstra by days over (cell, places visited). With storms or a tide the day is part
  * of the state too (arriving earlier doesn't always beat arriving later, since
  * waiting somewhere may be blocked), and dropping anchor is a move.
  */
@@ -73,7 +74,7 @@ function search(p: SeafarerPuzzle, board: Board, maxDays: number, o: SearchOptio
   keyPlaces.forEach((pl, i) => bit.set(pl.cell, 1 << i));
   const nMask = 1 << keyPlaces.length;
   const nCells = board.cells.length;
-  const timed = board.storms.length > 0;
+  const timed = isTimed(board);
   const limit = timed ? Math.min(maxDays, STORM_HORIZON) : maxDays;
   const day0 = o.from?.day ?? 0;
   const keyOf = (cell: number, mask: number, d: number) =>

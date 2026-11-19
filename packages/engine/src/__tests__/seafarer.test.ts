@@ -39,6 +39,7 @@ import {
   scoreRoute,
   starsFor,
   stormAt,
+  tideHigh,
   voyageExit,
 } from "../games/seafarer/rules.js";
 import type { SeafarerPuzzle } from "../games/seafarer/types.js";
@@ -318,6 +319,71 @@ describe("the naive sailor (plans by eye)", () => {
     // In `tiny` the current carries you two hexes east for one day's sailing.
     expect(solve(tiny).days).toBe(2);
     expect(naiveDays(tiny)).toBe(3);
+  });
+});
+
+describe("seafarer tides", () => {
+  // Straight across the flats (~) is 3 days; round by the open row below is 4.
+  //   row 0   H ~ ~ A
+  //   row 1    . . . .
+  const flats = (tide: SeafarerPuzzle["tide"]): SeafarerPuzzle => ({
+    ...tiny,
+    id: "flats",
+    cols: 4,
+    rows: 2,
+    map: [".~~.", "...."],
+    places: [
+      { id: "H", kind: "harbor", cell: 0, name: "Home" },
+      { id: "A", kind: "port", cell: 3, name: "Port" },
+    ],
+    tide,
+    par: 3,
+  });
+
+  it("turns on a regular cycle", () => {
+    const board = buildBoard(flats({ period: 4, high: 2, offset: 1 }));
+    expect([0, 1, 2, 3, 4, 5].map((d) => tideHigh(board, d))).toEqual([
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+    ]);
+    // No tide: the flats are always open.
+    expect(tideHigh(buildBoard(flats(undefined)), 7)).toBe(true);
+  });
+
+  it("crosses the flats while the tide is high", () => {
+    const p = flats({ period: 4, high: 3 });
+    expect(solve(p).days).toBe(3);
+    expect(scoreRoute(p, [1, 2, 3])?.days).toBe(3);
+  });
+
+  it("blocks the flats at low tide, so the long way is quicker", () => {
+    const p = flats({ period: 4, high: 2 });
+    // Day 2 is low tide: the second flats hex can't be reached in time.
+    expect(replayRoute(p, [1, 2])).toBeNull();
+    expect(solve(p).days).toBe(4);
+  });
+
+  it("won't anchor on flats that dry out tomorrow, but waits for the tide elsewhere", () => {
+    const board = buildBoard(flats({ period: 4, high: 2 }));
+    expect(anchor(board, 1, 1)).toBeNull(); // on the flats, low tide tomorrow
+    expect(anchor(board, 0, 1)).not.toBeNull(); // in harbor
+    // Without a tide or storms there is nothing to wait for.
+    expect(anchor(buildBoard(flats(undefined)), 0, 0)).toBeNull();
+  });
+
+  it("finds that waiting for the tide is best when the way round is long", () => {
+    // Wall off the way round: now the only way is across, at the next high tide.
+    const p = { ...flats({ period: 4, high: 2, offset: 2 }), map: [".~~.", "####"] };
+    // High tide on days 2 and 3: anchor a day in harbor, be on the flats on
+    // days 2 and 3, and arrive on day 4.
+    const sol = solve(p);
+    expect(sol.days).toBe(4);
+    expect(sol.taps).toEqual([0, 1, 2, 3]);
+    expect(scoreRoute(p, sol.taps)?.days).toBe(4);
   });
 });
 
