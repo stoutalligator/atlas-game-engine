@@ -2,7 +2,7 @@
 //
 //   pnpm --filter @stoutalligator/engine exec tsx scripts/build-seafarer-pack.ts <pack-id> [--review]
 //
-// Pack ids: shattered-isles (November), frozen-passages (December).
+// Pack ids: shattered-isles (November), frozen-passages (December), lantern-sea (January).
 // For each day: generate candidates (deterministic seeds), keep the pinned
 // `pick` or the top-ranked one, and write src/games/seafarer/packs/<pack-id>.ts.
 // --review also writes the top 6 candidates per day to
@@ -17,6 +17,7 @@ import {
   generateCandidates,
 } from "../src/games/seafarer/generator.js";
 import { FROZEN_PASSAGES_PACK_PLAN } from "../src/games/seafarer/packs/frozen-passages.plan.js";
+import { LANTERN_SEA_PACK_PLAN } from "../src/games/seafarer/packs/lantern-sea.plan.js";
 import type { PackPlan } from "../src/games/seafarer/packs/plan.js";
 import { SHATTERED_ISLES_PACK_PLAN } from "../src/games/seafarer/packs/shattered-isles.plan.js";
 import { linkVoyages } from "../src/games/seafarer/rules.js";
@@ -25,6 +26,7 @@ import type { SeafarerPack, SeafarerPuzzle } from "../src/games/seafarer/types.j
 const PLANS: Record<string, PackPlan> = {
   [SHATTERED_ISLES_PACK_PLAN.id]: SHATTERED_ISLES_PACK_PLAN,
   [FROZEN_PASSAGES_PACK_PLAN.id]: FROZEN_PASSAGES_PACK_PLAN,
+  [LANTERN_SEA_PACK_PLAN.id]: LANTERN_SEA_PACK_PLAN,
 };
 const plan = PLANS[process.argv.slice(2).find((a) => !a.startsWith("--")) ?? ""];
 if (!plan) {

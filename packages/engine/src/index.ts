@@ -57,6 +57,7 @@ export {
 export {
   SEAFARER_PACKS,
   FROZEN_PASSAGES,
+  LANTERN_SEA,
   SHATTERED_ISLES,
   seafarerPack,
 } from "./games/seafarer/packs/index.js";

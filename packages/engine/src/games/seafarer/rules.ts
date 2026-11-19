@@ -1,6 +1,6 @@
 // Seafarer rules: hex geometry, sailing, currents, route replay and scoring. Pure.
 
-import type { Cell, HexDir, Place, SeafarerPuzzle, Storm } from "./types.js";
+import type { Cell, HexDir, Place, SeafarerPuzzle, Storm, Tide } from "./types.js";
 
 export const HEX_DIRS: readonly HexDir[] = ["e", "ne", "nw", "w", "sw", "se"];
 
@@ -27,6 +27,7 @@ export function parseCell(ch: string): Cell {
   if (ch === "#") return { terrain: "land" };
   if (ch === "*") return { terrain: "reef" };
   if (ch === ",") return { terrain: "shallows" };
+  if (ch === "~") return { terrain: "flats" };
   const flow = FLOW_CHARS[ch];
   if (flow) return { terrain: "current", flow };
   if (ch === ".") return { terrain: "sea" };
@@ -40,12 +41,15 @@ export interface Board {
   /** Place by cell index. */
   placeAt: Map<number, Place>;
   storms: Storm[];
+  /** The tide over the flats (none: flats are always open). */
+  tide: Tide | null;
   /** Stormy cells by voyage day (filled lazily by stormAt). */
   stormCache: Map<number, ReadonlySet<number>>;
 }
 
 export function buildBoard(
-  p: Pick<SeafarerPuzzle, "cols" | "rows" | "map" | "places" | "storms">,
+  p: Pick<SeafarerPuzzle, "cols" | "rows" | "map" | "places" | "storms"> &
+    Partial<Pick<SeafarerPuzzle, "tide">>,
 ): Board {
   if (p.map.length !== p.rows) throw new Error(`Map has ${p.map.length} rows, expected ${p.rows}`);
   const cells: Cell[] = [];
@@ -61,6 +65,7 @@ export function buildBoard(
     cells,
     placeAt,
     storms: p.storms ?? [],
+    tide: p.tide ?? null,
     stormCache: new Map(),
   };
 }
@@ -142,9 +147,31 @@ export function stormAt(board: Board, day: number): ReadonlySet<number> {
 }
 const EMPTY: ReadonlySet<number> = new Set();
 
-/** Waiting a day where the ship is. Null if the storm will be there tomorrow. */
+/** High tide on voyage day `day` (always, on a chart without a tide). */
+export function tideHigh(board: Pick<Board, "tide">, day: number): boolean {
+  const t = board.tide;
+  if (!t) return true;
+  return (((day + (t.offset ?? 0)) % t.period) + t.period) % t.period < t.high;
+}
+
+/** Whether a ship may be in `cell` on voyage day `day` (no storm, and no flats at low tide). */
+function openOn(board: Board, cell: number, day: number): boolean {
+  if (board.cells[cell].terrain === "flats" && !tideHigh(board, day)) return false;
+  return !stormAt(board, day).has(cell);
+}
+
+/** Charts where time matters: storms move, the tide turns. Waiting is a move there. */
+export function isTimed(board: Pick<Board, "storms" | "tide">): boolean {
+  return board.storms.length > 0 || board.tide !== null;
+}
+
+/**
+ * Waiting a day where the ship is (drop anchor). Only on charts where time
+ * matters, and not where the ship couldn't be tomorrow (a storm arriving, or
+ * flats drying out at low tide).
+ */
 export function anchor(board: Board, at: number, day: number): Leg | null {
-  if (!board.storms.length || stormAt(board, day + 1).has(at)) return null;
+  if (!isTimed(board) || !openOn(board, at, day + 1)) return null;
   return { to: at, path: [at], days: 1, anchor: true };
 }
 
@@ -160,8 +187,8 @@ export function sail(board: Board, from: number, dir: HexDir, day = 0): Leg | nu
   const cell = board.cells[to];
   if (!isNavigable(cell)) return null;
   if (cell.terrain === "current" && cell.flow === OPPOSITE[dir]) return null;
-  const storm = stormAt(board, day + entryCost(cell));
-  if (storm.has(to)) return null;
+  const arrive = day + entryCost(cell);
+  if (!openOn(board, to, arrive)) return null;
   const path = [to];
   let at = to;
   const seen = new Set<number>([from, to]);
@@ -169,7 +196,13 @@ export function sail(board: Board, from: number, dir: HexDir, day = 0): Leg | nu
   // water without a current, or the next cell is blocked.
   while (board.cells[at].terrain === "current") {
     const next = neighbor(board, at, board.cells[at].flow as HexDir);
-    if (next < 0 || !isNavigable(board.cells[next]) || seen.has(next) || storm.has(next)) break;
+    if (
+      next < 0 ||
+      !isNavigable(board.cells[next]) ||
+      seen.has(next) ||
+      !openOn(board, next, arrive)
+    )
+      break;
     path.push(next);
     seen.add(next);
     at = next;

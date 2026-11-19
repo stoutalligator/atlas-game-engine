@@ -4,10 +4,15 @@
 
 import type { SeafarerPack, SeafarerPuzzle } from "../types.js";
 import { FROZEN_PASSAGES } from "./frozen-passages.js";
+import { LANTERN_SEA } from "./lantern-sea.js";
 import { SHATTERED_ISLES } from "./shattered-isles.js";
 
 /** In release order. Which month each pack runs is the host's call. */
-export const SEAFARER_PACKS: readonly SeafarerPack[] = [SHATTERED_ISLES, FROZEN_PASSAGES];
+export const SEAFARER_PACKS: readonly SeafarerPack[] = [
+  SHATTERED_ISLES,
+  FROZEN_PASSAGES,
+  LANTERN_SEA,
+];
 
 export function seafarerPack(id: string): SeafarerPack | null {
   return SEAFARER_PACKS.find((p) => p.id === id) ?? null;
@@ -22,4 +27,4 @@ export function seafarerPuzzle(puzzleId: string): SeafarerPuzzle | null {
   return null;
 }
 
-export { FROZEN_PASSAGES, SHATTERED_ISLES };
+export { FROZEN_PASSAGES, LANTERN_SEA, SHATTERED_ISLES };

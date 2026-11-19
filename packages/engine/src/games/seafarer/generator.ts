@@ -18,6 +18,7 @@ import {
   replayRoute,
   sail,
   stormAt,
+  tideHigh,
   twoStarSlack,
   voyageExit,
 } from "./rules.js";
@@ -84,6 +85,16 @@ export interface Recipe {
   stormSize?: [number, number];
   minStormCost?: number;
   /**
+   * Tidal flats: runs of flats laid across the calm-water best route (so the
+   * tide is in the way), their length, and the tide's cycle. `minTideCost`:
+   * days the tide must add to par.
+   */
+  flats?: [number, number];
+  flatsLength?: [number, number];
+  tidePeriod?: [number, number];
+  tideHigh?: [number, number];
+  minTideCost?: number;
+  /**
    * The obvious route must cost at least this many days over par: a sailor
    * who plans by eye (see naiveDays) loses stars for not thinking it through.
    */
@@ -140,6 +151,8 @@ export interface Metrics {
   altGap: number;
   /** Days the storms add to par (charter: cargo they cost). */
   stormCost: number;
+  /** Days the tide adds to par (charter: cargo it costs). */
+  tideCost: number;
   /** Days the obvious, plan-by-eye route loses to par (99: it never gets there). */
   lureGap: number;
   /** Hexes from where the voyage ends to the region's exit side (0 without one). */
@@ -502,6 +515,12 @@ export function generateCandidate(recipe: Recipe, seed: string): Candidate | nul
     difficulty: 1,
     meta: { seed },
   };
+  if (recipe.flats) {
+    const tidal = placeFlats(rng, draft, recipe);
+    if (!tidal) return null;
+    draft.map = tidal.map;
+    draft.tide = tidal.tide;
+  }
   if (recipe.storms) {
     const storms = placeStorms(rng, draft, recipe);
     if (!storms) return null;
@@ -518,6 +537,51 @@ export function generateCandidate(recipe: Recipe, seed: string): Candidate | nul
  * ship would get there. Footprints are small blobs. The harbor stays clear
  * for the first two days so every voyage can set out.
  */
+/**
+ * Tidal flats across the calm-water best route: a few short runs of open sea
+ * along it turn to flats (never a place or a dock beside one), so crossing
+ * them means timing the tide, waiting for it, or going round. The tide's
+ * cycle and phase are drawn from the recipe.
+ */
+function placeFlats(
+  rng: Rng,
+  p: SeafarerPuzzle,
+  recipe: Recipe,
+): { map: string[]; tide: { period: number; high: number; offset: number } } | null {
+  const board = buildBoard(p);
+  const calm = solve({ ...p, provisions: 999 });
+  const route = replayRoute({ ...p, provisions: 999 }, calm.taps);
+  if (!route) return null;
+  const along = route.legs.flatMap((l) => l.path);
+  const placeCells = new Set(p.places.map((pl) => pl.cell));
+  const nearPlace = (c: number) =>
+    placeCells.has(c) || HEX_DIRS.some((d) => placeCells.has(neighbor(board, c, d)));
+  const g = p.map.join("").split("");
+  const runs = randInt(rng, ...(recipe.flats as [number, number]));
+  let placed = 0;
+  for (let r = 0; r < runs; r++) {
+    const open = along.filter((c) => g[c] === "." && !nearPlace(c));
+    if (!open.length) break;
+    // Start on the route, then spread to open sea around it (a sandbank, not a line).
+    let at = pick(rng, open);
+    const len = randInt(rng, ...(recipe.flatsLength ?? [2, 4]));
+    for (let i = 0; i < len && at >= 0; i++) {
+      if (g[at] === "." && !nearPlace(at)) {
+        g[at] = "~";
+        placed++;
+      }
+      at = neighbor(board, at, pick(rng, HEX_DIRS));
+    }
+  }
+  if (!placed) return null;
+  const period = randInt(rng, ...(recipe.tidePeriod ?? [4, 6]));
+  const high = Math.min(period - 1, randInt(rng, ...(recipe.tideHigh ?? [2, 3])));
+  const map: string[] = [];
+  for (let row = 0; row < p.rows; row++)
+    map.push(g.slice(row * p.cols, (row + 1) * p.cols).join(""));
+  return { map, tide: { period, high, offset: randInt(rng, 0, period - 1) } };
+}
+
 function placeStorms(rng: Rng, p: SeafarerPuzzle, recipe: Recipe): Storm[] | null {
   const board = buildBoard(p);
   const calm = solve(p);
@@ -738,14 +802,19 @@ export function naiveDays(p: SeafarerPuzzle): number {
     const leg = sail(board, at, dir, day);
     if (!leg) {
       const stormy = stormAt(board, day + 1).has(next) || stormAt(board, day + 2).has(next);
-      if (stormy) {
-        // A storm in the way: wait a little, then go around it.
+      const dry = board.cells[next].terrain === "flats" && !tideHigh(board, day + 1);
+      if (stormy || dry) {
+        // A storm in the way, or the flats dry: wait a little, then go around.
         if (waits < 2 && anchor(board, at, day)) {
           day += 1;
           waits++;
           continue;
         }
         for (const c of stormAt(board, day + 1)) stormAvoid.add(c);
+        if (dry)
+          board.cells.forEach((cell, c) => {
+            if (cell.terrain === "flats") stormAvoid.add(c);
+          });
         stormAvoid.add(next);
       } else avoid.add(next); // straight up a current
       continue;
@@ -822,6 +891,10 @@ export function measure(p: SeafarerPuzzle): Metrics | null {
     }
   }
 
+  // The tide's cost: the same chart with the flats always open.
+  const slack = p.tide ? solve({ ...p, tide: undefined }) : sol;
+  const tideCost = charter ? (slack.best ?? 0) - (sol.best ?? 0) : sol.days - slack.days;
+
   const calm = p.storms?.length ? solve({ ...p, storms: undefined }) : sol;
   const stormCost = charter ? (calm.best ?? 0) - (sol.best ?? 0) : sol.days - calm.days;
 
@@ -830,6 +903,7 @@ export function measure(p: SeafarerPuzzle): Metrics | null {
 
   return {
     stormCost,
+    tideCost,
     lureGap,
     exitDistance: 0,
     routes: 0,
@@ -874,6 +948,7 @@ function evaluate(draft: SeafarerPuzzle, recipe: Recipe): Candidate | null {
   if (recipe.minGreedyGap !== undefined && m.greedyGap < recipe.minGreedyGap) return null;
   if (recipe.minShallowCost !== undefined && m.shallowCost < recipe.minShallowCost) return null;
   if (recipe.minStormCost !== undefined && m.stormCost < recipe.minStormCost) return null;
+  if (recipe.minTideCost !== undefined && m.tideCost < recipe.minTideCost) return null;
   if (recipe.minLureGap !== undefined && m.lureGap < recipe.minLureGap) return null;
   if (recipe.maxLureGap !== undefined && m.lureGap > recipe.maxLureGap) return null;
   if (recipe.naiveFinishes && m.par + m.lureGap > p.provisions) return null;

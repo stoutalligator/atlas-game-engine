@@ -8,6 +8,7 @@ import {
 } from "../games/seafarer/generator.js";
 import {
   FROZEN_PASSAGES,
+  LANTERN_SEA,
   SEAFARER_PACKS,
   SEAFARER_THEMES,
   SHATTERED_ISLES,
@@ -19,6 +20,7 @@ import {
   solve,
 } from "../games/seafarer/logic.js";
 import { FROZEN_PASSAGES_PACK_PLAN } from "../games/seafarer/packs/frozen-passages.plan.js";
+import { LANTERN_SEA_PACK_PLAN } from "../games/seafarer/packs/lantern-sea.plan.js";
 import {
   SHATTERED_ISLES_PACK_PLAN,
   SHATTERED_ISLES_PLAN,
@@ -39,6 +41,7 @@ import {
   scoreRoute,
   starsFor,
   stormAt,
+  tideHigh,
   voyageExit,
 } from "../games/seafarer/rules.js";
 import type { SeafarerPuzzle } from "../games/seafarer/types.js";
@@ -321,6 +324,71 @@ describe("the naive sailor (plans by eye)", () => {
   });
 });
 
+describe("seafarer tides", () => {
+  // Straight across the flats (~) is 3 days; round by the open row below is 4.
+  //   row 0   H ~ ~ A
+  //   row 1    . . . .
+  const flats = (tide: SeafarerPuzzle["tide"]): SeafarerPuzzle => ({
+    ...tiny,
+    id: "flats",
+    cols: 4,
+    rows: 2,
+    map: [".~~.", "...."],
+    places: [
+      { id: "H", kind: "harbor", cell: 0, name: "Home" },
+      { id: "A", kind: "port", cell: 3, name: "Port" },
+    ],
+    tide,
+    par: 3,
+  });
+
+  it("turns on a regular cycle", () => {
+    const board = buildBoard(flats({ period: 4, high: 2, offset: 1 }));
+    expect([0, 1, 2, 3, 4, 5].map((d) => tideHigh(board, d))).toEqual([
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+    ]);
+    // No tide: the flats are always open.
+    expect(tideHigh(buildBoard(flats(undefined)), 7)).toBe(true);
+  });
+
+  it("crosses the flats while the tide is high", () => {
+    const p = flats({ period: 4, high: 3 });
+    expect(solve(p).days).toBe(3);
+    expect(scoreRoute(p, [1, 2, 3])?.days).toBe(3);
+  });
+
+  it("blocks the flats at low tide, so the long way is quicker", () => {
+    const p = flats({ period: 4, high: 2 });
+    // Day 2 is low tide: the second flats hex can't be reached in time.
+    expect(replayRoute(p, [1, 2])).toBeNull();
+    expect(solve(p).days).toBe(4);
+  });
+
+  it("won't anchor on flats that dry out tomorrow, but waits for the tide elsewhere", () => {
+    const board = buildBoard(flats({ period: 4, high: 2 }));
+    expect(anchor(board, 1, 1)).toBeNull(); // on the flats, low tide tomorrow
+    expect(anchor(board, 0, 1)).not.toBeNull(); // in harbor
+    // Without a tide or storms there is nothing to wait for.
+    expect(anchor(buildBoard(flats(undefined)), 0, 0)).toBeNull();
+  });
+
+  it("finds that waiting for the tide is best when the way round is long", () => {
+    // Wall off the way round: now the only way is across, at the next high tide.
+    const p = { ...flats({ period: 4, high: 2, offset: 2 }), map: [".~~.", "####"] };
+    // High tide on days 2 and 3: anchor a day in harbor, be on the flats on
+    // days 2 and 3, and arrive on day 4.
+    const sol = solve(p);
+    expect(sol.days).toBe(4);
+    expect(sol.taps).toEqual([0, 1, 2, 3]);
+    expect(scoreRoute(p, sol.taps)?.days).toBe(4);
+  });
+});
+
 describe("seafarer generator", () => {
   it("is deterministic for a seed", () => {
     const recipe = SHATTERED_ISLES_PLAN[3].recipe;
@@ -335,6 +403,7 @@ describe("seafarer generator", () => {
 describe.each([
   [SHATTERED_ISLES, SHATTERED_ISLES_PACK_PLAN],
   [FROZEN_PASSAGES, FROZEN_PASSAGES_PACK_PLAN],
+  [LANTERN_SEA, LANTERN_SEA_PACK_PLAN],
 ] as const)("pack %#", (pack, plan) => {
   const n = plan.days.length;
 
@@ -446,32 +515,34 @@ describe.each([
     }
   });
 
-  it("brings storms in for storm season (days 21–25) and never before", () => {
-    for (let n = 1; n <= 20; n++) expect(pack.puzzles[n - 1].storms ?? []).toEqual([]);
-    for (let n = 21; n <= 25; n++) {
-      const p = pack.puzzles[n - 1];
-      expect(p.storms?.length).toBeGreaterThan(0);
-      // The storm changes the best plan.
-      expect(solve({ ...p, storms: undefined }).days).toBeLessThan(p.par);
-    }
+  it("brings each mechanic in only on the days its plan does", () => {
+    pack.puzzles.forEach((p, i) => {
+      const r = plan.days[i].recipe;
+      const map = p.map.join("");
+      const at = `${p.id}`;
+      // Storms only on storm days, and there they change the best plan.
+      if (r.storms) {
+        expect(p.storms?.length, at).toBeGreaterThan(0);
+        expect(solve({ ...p, storms: undefined }).days, at).toBeLessThanOrEqual(p.par);
+      } else expect(p.storms ?? [], at).toEqual([]);
+      // Tides only on tide days: flats and a tide cycle together.
+      expect(map.includes("~"), at).toBe(!!r.flats);
+      expect(!!p.tide, at).toBe(!!r.flats);
+      if (!r.shallows) expect(map.includes(","), at).toBe(false);
+      if (!(r.currents[1] > 0)) expect(/[qeadzc]/.test(map), at).toBe(false);
+      // Mechanic days offer the mechanic as a real choice, alongside a route without it.
+      const kinds = new Set(p.routes?.map((route) => route.kind));
+      for (const k of r.requireKinds ?? []) expect(kinds.has(k), `${at} ${k}`).toBe(true);
+      if (r.minKinds) expect(kinds.size, at).toBeGreaterThanOrEqual(r.minKinds);
+    });
   });
 
-  it("introduces mechanics gradually", () => {
-    const has = (n: number, re: RegExp) => re.test(pack.puzzles[n - 1].map.join(""));
-    for (let n = 1; n <= 5; n++) {
-      expect(has(n, /,/)).toBe(false);
-      expect(has(n, /[qeadzc]/)).toBe(false);
-    }
-    for (let n = 6; n <= 10; n++) expect(has(n, /[qeadzc]/)).toBe(false);
-    for (let n = 1; n <= 15; n++) expect(pack.puzzles[n - 1].objective.type).toBe("voyage");
-    // Mechanic days offer the mechanic as a real choice, alongside a route without it.
-    for (let n = 6; n <= 10; n++) {
-      const kinds = new Set(pack.puzzles[n - 1].routes?.map((r) => r.kind));
-      expect(kinds.has("shallows") && kinds.size >= 2).toBe(true);
-    }
-    for (let n = 11; n <= 15; n++) {
-      const kinds = new Set(pack.puzzles[n - 1].routes?.map((r) => r.kind));
-      expect(kinds.has("current") && kinds.size >= 2).toBe(true);
+  it("starts gentle: the first days are plain voyages", () => {
+    for (let n = 1; n <= 3; n++) {
+      const p = pack.puzzles[n - 1];
+      expect(p.objective.type).toBe("voyage");
+      expect(/[,~qeadzc]/.test(p.map.join(""))).toBe(false);
+      expect(p.storms ?? []).toEqual([]);
     }
   });
 
@@ -552,7 +623,11 @@ describe("the expedition chart", () => {
 
 describe("pack registry", () => {
   it("ships both months with ids that never collide", () => {
-    expect(SEAFARER_PACKS.map((p) => p.id)).toEqual(["shattered-isles", "frozen-passages"]);
+    expect(SEAFARER_PACKS.map((p) => p.id)).toEqual([
+      "shattered-isles",
+      "frozen-passages",
+      "lantern-sea",
+    ]);
     const ids = SEAFARER_PACKS.flatMap((p) => p.puzzles.map((pz) => pz.id));
     expect(new Set(ids).size).toBe(ids.length);
     // The server finds a challenge in either pack by its id.

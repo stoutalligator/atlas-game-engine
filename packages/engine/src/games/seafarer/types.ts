@@ -8,10 +8,11 @@ export type HexDir = "e" | "ne" | "nw" | "w" | "sw" | "se";
  * One map character per cell:
  *   .  open sea (1 day)          #  land (impassable)
  *   *  reef (impassable)         ,  shallows (2 days)
+ *   ~  tidal flats (1 day at high tide, impassable at low tide)
  *   currents carry the ship one cell per step, for free, in their direction.
  *   They use the keys around S on a keyboard: q nw · e ne · a w · d e · z sw · c se
  */
-export type Terrain = "sea" | "land" | "reef" | "shallows" | "current";
+export type Terrain = "sea" | "land" | "reef" | "shallows" | "current" | "flats";
 
 export interface Cell {
   terrain: Terrain;
@@ -28,6 +29,18 @@ export interface Cell {
 export interface Storm {
   cells: number[];
   drift: HexDir;
+}
+
+/**
+ * The tide over a chart's tidal flats: a regular cycle of `period` days, the
+ * first `high` of which are high tide, shifted by `offset`. On voyage day d
+ * the tide is high when (d + offset) mod period < high. Like storms, the
+ * tide clock restarts with each voyage.
+ */
+export interface Tide {
+  period: number;
+  high: number;
+  offset?: number;
 }
 
 export type PlaceKind = "harbor" | "port" | "cargo";
@@ -69,6 +82,8 @@ export interface SeafarerPuzzle {
   places: Place[];
   /** Storm fronts (none on most charts). */
   storms?: Storm[];
+  /** The tide over the chart's tidal flats (charts with `~` hexes only). */
+  tide?: Tide;
   objective: Objective;
   /** Days of provisions: the route can't cost more. */
   provisions: number;
@@ -92,7 +107,7 @@ export interface SeafarerPuzzle {
 }
 
 /** How a route mostly gets there, for labelling it. */
-export type RouteKind = "storm" | "current" | "shallows" | "open";
+export type RouteKind = "storm" | "tide" | "current" | "shallows" | "open";
 
 export interface ReferenceRoute {
   days: number;

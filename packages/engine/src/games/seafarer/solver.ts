@@ -10,6 +10,7 @@ import {
   anchor,
   buildBoard,
   harborOf,
+  isTimed,
   neighbor,
   replayRoute,
   sail,
@@ -63,7 +64,7 @@ interface SearchOptions {
 const STORM_HORIZON = 120;
 
 /**
- * Dijkstra by days over (cell, places visited). With storms the day is part
+ * Dijkstra by days over (cell, places visited). With storms or a tide the day is part
  * of the state too (arriving earlier doesn't always beat arriving later, since
  * waiting somewhere may be blocked), and dropping anchor is a move.
  */
@@ -73,7 +74,7 @@ function search(p: SeafarerPuzzle, board: Board, maxDays: number, o: SearchOptio
   keyPlaces.forEach((pl, i) => bit.set(pl.cell, 1 << i));
   const nMask = 1 << keyPlaces.length;
   const nCells = board.cells.length;
-  const timed = board.storms.length > 0;
+  const timed = isTimed(board);
   const limit = timed ? Math.min(maxDays, STORM_HORIZON) : maxDays;
   const day0 = o.from?.day ?? 0;
   const keyOf = (cell: number, mask: number, d: number) =>
@@ -203,11 +204,16 @@ export function canFinish(p: SeafarerPuzzle, route: RouteState): boolean {
   return s.goalKey >= 0;
 }
 
-/** What a route mostly relies on: riding currents, cutting through shallows, or open water. */
+/**
+ * What a route mostly relies on: waiting out a storm, timing the tide over
+ * the flats, riding currents, cutting through shallows, or open water.
+ */
 export function routeKind(p: SeafarerPuzzle, taps: readonly number[]): RouteKind {
   const r = replayRoute({ ...p, provisions: 999 }, taps);
   if (!r) return "open";
-  if (r.legs.some((l) => l.anchor)) return "storm";
+  if (r.legs.some((l) => l.anchor)) return p.storms?.length ? "storm" : "tide";
+  const board = buildBoard(p);
+  if (r.legs.some((l) => l.path.some((c) => board.cells[c].terrain === "flats"))) return "tide";
   const drift = r.legs.reduce((n, l) => n + l.path.length - 1, 0);
   if (drift >= 2) return "current";
   return r.legs.some((l) => l.days === 2) ? "shallows" : "open";
