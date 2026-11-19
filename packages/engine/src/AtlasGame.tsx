@@ -5,6 +5,7 @@ import { BoxPlot } from "./games/box-plot/BoxPlot.js";
 import { CubeRush } from "./games/cube-rush/CubeRush.js";
 import { Doodle, type DoodleApi } from "./games/doodle/Doodle.js";
 import { RiskPool } from "./games/risk-pool/RiskPool.js";
+import { Seafarer, type SeafarerProps } from "./games/seafarer/Seafarer.js";
 import { WordWeb } from "./games/wordweb/WordWeb.js";
 import { ResultTagsContext } from "./ui/Shell.js";
 
@@ -19,6 +20,11 @@ export interface AtlasGameProps extends DailyGameProps {
   blackSwanApi?: BlackSwanApi;
   /** Doodle only: the host's server calls (the answer stays server-side until submitting). */
   doodleApi?: DoodleApi;
+  /**
+   * Seafarer only: the pack, which challenge to show, and the player's
+   * progress (Seafarer advances per player, not per date).
+   */
+  seafarer?: Omit<SeafarerProps, "storage">;
   /**
    * Tags for today's finish, from the host's records ("Personal best!",
    * "No hints!", "🔥 5-day streak"). Shown in the result panel once the
@@ -41,6 +47,7 @@ function Game({
   packs = [],
   blackSwanApi,
   doodleApi,
+  seafarer,
   ...props
 }: Omit<AtlasGameProps, "resultTags">) {
   switch (game) {
@@ -65,6 +72,12 @@ function Game({
         <Doodle api={doodleApi} {...props} />
       ) : (
         <div className="ag-root ag-error">Doodle needs a doodleApi from the host.</div>
+      );
+    case "seafarer":
+      return seafarer ? (
+        <Seafarer {...seafarer} storage={props.storage} />
+      ) : (
+        <div className="ag-root ag-error">Seafarer needs its pack and progress from the host.</div>
       );
   }
 }

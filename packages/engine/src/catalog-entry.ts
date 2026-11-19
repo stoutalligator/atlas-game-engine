@@ -58,3 +58,7 @@ export type {
   DoodleSource,
   DoodleType,
 } from "./games/doodle/logic.js";
+
+// Seafarer pack metadata (titles, sizes, badge tiers) for game lists and profiles.
+export { SEAFARER_PACKS, seafarerPack } from "./games/seafarer/packs/index.js";
+export type { BadgeTierKey, SeafarerPack } from "./games/seafarer/types.js";

@@ -1,6 +1,7 @@
 // @stoutalligator/engine — ATLAS daily games.
 // Hosts also import the stylesheet once: import "@stoutalligator/engine/styles.css";
 import "./styles/atlas-games.css";
+import "./styles/seafarer.css";
 
 export { AtlasGame, type AtlasGameProps } from "./AtlasGame.js";
 export { GAME_CATALOG, GAME_IDS, getGameInfo, isGameId } from "./catalog.js";
@@ -47,6 +48,19 @@ export { BoxPlot } from "./games/box-plot/BoxPlot.js";
 export { CubeRush } from "./games/cube-rush/CubeRush.js";
 export { cubeRushForDate } from "./games/cube-rush/daily.js";
 export { RiskPool } from "./games/risk-pool/RiskPool.js";
+export {
+  Seafarer,
+  type SeafarerFinish,
+  type SeafarerProps,
+  type SeafarerSubmission,
+} from "./games/seafarer/Seafarer.js";
+export {
+  SEAFARER_PACKS,
+  FROZEN_PASSAGES,
+  SHATTERED_ISLES,
+  seafarerPack,
+} from "./games/seafarer/packs/index.js";
+export type { SeafarerPack, SeafarerPuzzle } from "./games/seafarer/types.js";
 export { WordWeb, type WordWebProps } from "./games/wordweb/WordWeb.js";
 export { HOUSEHOLD_PETS, wordWebForDate, wordWebShareText } from "./games/wordweb/logic.js";
 export type { WordWebPuzzle, WordWebState } from "./games/wordweb/logic.js";

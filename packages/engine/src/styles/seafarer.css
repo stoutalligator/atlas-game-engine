@@ -1,0 +1,1497 @@
+/* Seafarer. The frame follows ATLAS (slate panels, 2px borders, 4px corners,
+   pressed shadows, black-weight uppercase labels, cyan accents); the chart
+   inside is an illustrated hex sea. Scoped to .sf-root; a pack picks its map
+   palette with data-theme. */
+
+.sf-root {
+  /* Chart palette: The Shattered Isles (November) */
+  --sf-deep: #0b3b5c;
+  --sf-deep-2: #082f49;
+  --sf-sea-0: #1fa3c4;
+  --sf-sea-1: #23abca;
+  --sf-sea-2: #1a98bb;
+  --sf-tile-line: rgba(255, 255, 255, 0.16);
+  --sf-ripple: rgba(255, 255, 255, 0.35);
+  --sf-shallow: #8fe0d2;
+  --sf-shallow-ripple: rgba(161, 120, 50, 0.45);
+  --sf-current: #45c9e0;
+  --sf-current-band: #7ee3f1;
+  --sf-current-ink: #0c4a6e;
+  --sf-reef: #6fd1cb;
+  --sf-surf: rgba(255, 255, 255, 0.55);
+  --sf-sand: #f3dca2;
+  --sf-grass: #6cbf5c;
+  --sf-hill: #4c9a4f;
+  --sf-land-shadow: rgba(3, 37, 60, 0.45);
+  --sf-coral-a: #fb7185;
+  --sf-coral-b: #fbbf24;
+  --sf-coral-c: #f472b6;
+  /* Routes and states */
+  --sf-route: #0f172a;
+  --sf-drift: #ecfeff;
+  --sf-reach: #a5f3fc;
+  --sf-target: #f59e0b;
+  --sf-done: #10b981;
+  --sf-gold: #f59e0b;
+  --sf-silver: #94a3b8;
+  --sf-bronze: #c2703d;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 720px;
+  margin: 0 auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sf-loading {
+  min-height: 560px;
+}
+
+/* ── ATLAS panels ─────────────────────────────────────────────────────── */
+
+.sf-panel {
+  background: var(--ag-surface);
+  border: 2px solid var(--ag-line);
+  border-radius: var(--ag-radius);
+  box-shadow: 0 2px 0 0 var(--ag-shadow);
+}
+
+.sf-chip {
+  display: inline-block;
+  align-self: flex-start;
+  border: 2px solid #94a3b8;
+  border-radius: var(--ag-radius);
+  background: var(--ag-sunken-2);
+  color: var(--ag-ink);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sf-stat-label {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ag-muted);
+}
+
+/* ── Expedition track ─────────────────────────────────────────────────── */
+
+.sf-track {
+  padding: 10px 12px 12px;
+}
+.sf-track-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.sf-track-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--ag-ink);
+  letter-spacing: -0.01em;
+}
+.sf-track-title small {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ag-accent-strong);
+}
+.sf-track-count {
+  font-size: 12px;
+  color: var(--ag-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sf-track-count strong {
+  color: var(--ag-ink);
+}
+.sf-track-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 3px 2px;
+}
+.sf-node {
+  all: unset;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 30px;
+  margin: 0 auto;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.sf-node:disabled {
+  cursor: default;
+}
+.sf-node svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.sf-node polygon {
+  fill: var(--ag-sunken);
+  stroke: var(--ag-line);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 2;
+}
+.sf-node span {
+  position: relative;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--ag-subtle);
+  font-variant-numeric: tabular-nums;
+}
+.sf-node[data-state="open"] polygon {
+  fill: var(--ag-accent-soft);
+  stroke: var(--ag-accent);
+  stroke-dasharray: none;
+  stroke-width: 2;
+}
+.sf-node[data-state="open"] span {
+  color: var(--ag-accent-ink);
+}
+.sf-node[data-state="done"] polygon {
+  fill: var(--ag-accent);
+  stroke: var(--ag-accent-strong);
+  stroke-dasharray: none;
+}
+.sf-node[data-stars="3"] polygon {
+  fill: var(--sf-gold);
+  stroke: #b45309;
+}
+.sf-node[data-stars="1"] polygon {
+  fill: #64748b;
+  stroke: #475569;
+}
+.sf-node[data-state="done"] span {
+  color: #fff;
+}
+.sf-node[data-current="true"] {
+  transform: scale(1.18);
+}
+.sf-node[data-current="true"] polygon {
+  stroke: var(--ag-ink);
+  stroke-width: 2.6;
+  stroke-dasharray: none;
+}
+.sf-node[data-tier]::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tier);
+  box-shadow: 0 0 0 1.5px #fff;
+}
+.sf-node[data-tier="bronze"] {
+  --tier: var(--sf-bronze);
+}
+.sf-node[data-tier="silver"] {
+  --tier: var(--sf-silver);
+}
+.sf-node[data-tier="gold"] {
+  --tier: var(--sf-gold);
+}
+.sf-node:not(:disabled):hover {
+  transform: scale(1.12);
+}
+.sf-node:focus-visible {
+  outline: 3px solid var(--ag-accent-line);
+  outline-offset: 2px;
+}
+
+/* ── Voyage panel ─────────────────────────────────────────────────────── */
+
+.sf-voyage {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (max-width: 520px) {
+  .sf-voyage {
+    padding: 10px;
+  }
+}
+.sf-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.sf-head-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.sf-title {
+  margin: 2px 0 0;
+  font-size: clamp(20px, 4.5vw, 26px);
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--ag-ink);
+}
+.sf-objective {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ag-text);
+}
+.sf-diff {
+  display: flex;
+  gap: 3px;
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+.sf-diff span {
+  width: 8px;
+  height: 9px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: var(--ag-line);
+}
+.sf-diff span[data-on="true"] {
+  background: var(--ag-accent);
+}
+.sf-tip {
+  margin: 0;
+  border-left: 4px solid var(--ag-accent);
+  background: var(--ag-accent-soft);
+  color: var(--ag-accent-ink);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 0 var(--ag-radius) var(--ag-radius) 0;
+}
+
+/* ── The chart ────────────────────────────────────────────────────────── */
+
+.sf-board {
+  border: 2px solid var(--ag-ink);
+  border-radius: var(--ag-radius);
+  background: radial-gradient(120% 90% at 50% 35%, var(--sf-deep) 0%, var(--sf-deep-2) 100%);
+  padding: 6px;
+  box-shadow: 0 3px 0 0 var(--ag-shadow-strong);
+  transition: filter 0.35s;
+}
+@media (max-width: 520px) {
+  .sf-board {
+    padding: 3px;
+  }
+}
+.sf-board[data-returning="true"] {
+  filter: saturate(0.6) brightness(0.9);
+}
+.sf-chart {
+  position: relative;
+  width: 100%;
+  max-height: 70vh;
+  margin: 0 auto;
+}
+.sf-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: visible;
+}
+.sf-map[data-interactive="true"] {
+  cursor: pointer;
+}
+
+/* Tiles */
+.sf-tile {
+  stroke: var(--sf-tile-line);
+  stroke-width: 1;
+}
+.sf-tile--sea0 {
+  fill: var(--sf-sea-0);
+}
+.sf-tile--sea1 {
+  fill: var(--sf-sea-1);
+}
+.sf-tile--sea2 {
+  fill: var(--sf-sea-2);
+}
+.sf-tile--shallows {
+  fill: var(--sf-shallow);
+}
+.sf-tile--current {
+  fill: var(--sf-current);
+}
+.sf-tile--reef {
+  fill: var(--sf-reef);
+}
+.sf-ripple {
+  fill: none;
+  stroke: var(--sf-ripple);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.sf-ripple--sand {
+  stroke: var(--sf-shallow-ripple);
+}
+
+/* Currents */
+.sf-stream line {
+  stroke: var(--sf-current-band);
+  stroke-width: 22;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+.sf-flow-line {
+  fill: none;
+  stroke: var(--sf-current-ink);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-dasharray: 5 5;
+  animation: sf-flow 0.8s linear infinite;
+}
+.sf-flow-head {
+  fill: none;
+  stroke: var(--sf-current-ink);
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+@keyframes sf-flow {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* Reefs */
+.sf-surf {
+  fill: none;
+  stroke: var(--sf-surf);
+  stroke-width: 2;
+  stroke-dasharray: 2 4;
+}
+.sf-coral-0 {
+  fill: var(--sf-coral-a);
+}
+.sf-coral-1 {
+  fill: var(--sf-coral-b);
+}
+.sf-coral-2 {
+  fill: var(--sf-coral-c);
+}
+
+/* Islands */
+.sf-land-shadow polygon {
+  fill: var(--sf-land-shadow);
+}
+.sf-sand polygon {
+  fill: var(--sf-sand);
+}
+.sf-grass polygon {
+  fill: var(--sf-grass);
+}
+.sf-hill path {
+  fill: var(--sf-hill);
+}
+.sf-hill .sf-hill-snow {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.65);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sf-palm-trunk {
+  fill: none;
+  stroke: #8a5a33;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.sf-palm-leaf {
+  fill: none;
+  stroke: #23703a;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+/* Waters this voyage has crossed */
+.sf-wakecells polygon {
+  fill: rgba(255, 255, 255, 0.16);
+}
+
+/* Next moves: glowing hexes; the hovered/aimed one lights up */
+.sf-reach {
+  fill: rgba(165, 243, 252, 0.18);
+  stroke: var(--sf-reach);
+  stroke-width: 2;
+  animation: sf-pulse 1.5s ease-in-out infinite;
+  transition: fill 0.12s, stroke-width 0.12s;
+}
+.sf-reach[data-target="true"] {
+  fill: rgba(255, 255, 255, 0.42);
+  stroke: #fff;
+  stroke-width: 3;
+  animation: none;
+}
+@keyframes sf-pulse {
+  50% {
+    fill: rgba(165, 243, 252, 0.34);
+  }
+}
+.sf-preview {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-dasharray: 1 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The voyage so far */
+.sf-route path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sf-route-glow {
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 8;
+}
+.sf-route-sail {
+  stroke: var(--sf-route);
+  stroke-width: 3.2;
+  stroke-dasharray: 0.1 7;
+}
+.sf-route-drift {
+  stroke: var(--sf-current-ink);
+  stroke-width: 2.8;
+  stroke-dasharray: 7 4;
+}
+
+/* Reference routes, shown after finishing */
+.sf-overlay path {
+  fill: none;
+  stroke: var(--sf-target);
+  stroke-width: 4.5;
+  stroke-dasharray: 9 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: sf-draw 0.6s ease-out;
+}
+.sf-overlay[data-kind="current"] path {
+  stroke: #e879f9;
+}
+.sf-overlay[data-kind="shallows"] path {
+  stroke: #fb923c;
+}
+@keyframes sf-draw {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Places */
+.sf-place-ring {
+  fill: rgba(255, 255, 255, 0.88);
+  stroke: var(--sf-route);
+  stroke-width: 2;
+}
+.sf-harbor .sf-place-ring {
+  stroke: var(--sf-done);
+  stroke-width: 2.5;
+}
+.sf-target {
+  stroke: var(--sf-target);
+  stroke-width: 3;
+  animation: sf-beacon 2s ease-in-out infinite;
+}
+@keyframes sf-beacon {
+  50% {
+    stroke-width: 5;
+  }
+}
+.sf-port[data-done="true"] .sf-target,
+.sf-cargo[data-done="true"] .sf-place-ring {
+  stroke: var(--sf-done);
+  animation: none;
+}
+.sf-lh-body {
+  fill: #fff;
+  stroke: var(--sf-route);
+  stroke-width: 1.2;
+}
+.sf-lh-stripe {
+  stroke: #e11d48;
+  stroke-width: 2;
+}
+.sf-lh-top {
+  fill: var(--sf-route);
+}
+.sf-lh-light {
+  fill: #fde047;
+}
+.sf-flag-pole {
+  stroke: var(--sf-route);
+  stroke-width: 1.6;
+}
+.sf-flag {
+  fill: #e11d48;
+}
+.sf-port[data-done="true"] .sf-flag {
+  fill: var(--sf-done);
+}
+.sf-pier {
+  fill: #92633a;
+}
+.sf-crate {
+  fill: #c98b4b;
+  stroke: #6f4520;
+  stroke-width: 1.2;
+}
+.sf-crate-band {
+  stroke: #6f4520;
+  stroke-width: 1.2;
+}
+.sf-value {
+  fill: var(--sf-gold);
+  stroke: #fff;
+  stroke-width: 1.4;
+}
+.sf-value-text {
+  fill: #fff;
+  font-size: 9px;
+  font-weight: 900;
+}
+.sf-cargo[data-done="true"] .sf-crate {
+  opacity: 0.35;
+}
+.sf-cargo[data-done="true"] .sf-value {
+  fill: var(--sf-done);
+}
+
+/* Ship: CSS transitions carry it between cells and turn it the short way */
+.sf-ship {
+  transition: transform 0.32s cubic-bezier(0.45, 0.05, 0.35, 1), opacity 0.3s;
+  pointer-events: none;
+}
+.sf-ship[data-moving="true"] {
+  transition-timing-function: linear;
+}
+.sf-ship[data-hidden="true"] {
+  opacity: 0;
+}
+.sf-ship-turn {
+  transition: transform 0.25s ease-out;
+}
+.sf-ship-shape {
+  animation: sf-bob 2.6s ease-in-out infinite;
+}
+@keyframes sf-bob {
+  50% {
+    transform: translateY(-1px) rotate(2deg);
+  }
+}
+.sf-ship-shadow {
+  fill: rgba(3, 37, 60, 0.35);
+}
+.sf-hull {
+  fill: #7c4a24;
+  stroke: #3f230e;
+  stroke-width: 1.2;
+}
+.sf-deck {
+  fill: #c08a55;
+}
+.sf-sail {
+  fill: #fffdf7;
+  stroke: #cbd5e1;
+  stroke-width: 0.8;
+}
+.sf-boom {
+  stroke: #3f230e;
+  stroke-width: 1.4;
+}
+.sf-pennant {
+  fill: #e11d48;
+}
+.sf-wake {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: stroke 0.2s;
+}
+.sf-ship[data-moving="true"] .sf-wake {
+  stroke: rgba(255, 255, 255, 0.85);
+}
+
+/* Text overlays */
+.sf-tag,
+.sf-cost {
+  position: absolute;
+  transform: translate(-50%, 0);
+  pointer-events: none;
+  white-space: nowrap;
+  border-radius: 3px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+.sf-tag {
+  font-size: 9.5px;
+  padding: 3px 5px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--ag-ink);
+  border: 1.5px solid var(--ag-ink);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.3);
+}
+.sf-tag[data-kind="harbor"] {
+  border-color: #047857;
+  color: #047857;
+}
+.sf-tag[data-kind="port"] {
+  border-color: #b45309;
+  color: #92400e;
+}
+.sf-tag[data-done="true"] {
+  border-color: #047857;
+  color: #047857;
+}
+@media (max-width: 480px) {
+  .sf-tag {
+    font-size: 8px;
+    padding: 2px 4px;
+    letter-spacing: 0.04em;
+  }
+}
+.sf-cost {
+  transform: translate(-50%, -100%);
+  font-size: 11px;
+  padding: 5px 7px;
+  background: var(--ag-ink);
+  color: #fff;
+  box-shadow: 0 2px 0 rgba(15, 23, 42, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  z-index: 2;
+  animation: sf-pop-in 0.12s ease-out;
+}
+.sf-cost em {
+  font-style: normal;
+  font-size: 9px;
+  color: var(--sf-reach);
+}
+@keyframes sf-pop-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -80%);
+  }
+}
+
+/* Legend */
+.sf-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--ag-muted);
+  font-weight: 600;
+}
+.sf-legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.sf-swatch {
+  width: 15px;
+  height: 15px;
+}
+.sf-swatch polygon {
+  stroke: rgba(15, 23, 42, 0.25);
+  stroke-width: 1.5;
+}
+.sf-legend [data-kind="sea"] polygon {
+  fill: var(--sf-sea-1);
+}
+.sf-legend [data-kind="shallows"] polygon {
+  fill: var(--sf-shallow);
+}
+.sf-legend [data-kind="current"] polygon {
+  fill: var(--sf-current);
+}
+.sf-legend [data-kind="block"] polygon {
+  fill: var(--sf-grass);
+  stroke: var(--sf-sand);
+  stroke-width: 3;
+}
+
+/* Voyage log */
+.sf-log {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  border: 2px solid var(--ag-line);
+  border-radius: var(--ag-radius);
+  background: var(--ag-sunken);
+}
+.sf-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 12px;
+  min-width: 0;
+}
+.sf-stat + .sf-stat {
+  border-left: 2px solid var(--ag-line-soft);
+}
+.sf-stat-big {
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--ag-ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.sf-stat-big small {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ag-muted);
+  letter-spacing: 0;
+}
+.sf-stat-note {
+  font-size: 11px;
+  color: var(--ag-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sf-meter {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ag-line-soft);
+  overflow: hidden;
+  margin-top: 3px;
+}
+.sf-meter span {
+  display: block;
+  height: 100%;
+  background: var(--ag-accent);
+  transition: width 0.35s ease;
+}
+.sf-meter span[data-low="true"] {
+  background: #e11d48;
+}
+@media (max-width: 420px) {
+  .sf-stat {
+    padding: 7px 8px;
+  }
+  .sf-stat-big {
+    font-size: 22px;
+  }
+}
+
+/* Actions and messages */
+.sf-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.sf-actions .ag-btn {
+  min-height: 40px;
+}
+.sf-hint {
+  margin: -4px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ag-muted);
+}
+.sf-warn {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #9a3412;
+  background: #fff7ed;
+  border: 2px solid #fdba74;
+  border-radius: var(--ag-radius);
+  padding: 8px 12px;
+  animation: sf-rise 0.3s ease-out;
+}
+.sf-locked {
+  margin: 0;
+  text-align: center;
+  color: var(--ag-muted);
+  font-size: 14px;
+}
+
+/* Result */
+.sf-result {
+  text-align: center;
+  border-top: 2px solid var(--ag-line-soft);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: sf-rise 0.45s ease-out;
+}
+.sf-result h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--ag-ink);
+}
+.sf-result-detail {
+  margin: 0;
+  color: var(--ag-text);
+  font-size: 14px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.sf-foot {
+  margin: 0;
+  color: var(--ag-muted);
+  font-size: 13px;
+}
+@keyframes sf-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.sf-stars {
+  display: inline-flex;
+  justify-content: center;
+  gap: 8px;
+}
+.sf-star {
+  font-size: 40px;
+  line-height: 1;
+  color: var(--ag-line);
+}
+.sf-star[data-on="true"] {
+  color: var(--sf-gold);
+  text-shadow: 0 3px 0 #b45309;
+  animation: sf-pop 0.55s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+@keyframes sf-pop {
+  from {
+    transform: scale(0.2) rotate(-30deg);
+    opacity: 0;
+  }
+}
+.sf-routes {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sf-routes ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sf-route-row {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid var(--ag-line);
+  border-radius: var(--ag-radius);
+  background: var(--ag-surface);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ag-ink);
+  transition: background 0.12s, border-color 0.12s;
+}
+.sf-route-row:hover {
+  background: var(--ag-sunken);
+}
+.sf-route-row[data-on="true"] {
+  border-color: var(--ag-ink);
+  background: var(--ag-sunken-2);
+}
+.sf-route-row:focus-visible {
+  outline: 3px solid var(--ag-accent-line);
+  outline-offset: 2px;
+}
+.sf-route-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--sf-target);
+  flex-shrink: 0;
+}
+.sf-route-row[data-kind="current"] .sf-route-dot {
+  background: #e879f9;
+}
+.sf-route-row[data-kind="shallows"] .sf-route-dot {
+  background: #fb923c;
+}
+.sf-route-name {
+  flex: 1;
+}
+.sf-route-name em {
+  font-style: normal;
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #047857;
+  background: var(--ag-good-soft);
+  border: 1.5px solid var(--ag-good-line);
+  border-radius: 3px;
+  padding: 2px 5px;
+}
+.sf-route-days {
+  font-variant-numeric: tabular-nums;
+  color: var(--ag-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-flow-line,
+  .sf-reach,
+  .sf-target,
+  .sf-ship-shape,
+  .sf-star,
+  .sf-result,
+  .sf-overlay path {
+    animation: none !important;
+  }
+  .sf-ship,
+  .sf-ship-turn {
+    transition: none;
+  }
+}
+
+/* ── Storms ───────────────────────────────────────────────────────────── */
+
+.sf-forecast {
+  fill: rgba(15, 23, 42, 0.16);
+  stroke: rgba(15, 23, 42, 0.55);
+  stroke-width: 1.8;
+  stroke-dasharray: 4 3;
+}
+.sf-cloud {
+  animation: sf-cloud-in 0.5s ease-out;
+}
+@keyframes sf-cloud-in {
+  from {
+    opacity: 0;
+  }
+}
+.sf-cloud-hex {
+  fill: rgba(30, 41, 59, 0.72);
+  stroke: rgba(15, 23, 42, 0.5);
+  stroke-width: 1;
+}
+.sf-cloud-puff {
+  fill: #cbd5e1;
+  stroke: #64748b;
+  stroke-width: 1;
+}
+.sf-rain path {
+  stroke: rgba(186, 230, 253, 0.85);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}
+.sf-rain {
+  animation: sf-rain 0.8s linear infinite;
+}
+@keyframes sf-rain {
+  from {
+    transform: translate(2px, -5px);
+    opacity: 0.2;
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    transform: translate(-2px, 6px);
+    opacity: 0.2;
+  }
+}
+.sf-bolt {
+  fill: none;
+  stroke: #fde047;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  opacity: 0;
+  animation: sf-flash 4.5s steps(1) infinite;
+}
+@keyframes sf-flash {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  2% {
+    opacity: 1;
+  }
+  4% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  8% {
+    opacity: 0;
+  }
+}
+.sf-storm-drift path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.6));
+}
+.sf-legend [data-kind="storm"] polygon {
+  fill: #334155;
+}
+.sf-anchor-mark {
+  opacity: 0;
+  pointer-events: none;
+}
+.sf-anchor-mark circle {
+  fill: var(--ag-ink);
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+.sf-anchor-mark path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.sf-ship[data-anchoring="true"] .sf-anchor-mark {
+  animation: sf-anchor 0.65s ease-out;
+}
+@keyframes sf-anchor {
+  0% {
+    opacity: 0;
+    transform: translate(12px, -22px);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(12px, -14px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(12px, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-rain,
+  .sf-bolt,
+  .sf-cloud,
+  .sf-ship[data-anchoring="true"] .sf-anchor-mark {
+    animation: none !important;
+  }
+}
+.sf-route-row[data-kind="storm"] .sf-route-dot {
+  background: #475569;
+}
+.sf-overlay[data-kind="storm"] path {
+  stroke: #cbd5e1;
+}
+
+/* ── Expedition chart (the month as one journey) ──────────────────────── */
+
+.sf-expedition {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sf-expedition-frame {
+  position: relative;
+  width: 100%;
+  max-height: 78vh;
+  margin: 0 auto;
+  border: 2px solid var(--ag-ink);
+  border-radius: var(--ag-radius);
+  overflow: hidden;
+  box-shadow: 0 3px 0 0 var(--ag-shadow-strong);
+  background: var(--sf-deep-2);
+}
+.sf-expedition-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.sf-ocean {
+  fill: var(--sf-deep);
+}
+.sf-lattice-gap {
+  fill: var(--sf-deep);
+}
+.sf-ocean-wave {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.sf-cartouche-title {
+  fill: #fff;
+  font-size: 84px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.sf-cartouche-sub {
+  fill: #a5f3fc;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.sf-lane {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 6;
+  stroke-dasharray: 2 14;
+  stroke-linecap: round;
+}
+.sf-lane[data-done="true"] {
+  stroke: #fff;
+  stroke-dasharray: 2 9;
+}
+.sf-region {
+  cursor: pointer;
+}
+.sf-region[data-state="fog"] {
+  cursor: default;
+}
+.sf-region-sea {
+  fill: var(--sf-sea-1);
+}
+.sf-region-frame {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0);
+  stroke-width: 3;
+  stroke-dasharray: 10 8;
+}
+.sf-region[data-state="open"] .sf-region-frame {
+  stroke: #a5f3fc;
+  stroke-width: 4;
+}
+.sf-region[data-focus="true"] .sf-region-frame {
+  stroke: var(--sf-gold);
+  stroke-width: 6;
+  animation: sf-focus 1.8s ease-in-out infinite;
+}
+@keyframes sf-focus {
+  50% {
+    stroke-width: 10;
+  }
+}
+.sf-region:not([data-state="fog"]):hover .sf-region-frame {
+  stroke: #fff;
+}
+.sf-fog rect {
+  fill: #dbe4ee;
+  opacity: 0.78;
+}
+.sf-fog circle {
+  fill: #f1f5f9;
+  opacity: 0.55;
+}
+.sf-region-label rect {
+  fill: #fff;
+  stroke: var(--ag-ink);
+  stroke-width: 2;
+}
+.sf-region[data-state="fog"] .sf-region-label rect {
+  fill: #cbd5e1;
+  stroke: #64748b;
+}
+.sf-region-label text {
+  fill: var(--ag-ink);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+.sf-region-stars {
+  fill: var(--sf-gold);
+  font-size: 40px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: #0b3b5c;
+  stroke-width: 4px;
+}
+.sf-ink path {
+  fill: none;
+  stroke: #0f172a;
+  stroke-width: 5;
+  stroke-dasharray: 0.1 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sf-chart-ship-halo {
+  fill: rgba(245, 158, 11, 0.35);
+  animation: sf-halo 1.6s ease-in-out infinite;
+}
+@keyframes sf-halo {
+  50% {
+    fill: rgba(245, 158, 11, 0.6);
+  }
+}
+.sf-expedition-foot {
+  display: flex;
+  justify-content: center;
+  min-height: 40px;
+  align-items: center;
+}
+.sf-expedition-status {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ag-accent-strong);
+  animation: sf-pulse-text 1.2s ease-in-out infinite;
+}
+@keyframes sf-pulse-text {
+  50% {
+    opacity: 0.45;
+  }
+}
+.sf-head-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.sf-chart-btn {
+  padding: 4px 8px;
+  font-size: 10px;
+}
+.sf-enter {
+  animation: sf-enter 0.45s ease-out;
+}
+@keyframes sf-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-region[data-focus="true"] .sf-region-frame,
+  .sf-chart-ship-halo,
+  .sf-enter,
+  .sf-expedition-status {
+    animation: none !important;
+  }
+}
+
+/* ── The Frozen Passages (December): polar palette and art ────────────── */
+
+.sf-root[data-theme="frozen-passages"] {
+  --sf-deep: #13314d;
+  --sf-deep-2: #0c2238;
+  --sf-sea-0: #4f8fb8;
+  --sf-sea-1: #5a9ac2;
+  --sf-sea-2: #4785ae;
+  --sf-tile-line: rgba(255, 255, 255, 0.2);
+  --sf-ripple: rgba(255, 255, 255, 0.4);
+  /* Slush ice */
+  --sf-shallow: #cfe4f1;
+  --sf-shallow-ripple: rgba(71, 133, 174, 0.55);
+  /* Polar drift */
+  --sf-current: #6cc6dc;
+  --sf-current-band: #b9ecf6;
+  --sf-current-ink: #0b3954;
+  /* Icebergs sit on dark water */
+  --sf-reef: #3f7ea8;
+  /* Snowy islands: pale-ice shore, snow on top, rocky peaks */
+  --sf-sand: #dbe8f1;
+  --sf-grass: #f8fbfe;
+  --sf-hill: #7d8fa3;
+  --sf-land-shadow: rgba(6, 24, 42, 0.5);
+}
+.sf-berg-wake {
+  fill: rgba(255, 255, 255, 0.35);
+}
+.sf-berg-ice {
+  fill: #f8fcff;
+  stroke: #9cc3dd;
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.sf-berg-shade {
+  fill: #c3dcee;
+}
+.sf-peak path {
+  fill: #7d8fa3;
+}
+.sf-peak .sf-peak-snow {
+  fill: #ffffff;
+}
+.sf-pine path:first-child {
+  fill: #2c6650;
+}
+.sf-pine .sf-pine-snow {
+  fill: #ffffff;
+}
+.sf-pine-trunk {
+  stroke: #6b4a2b;
+  stroke-width: 1.8;
+}
+/* Blizzards: snow, not rain */
+.sf-root[data-theme="frozen-passages"] .sf-cloud-hex {
+  fill: rgba(203, 213, 225, 0.62);
+  stroke: rgba(255, 255, 255, 0.6);
+}
+.sf-root[data-theme="frozen-passages"] .sf-cloud-puff {
+  fill: #f1f5f9;
+  stroke: #94a3b8;
+}
+.sf-root[data-theme="frozen-passages"] .sf-rain path {
+  stroke: #ffffff;
+  stroke-width: 2.4;
+  stroke-dasharray: 0.1 4;
+}
+.sf-root[data-theme="frozen-passages"] .sf-rain {
+  animation-duration: 1.8s;
+}
+.sf-root[data-theme="frozen-passages"] .sf-bolt {
+  display: none;
+}
+.sf-root[data-theme="frozen-passages"] .sf-legend [data-kind="storm"] polygon {
+  fill: #cbd5e1;
+}
+.sf-root[data-theme="frozen-passages"] .sf-legend [data-kind="block"] polygon {
+  fill: #f8fbfe;
+  stroke: #9cc3dd;
+}
+.sf-root[data-theme="frozen-passages"] .sf-region-sea,
+.sf-root[data-theme="frozen-passages"] .sf-ocean,
+.sf-root[data-theme="frozen-passages"] .sf-lattice-gap {
+  fill: var(--sf-deep);
+}
+
+/* ── Premium touches ──────────────────────────────────────────────────── */
+
+.sf-board {
+  position: relative;
+}
+.sf-landfall {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 3;
+  background: radial-gradient(closest-side, rgba(8, 47, 73, 0.45), transparent);
+  animation: sf-landfall 2.6s ease-in-out both;
+}
+.sf-landfall span {
+  background: #fff;
+  color: var(--ag-ink);
+  border: 2px solid var(--ag-ink);
+  border-radius: var(--ag-radius);
+  box-shadow: 0 3px 0 0 var(--ag-shadow-strong);
+  padding: 10px 16px;
+  font-size: clamp(13px, 3.4vw, 17px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  animation: sf-landfall-card 2.6s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+@keyframes sf-landfall {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes sf-landfall-card {
+  0% {
+    transform: scale(0.7);
+  }
+  14% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.sf-bump {
+  display: inline-block;
+  animation: sf-bump 0.35s ease-out;
+}
+@keyframes sf-bump {
+  40% {
+    transform: translateY(-3px) scale(1.12);
+    color: var(--ag-accent-strong);
+  }
+}
+.sf-loading {
+  border-radius: var(--ag-radius);
+  background: linear-gradient(
+    100deg,
+    var(--ag-sunken) 30%,
+    var(--ag-sunken-2) 50%,
+    var(--ag-sunken) 70%
+  );
+  background-size: 300% 100%;
+  animation: sf-shimmer 1.4s linear infinite;
+}
+@keyframes sf-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-landfall,
+  .sf-landfall span,
+  .sf-bump,
+  .sf-loading {
+    animation: none !important;
+  }
+  .sf-landfall {
+    display: none;
+  }
+}

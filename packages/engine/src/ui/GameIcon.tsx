@@ -60,6 +60,16 @@ const PATHS: Record<GameId, React.ReactNode> = {
       <path d="M14.5 19.5l6-6-2-2-6 6-.8 2.8z" />
     </>
   ),
+  // Seafarer: a sailboat on a dotted course.
+  seafarer: (
+    <>
+      <path d="M11 3v11" />
+      <path d="M11 4c3.5 2 5.5 5 6 9h-6" />
+      <path d="M9 6c-2 2-3 4.5-3 7h3" />
+      <path d="M4 16h14l-2 3H6z" />
+      <path d="M3 22h2M9 22h2M15 22h2" />
+    </>
+  ),
 };
 
 /** Line icons in the same 24px / 2px-stroke style as the ATLAS dashboard tiles. */

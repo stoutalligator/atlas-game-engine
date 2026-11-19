@@ -9,6 +9,7 @@ import {
   localDateKey,
 } from "@stoutalligator/engine";
 import { useEffect, useState } from "react";
+import { SeafarerPlayground } from "./SeafarerPlayground";
 import { blackSwanMock, resetBlackSwanMock } from "./blackSwanMock";
 import {
   DOODLE_SANDBOX_START,
@@ -125,7 +126,9 @@ export function App() {
         <div className="pg-tab">{info.title.toUpperCase()}</div>
         <p className="pg-desc">{info.description}</p>
         {game === "doodle" && <DoodleSandboxNote date={date} />}
-        {game === "wordweb" && wwPuzzles === null ? (
+        {game === "seafarer" ? (
+          <SeafarerPlayground />
+        ) : game === "wordweb" && wwPuzzles === null ? (
           <p className="pg-desc">Generating…</p>
         ) : (
           <AtlasGame
