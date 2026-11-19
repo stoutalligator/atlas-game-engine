@@ -82,6 +82,15 @@
   --ag-accent-ink: #0c4a6e;
 }
 
+.ag-root[data-accent="orange"] {
+  --ag-accent: #ea580c;
+  --ag-accent-strong: #c2410c;
+  --ag-accent-line: #fb923c;
+  --ag-accent-soft: #fff7ed;
+  --ag-accent-tint: #ffedd5;
+  --ag-accent-ink: #7c2d12;
+}
+
 .ag-root[data-accent="rose"] {
   --ag-accent: #e11d48;
   --ag-accent-strong: #be123c;

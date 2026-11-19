@@ -1,7 +1,7 @@
 import type { GameId } from "./core/types.js";
 
 /** Accent colours map to the ATLAS Tailwind palette. */
-export type GameAccent = "violet" | "amber" | "cyan" | "emerald" | "slate" | "rose" | "sky";
+export type GameAccent = "violet" | "amber" | "cyan" | "emerald" | "slate" | "rose" | "sky" | "orange";
 
 export interface GameInfo {
   id: GameId;
@@ -133,7 +133,7 @@ export const GAME_CATALOG: readonly GameInfo[] = [
       "Monday is easy; the weekend is hard. Harder days show less, they aren't marked more strictly.",
       "New here? Press Practice for a quick round on a circle. It never counts.",
     ],
-    accent: "sky",
+    accent: "orange",
     minutes: "1–2 min",
     needsContent: true,
   },
