@@ -381,6 +381,40 @@ export interface StormView {
   drifts: HexDir[];
 }
 
+/** Today's and tomorrow's tide over the flats (charts with a tide only). */
+export interface TideView {
+  high: boolean;
+  next: boolean;
+}
+
+/**
+ * The flats as the tide leaves them: at low tide a dry sandbar (blocked);
+ * at high tide open water, with a dashed rim when it drops tomorrow.
+ */
+function FlatsLayer({
+  cells,
+  tide,
+  centers,
+}: { cells: number[]; tide: TideView; centers: Array<[number, number]> }) {
+  return (
+    <g className="sf-flats" data-high={tide.high} data-ebbing={tide.high && !tide.next}>
+      {cells.map((c) => {
+        const [x, y] = centers[c];
+        return (
+          <g key={c} transform={`translate(${x} ${y})`}>
+            <polygon points={hexPoints(0, 0, HEX - 0.7)} className="sf-flats-hex" />
+            {tide.high ? (
+              <path d="M-9 2 q3 -3 6 0 t6 0 t6 0" className="sf-flats-wave" />
+            ) : (
+              <path d="M-10 4 q5 -6 10 -2 t10 -1 M-6 -5 h3 M3 7 h3" className="sf-flats-sand" />
+            )}
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
 export interface Overlay {
   legs: readonly Leg[];
   kind: RouteKind | "mine";
@@ -404,6 +438,8 @@ export interface SeafarerMapProps {
   overlay?: Overlay | null;
   /** Stormy cells today and tomorrow (the forecast), and which way each front drifts. */
   storm?: StormView | null;
+  /** The tide over the flats today and tomorrow. */
+  tide?: TideView | null;
   /** The ship just dropped anchor (plays a small animation). */
   anchoring?: boolean;
   /** Decoration style for the pack's setting. */
@@ -516,6 +552,13 @@ export function SeafarerMap(props: SeafarerMapProps) {
             );
           })}
 
+        {props.tide && (
+          <FlatsLayer
+            cells={board.cells.flatMap((cell, i) => (cell.terrain === "flats" ? [i] : []))}
+            tide={props.tide}
+            centers={centers}
+          />
+        )}
         {props.storm && <StormLayer storm={props.storm} centers={centers} />}
 
         {ref && (

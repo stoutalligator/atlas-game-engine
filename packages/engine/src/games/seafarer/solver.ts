@@ -204,11 +204,16 @@ export function canFinish(p: SeafarerPuzzle, route: RouteState): boolean {
   return s.goalKey >= 0;
 }
 
-/** What a route mostly relies on: riding currents, cutting through shallows, or open water. */
+/**
+ * What a route mostly relies on: waiting out a storm, timing the tide over
+ * the flats, riding currents, cutting through shallows, or open water.
+ */
 export function routeKind(p: SeafarerPuzzle, taps: readonly number[]): RouteKind {
   const r = replayRoute({ ...p, provisions: 999 }, taps);
   if (!r) return "open";
-  if (r.legs.some((l) => l.anchor)) return "storm";
+  if (r.legs.some((l) => l.anchor)) return p.storms?.length ? "storm" : "tide";
+  const board = buildBoard(p);
+  if (r.legs.some((l) => l.path.some((c) => board.cells[c].terrain === "flats"))) return "tide";
   const drift = r.legs.reduce((n, l) => n + l.path.length - 1, 0);
   if (drift >= 2) return "current";
   return r.legs.some((l) => l.days === 2) ? "shallows" : "open";

@@ -340,6 +340,83 @@
 .sf-tile--current {
   fill: var(--sf-current);
 }
+/* Tidal flats: the base tile; the tide state is drawn over it (FlatsLayer). */
+.sf-tile--flats {
+  fill: var(--sf-shallow);
+}
+.sf-flats-hex {
+  fill: rgba(56, 189, 248, 0.35);
+  stroke: rgba(14, 116, 144, 0.55);
+  stroke-width: 1.5;
+}
+.sf-flats[data-high="false"] .sf-flats-hex {
+  fill: #e7d3a1;
+  stroke: #b08d4a;
+}
+.sf-flats[data-ebbing="true"] .sf-flats-hex {
+  stroke-dasharray: 4 3;
+  stroke: #b08d4a;
+  stroke-width: 2;
+}
+.sf-flats-wave {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.sf-flats-sand {
+  fill: none;
+  stroke: #8a6a2f;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.sf-tide {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  flex-wrap: wrap;
+}
+.sf-tide-label {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #475569;
+}
+.sf-tide-day {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 6px;
+  border: 2px solid #cbd5e1;
+  border-radius: 4px;
+  background: #fff;
+}
+.sf-tide-day[data-high="true"] {
+  border-color: #0e7490;
+  background: #ecfeff;
+}
+.sf-tide-day[data-today="true"] {
+  box-shadow: 0 2px 0 0 rgba(15, 23, 42, 0.25);
+}
+.sf-tide-day svg {
+  width: 20px;
+  height: 12px;
+  fill: none;
+  stroke: #b08d4a;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+.sf-tide-day[data-high="true"] svg {
+  stroke: #0e7490;
+}
+.sf-tide-day small {
+  font-size: 9px;
+  font-weight: 900;
+  color: #475569;
+}
 .sf-tile--reef {
   fill: var(--sf-reef);
 }
@@ -500,6 +577,9 @@
 }
 .sf-overlay[data-kind="shallows"] path {
   stroke: #fb923c;
+}
+.sf-overlay[data-kind="tide"] path {
+  stroke: #facc15;
 }
 @keyframes sf-draw {
   from {
@@ -743,6 +823,12 @@
 .sf-legend [data-kind="current"] polygon {
   fill: var(--sf-current);
 }
+.sf-legend [data-kind="flats"] polygon {
+  fill: #e7d3a1;
+  stroke: #b08d4a;
+  stroke-width: 2;
+  stroke-dasharray: 3 2;
+}
 .sf-legend [data-kind="block"] polygon {
   fill: var(--sf-grass);
   stroke: var(--sf-sand);
@@ -959,6 +1045,9 @@
 }
 .sf-route-row[data-kind="shallows"] .sf-route-dot {
   background: #fb923c;
+}
+.sf-route-row[data-kind="tide"] .sf-route-dot {
+  background: #facc15;
 }
 .sf-route-name {
   flex: 1;

@@ -14,12 +14,14 @@ import {
   emptyRoute,
   harborOf,
   isNavigable,
+  isTimed,
   neighbor,
   reachableNext,
   replayRoute,
   sail,
   starsFor,
   stormAt,
+  tideHigh,
   twoStarDays,
   voyageDay,
   voyageExit,
@@ -267,10 +269,12 @@ function SeafarerGame({
 
   const day = voyageDay(route);
   const hasStorms = board.storms.length > 0;
+  // Waiting is a move wherever time matters: storms move, the tide turns.
+  const timed = isTimed(board);
   const canAnchor =
     sailing &&
     !busy &&
-    hasStorms &&
+    timed &&
     !route.complete &&
     !!anchor(board, route.position, day) &&
     route.remaining >= 1;
@@ -317,7 +321,7 @@ function SeafarerGame({
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key.toLowerCase() === "s" && hasStorms) {
+      if (e.key.toLowerCase() === "s" && timed) {
         e.preventDefault();
         dropAnchor();
         return;
@@ -521,6 +525,9 @@ function SeafarerGame({
                   }
                 : null
             }
+            tide={
+              board.tide ? { high: tideHigh(board, day), next: tideHigh(board, day + 1) } : null
+            }
             anchoring={anchoring}
             art={theme.art}
             target={target}
@@ -530,6 +537,7 @@ function SeafarerGame({
             onCellTap={onCellTap}
           />
         </div>
+        {board.tide && <TideClock board={board} day={day} />}
         <Legend puzzle={puzzle} theme={theme} />
 
         <VoyageLog puzzle={puzzle} route={route} theme={theme} />
@@ -551,7 +559,7 @@ function SeafarerGame({
             >
               ↺ Return to harbor · +1 day
             </button>
-            {hasStorms && (
+            {timed && (
               <button
                 type="button"
                 className="ag-btn"
@@ -559,8 +567,10 @@ function SeafarerGame({
                 disabled={!canAnchor}
                 title={
                   canAnchor
-                    ? "Wait here for a day while the storm moves on."
-                    : "The storm reaches this hex tomorrow: you can't wait here."
+                    ? hasStorms
+                      ? "Wait here for a day while the storm moves on."
+                      : "Wait here for a day while the tide turns."
+                    : "You can't wait here: the storm arrives or the flats dry out tomorrow."
                 }
               >
                 ⚓ Drop anchor · +1 day
@@ -575,6 +585,7 @@ function SeafarerGame({
         )}
         {hint && <p className="sf-hint">{hint}</p>}
         {stormHint && <p className="sf-hint">{stormHint}</p>}
+        {board.tide && sailing && <p className="sf-hint">{theme.words.tideHint}</p>}
 
         {!playable && !saved.done && (
           <p className="sf-locked">
@@ -685,6 +696,7 @@ function Legend({ puzzle, theme }: { puzzle: SeafarerPuzzle; theme: SeafarerThem
   if (all.includes(",")) items.push(["shallows", theme.words.shallows]);
   if (/[qeadzc]/.test(all)) items.push(["current", theme.words.current]);
   items.push(["block", theme.words.reef]);
+  if (all.includes("~")) items.push(["flats", theme.words.flats]);
   if (puzzle.storms?.length) items.push(["storm", theme.words.storm]);
   return (
     <ul className="sf-legend">
@@ -697,6 +709,28 @@ function Legend({ puzzle, theme }: { puzzle: SeafarerPuzzle; theme: SeafarerThem
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Today's tide and the next four days, so a crossing can be timed. */
+function TideClock({ board, day }: { board: Board; day: number }) {
+  const days = [0, 1, 2, 3, 4].map((k) => ({ k, high: tideHigh(board, day + k) }));
+  return (
+    <div
+      className="sf-tide"
+      role="img"
+      aria-label={`Tide: ${days.map((d) => (d.high ? "high" : "low")).join(", ")}`}
+    >
+      <span className="sf-tide-label">Tide</span>
+      {days.map((d) => (
+        <span key={d.k} className="sf-tide-day" data-high={d.high} data-today={d.k === 0}>
+          <svg viewBox="0 0 20 12" aria-hidden="true">
+            {d.high ? <path d="M1 7 q3 -4 6 0 t6 0 t6 0" /> : <path d="M2 9 h16 M5 6 h4" />}
+          </svg>
+          <small>{d.k === 0 ? "Today" : `+${d.k}`}</small>
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -721,6 +755,8 @@ function kindLabel(kind: RouteKind, t: SeafarerTheme): string {
   switch (kind) {
     case "storm":
       return t.words.waitStorm;
+    case "tide":
+      return t.words.timeTide;
     case "current":
       return t.words.rideCurrent;
     case "shallows":

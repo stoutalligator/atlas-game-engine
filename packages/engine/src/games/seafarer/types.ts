@@ -107,7 +107,7 @@ export interface SeafarerPuzzle {
 }
 
 /** How a route mostly gets there, for labelling it. */
-export type RouteKind = "storm" | "current" | "shallows" | "open";
+export type RouteKind = "storm" | "tide" | "current" | "shallows" | "open";
 
 export interface ReferenceRoute {
   days: number;

@@ -34,6 +34,10 @@ export interface SeafarerTheme {
     waitStorm: string;
     /** Hint shown on stormy days. */
     stormHint: string;
+    /** Tidal flats: legend line, route name and the hint on tide days. */
+    flats: string;
+    timeTide: string;
+    tideHint: string;
     /** Shown when the voyage can no longer finish. */
     stuck: string;
   };
@@ -64,6 +68,10 @@ export const SEAFARER_THEMES: Record<string, SeafarerTheme> = {
       waitStorm: "Wait out the storm",
       stormHint:
         "Storms drift one hex a day: dashed hexes show tomorrow, faint ones (+2, +3) the days after. Tap your ship to drop anchor and wait.",
+      flats: "Tidal flats: open at high tide only",
+      timeTide: "Ride the high tide",
+      tideHint:
+        "The flats are open at high tide only. The tide clock shows the days ahead: cross while it's high, or drop anchor and wait for it.",
       stuck:
         "You can't finish from here: a current, a storm or your provisions won't allow it. Return to harbor to start over.",
     },
@@ -92,6 +100,10 @@ export const SEAFARER_THEMES: Record<string, SeafarerTheme> = {
       waitStorm: "Wait out the blizzard",
       stormHint:
         "Blizzards drift one hex a day: dashed hexes show tomorrow, faint ones (+2, +3) the days after. Tap your ship to drop anchor and wait.",
+      flats: "Tidal ice: open at high tide only",
+      timeTide: "Ride the high tide",
+      tideHint:
+        "The tidal ice is open at high tide only. The tide clock shows the days ahead: cross while it's high, or drop anchor and wait for it.",
       stuck:
         "You can't finish from here: the drift, a blizzard or your provisions won't allow it. Return to harbor to start over.",
     },
