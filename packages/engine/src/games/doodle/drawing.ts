@@ -73,9 +73,13 @@ export function drawingReducer(state: DrawingState, action: DrawingAction): Draw
   }
 }
 
-/** Strokes ready to submit: rounded to a decimal place and lightly simplified. */
+/**
+ * Strokes ready to submit: whole canvas units, simplified within 1.5 units.
+ * Scoring tolerates 20 units, so this changes no score, and it roughly halves
+ * what's sent and stored.
+ */
 export function strokesForSubmit(strokes: readonly DoodlePath[]): DoodlePath[] {
-  return strokes.map((s) => roundPath(simplify(s, 0.8))).filter((s) => s.length > 0);
+  return strokes.map((s) => roundPath(simplify(s, 1.5), 0)).filter((s) => s.length > 0);
 }
 
 /** Point helper for tests and the component. */

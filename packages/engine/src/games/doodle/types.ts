@@ -117,6 +117,8 @@ export interface DoodleVariantMetrics {
   missingRuns: number;
   /** Drawing region as a share of the canvas. */
   regionShare: number;
+  /** Farthest the missing part strays from a straight line (units); small = too obvious. */
+  bend?: number;
 }
 
 /** A playable cut of a source. Stores only the mask; geometry comes from the source. */
