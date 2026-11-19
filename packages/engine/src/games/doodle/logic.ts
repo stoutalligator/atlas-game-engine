@@ -30,7 +30,9 @@ export {
   doodlePrompt,
   doodleReference,
   doodleShareText,
+  labelBox,
   maskRects,
+  placeMapLabels,
 } from "./puzzle.js";
 export {
   DOODLE_BANDS,
