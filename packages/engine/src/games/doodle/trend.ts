@@ -35,8 +35,13 @@ export function shortPeriod(p: string): string {
   return m[2] === "01" ? m[1] : `${MONTHS[Number(m[2]) - 1] ?? m[2]} ${m[1]}`;
 }
 
-const fmt = (n: number) =>
-  Math.abs(n) >= 1000 ? n.toLocaleString("en-US", { maximumFractionDigits: 0 }) : String(round1(n));
+/** Short axis labels: 1,313 → "1.3k", 12,500,000 → "12.5M". */
+const fmt = (n: number) => {
+  const a = Math.abs(n);
+  if (a >= 1e6) return `${round1(n / 1e6)}M`;
+  if (a >= 1e3) return `${round1(n / 1e3)}k`;
+  return String(round1(n));
+};
 
 /** Builds a trend Doodle source: a line chart with axes and a few labels. */
 export function trendSource(input: TrendSourceInput): DoodleSource {
@@ -47,7 +52,8 @@ export function trendSource(input: TrendSourceInput): DoodleSource {
   const lo = input.yMin ?? (Math.min(...values) >= 0 ? 0 : Math.min(...values));
   const hi = input.yMax ?? Math.max(...values);
   const span = hi - lo || 1;
-  const left = 90;
+  // Room for the y-axis labels (up to ~5 characters at the board's label size).
+  const left = 130;
   const right = 960;
   const top = 50;
   const bottom = height - 80;

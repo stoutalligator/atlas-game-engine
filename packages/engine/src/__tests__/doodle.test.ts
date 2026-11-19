@@ -729,3 +729,41 @@ describe("Doodle family spacing", () => {
     expect(plan.warnings.join()).toMatch(/spacing relaxed/);
   });
 });
+
+describe("Doodle: too obvious", () => {
+  const square: DoodleSource = {
+    ...ring,
+    id: "square",
+    paths: [
+      [
+        [200, 150],
+        [800, 150],
+        [800, 650],
+        [200, 650],
+        [200, 150],
+      ],
+    ],
+  };
+  it("rejects a hidden part that is just a few straight edges", () => {
+    const side = validateDoodleVariant(square, [{ x: 440, y: 0, w: 560, h: 800 }]);
+    expect(side.problems.join()).toMatch(/too obvious/);
+  });
+  it("rejects a chart stretch that's nearly straight, keeps one with a turn", () => {
+    const line = trendSource({
+      id: "steady",
+      category: "t",
+      title: "steady growth",
+      series: {
+        measure: "x",
+        points: Array.from({ length: 40 }, (_, i) => [`${1980 + i}`, 10 + i]),
+      },
+      provenance,
+    });
+    expect(pickDoodleVariants(line)).toEqual([]);
+    expect(pickDoodleVariants(trend).length).toBeGreaterThan(0); // the seasonal fixture
+  });
+  it("keeps curvy outlines", () => {
+    expect(pickDoodleVariants(ring).length).toBeGreaterThan(0);
+    expect(pickDoodleVariants(apple).length).toBeGreaterThan(0);
+  });
+});

@@ -18,6 +18,8 @@ import {
   maskIoU,
   pathLength,
   pointDistance,
+  segmentDistance,
+  simplify,
   splitRuns,
   totalLength,
   turning,
@@ -26,6 +28,7 @@ import {
 import type {
   DoodleDifficulty,
   DoodleMask,
+  DoodlePath,
   DoodleRect,
   DoodleSource,
   DoodleVariant,
@@ -69,6 +72,10 @@ export const DOODLE_LIMITS = {
   anchorDistance: 4,
   /** Most variants kept per source. */
   maxVariantsPerSource: 3,
+  /** Charts: the hidden stretch must stray at least this far (units) from a straight line. */
+  minTrendBend: 50,
+  /** Outlines and lines: some hidden piece, simplified at this tolerance (units), must be more than three straight edges. */
+  cornerTolerance: 12,
 } as const;
 
 /** Margin (units) the mask extends past the source, so the region has room around the answer. */
@@ -158,6 +165,25 @@ function sourceStrategies(source: DoodleSource): Array<[string, Strategy]> {
   return source.cuts ? all.filter(([name]) => source.cuts?.includes(name)) : all;
 }
 
+/**
+ * How much the missing part bends away from a straight line, in canvas units:
+ * for each missing piece, the farthest point from the line joining its ends;
+ * the largest over the pieces. Near zero means a ruler would do (a straight
+ * border, a steady chart stretch): too obvious to be a puzzle.
+ */
+export function missingBend(missing: readonly DoodlePath[]): number {
+  let best = 0;
+  for (const run of missing) {
+    if (run.length < 3) continue;
+    const a = run[0];
+    const b = run[run.length - 1];
+    let dev = 0;
+    for (const p of run) dev = Math.max(dev, segmentDistance(p, a, b));
+    best = Math.max(best, dev);
+  }
+  return Math.round(best);
+}
+
 /** Measures a mask against its source. */
 export function measureVariant(source: DoodleSource, rects: readonly DoodleRect[]) {
   const region = clampRects(rects, DOODLE_WIDTH, source.height);
@@ -169,6 +195,7 @@ export function measureVariant(source: DoodleSource, rects: readonly DoodleRect[
     missingLength: Math.round(missingLength),
     detail: missingLength > 0 ? Math.round((turn / missingLength) * 100 * 100) / 100 : 0,
     missingRuns: cut.missing.length,
+    bend: missingBend(cut.missing),
     regionShare:
       Math.round(
         (unionArea(region, DOODLE_WIDTH, source.height) / (DOODLE_WIDTH * source.height)) * 1000,
@@ -279,6 +306,17 @@ export function validateDoodleVariant(
   if (cut.visible.some((p) => pathLength(p) < L.minVisibleRun))
     problems.push("visible fragments are crumbs");
   if (metrics.detail > L.maxDetail) problems.push("missing part needs unreasonable fine detail");
+  // Too obvious: a ruler would do. Charts whose hidden stretch barely bends
+  // (a steady population line); outlines whose every hidden piece is at most
+  // three straight edges (a rectangle's side, a polygon's corner).
+  if (metrics.missingRuns > 0) {
+    if (source.type === "trend") {
+      if ((metrics.bend ?? 0) < L.minTrendBend)
+        problems.push("too obvious: the hidden stretch is nearly a straight line");
+    } else if (cut.missing.every((m) => simplify(m, L.cornerTolerance).length <= 4)) {
+      problems.push("too obvious: the missing part is just a few straight edges");
+    }
+  }
   // Ambiguity: every missing piece must connect to something the player can see,
   // and a closed outline's gap must be bounded on both sides.
   const visEnds = cut.visible.flatMap(ends);
