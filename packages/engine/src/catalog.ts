@@ -165,6 +165,7 @@ export const GAME_CATALOG: readonly GameInfo[] = [
 export const SEAFARER_TILES: Record<string, { tagline: string }> = {
   "shattered-isles": { tagline: "Chart the best course through the isles." },
   "frozen-passages": { tagline: "Chart the best course through the ice." },
+  "lantern-sea": { tagline: "Chart the best course by lantern light." },
 };
 
 export const GAME_IDS: readonly GameId[] = GAME_CATALOG.map((g) => g.id);

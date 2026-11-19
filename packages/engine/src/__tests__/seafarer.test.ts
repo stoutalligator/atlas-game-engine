@@ -8,6 +8,7 @@ import {
 } from "../games/seafarer/generator.js";
 import {
   FROZEN_PASSAGES,
+  LANTERN_SEA,
   SEAFARER_PACKS,
   SEAFARER_THEMES,
   SHATTERED_ISLES,
@@ -19,6 +20,7 @@ import {
   solve,
 } from "../games/seafarer/logic.js";
 import { FROZEN_PASSAGES_PACK_PLAN } from "../games/seafarer/packs/frozen-passages.plan.js";
+import { LANTERN_SEA_PACK_PLAN } from "../games/seafarer/packs/lantern-sea.plan.js";
 import {
   SHATTERED_ISLES_PACK_PLAN,
   SHATTERED_ISLES_PLAN,
@@ -401,6 +403,7 @@ describe("seafarer generator", () => {
 describe.each([
   [SHATTERED_ISLES, SHATTERED_ISLES_PACK_PLAN],
   [FROZEN_PASSAGES, FROZEN_PASSAGES_PACK_PLAN],
+  [LANTERN_SEA, LANTERN_SEA_PACK_PLAN],
 ] as const)("pack %#", (pack, plan) => {
   const n = plan.days.length;
 
@@ -512,32 +515,34 @@ describe.each([
     }
   });
 
-  it("brings storms in for storm season (days 21–25) and never before", () => {
-    for (let n = 1; n <= 20; n++) expect(pack.puzzles[n - 1].storms ?? []).toEqual([]);
-    for (let n = 21; n <= 25; n++) {
-      const p = pack.puzzles[n - 1];
-      expect(p.storms?.length).toBeGreaterThan(0);
-      // The storm changes the best plan.
-      expect(solve({ ...p, storms: undefined }).days).toBeLessThan(p.par);
-    }
+  it("brings each mechanic in only on the days its plan does", () => {
+    pack.puzzles.forEach((p, i) => {
+      const r = plan.days[i].recipe;
+      const map = p.map.join("");
+      const at = `${p.id}`;
+      // Storms only on storm days, and there they change the best plan.
+      if (r.storms) {
+        expect(p.storms?.length, at).toBeGreaterThan(0);
+        expect(solve({ ...p, storms: undefined }).days, at).toBeLessThanOrEqual(p.par);
+      } else expect(p.storms ?? [], at).toEqual([]);
+      // Tides only on tide days: flats and a tide cycle together.
+      expect(map.includes("~"), at).toBe(!!r.flats);
+      expect(!!p.tide, at).toBe(!!r.flats);
+      if (!r.shallows) expect(map.includes(","), at).toBe(false);
+      if (!(r.currents[1] > 0)) expect(/[qeadzc]/.test(map), at).toBe(false);
+      // Mechanic days offer the mechanic as a real choice, alongside a route without it.
+      const kinds = new Set(p.routes?.map((route) => route.kind));
+      for (const k of r.requireKinds ?? []) expect(kinds.has(k), `${at} ${k}`).toBe(true);
+      if (r.minKinds) expect(kinds.size, at).toBeGreaterThanOrEqual(r.minKinds);
+    });
   });
 
-  it("introduces mechanics gradually", () => {
-    const has = (n: number, re: RegExp) => re.test(pack.puzzles[n - 1].map.join(""));
-    for (let n = 1; n <= 5; n++) {
-      expect(has(n, /,/)).toBe(false);
-      expect(has(n, /[qeadzc]/)).toBe(false);
-    }
-    for (let n = 6; n <= 10; n++) expect(has(n, /[qeadzc]/)).toBe(false);
-    for (let n = 1; n <= 15; n++) expect(pack.puzzles[n - 1].objective.type).toBe("voyage");
-    // Mechanic days offer the mechanic as a real choice, alongside a route without it.
-    for (let n = 6; n <= 10; n++) {
-      const kinds = new Set(pack.puzzles[n - 1].routes?.map((r) => r.kind));
-      expect(kinds.has("shallows") && kinds.size >= 2).toBe(true);
-    }
-    for (let n = 11; n <= 15; n++) {
-      const kinds = new Set(pack.puzzles[n - 1].routes?.map((r) => r.kind));
-      expect(kinds.has("current") && kinds.size >= 2).toBe(true);
+  it("starts gentle: the first days are plain voyages", () => {
+    for (let n = 1; n <= 3; n++) {
+      const p = pack.puzzles[n - 1];
+      expect(p.objective.type).toBe("voyage");
+      expect(/[,~qeadzc]/.test(p.map.join(""))).toBe(false);
+      expect(p.storms ?? []).toEqual([]);
     }
   });
 
@@ -618,7 +623,11 @@ describe("the expedition chart", () => {
 
 describe("pack registry", () => {
   it("ships both months with ids that never collide", () => {
-    expect(SEAFARER_PACKS.map((p) => p.id)).toEqual(["shattered-isles", "frozen-passages"]);
+    expect(SEAFARER_PACKS.map((p) => p.id)).toEqual([
+      "shattered-isles",
+      "frozen-passages",
+      "lantern-sea",
+    ]);
     const ids = SEAFARER_PACKS.flatMap((p) => p.puzzles.map((pz) => pz.id));
     expect(new Set(ids).size).toBe(ids.length);
     // The server finds a challenge in either pack by its id.

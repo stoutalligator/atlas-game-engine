@@ -315,6 +315,11 @@ interface WorldLayerProps {
   onRegion: (n: number) => void;
 }
 
+const labelText = (r: Region, open: boolean) =>
+  open ? `${r.puzzle.number} · ${r.puzzle.title}` : `Day ${r.puzzle.number}`;
+const labelWidth = (r: Region, open: boolean) =>
+  Math.max(120, Math.round(labelText(r, open).length * 12.5 + 28));
+
 /** Path data through world cells. */
 function cellsPath(cols: number, cells: readonly number[]): string {
   return cells
@@ -458,9 +463,16 @@ const WorldLayer = memo(function WorldLayer({
               className="sf-region-frame"
             />
             <g transform={`translate(${r.x + r.w / 2} ${r.y + 6})`} className="sf-region-label">
-              <rect x={-120} y={-24} width={240} height={40} rx="5" />
+              {/* Sized to the text (~12.5px a character at this weight), so long titles fit. */}
+              <rect
+                x={-labelWidth(r, open) / 2}
+                y={-24}
+                width={labelWidth(r, open)}
+                height={40}
+                rx="5"
+              />
               <text y={1} textAnchor="middle">
-                {open ? `${n} · ${r.puzzle.title}` : `Day ${n}`}
+                {labelText(r, open)}
               </text>
             </g>
             {f && (

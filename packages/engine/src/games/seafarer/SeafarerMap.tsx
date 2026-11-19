@@ -136,6 +136,33 @@ export const Terrain = memo(function Terrain({
       {/* Reefs: coral heads and breaking surf (polar: icebergs) */}
       {reef.map((i) => {
         const [x, y] = c(i);
+        if (art === "night") {
+          // A dark rock with glowing algae; the dots vary per hex.
+          return (
+            <g key={i} className="sf-glowrock">
+              <ellipse
+                cx={x}
+                cy={y + 6}
+                rx={HEX * 0.6}
+                ry={HEX * 0.24}
+                className="sf-glowrock-wake"
+              />
+              <path
+                d={`M${x - 13} ${y + 7} Q${x - 10} ${y - 9} ${x - 1} ${y - 10} Q${x + 11} ${y - 8} ${x + 13} ${y + 7} Z`}
+                className="sf-glowrock-stone"
+              />
+              {[0, 1, 2, 3].map((k) => (
+                <circle
+                  key={k}
+                  cx={x - 8 + h(i, k + 30) * 16}
+                  cy={y - 5 + h(i, k + 40) * 10}
+                  r={1.2 + h(i, k + 50) * 1.3}
+                  className="sf-glow"
+                />
+              ))}
+            </g>
+          );
+        }
         if (art === "polar") {
           // A faceted berg, its shaded side and a waterline; shapes vary per hex.
           const lean = (h(i, 11) - 0.5) * 6;
@@ -184,6 +211,42 @@ export const Terrain = memo(function Terrain({
         const [x, y] = c(i);
         const n = landNeighbors(i);
         const r = h(i, 3);
+        if (art === "night") {
+          // Lighthouses keep to the coast; inland, lantern-lit cottages and dark trees.
+          if (n <= 3 && r < 0.22)
+            return (
+              <g key={i} className="sf-lighthouse" transform={`translate(${x} ${y + 4})`}>
+                <circle cy="-14" r="9" className="sf-lighthouse-glow" />
+                <path d="M-4 6 L-3 -10 L3 -10 L4 6 Z" className="sf-lh-body" />
+                <path d="M-3.4 -3 H3.4 M-3.8 2 H3.8" className="sf-lh-stripe" />
+                <path d="M-4.5 -10 L0 -15.5 L4.5 -10 Z" className="sf-lh-top" />
+                <circle cy="-12" r="1.8" className="sf-lighthouse-lamp" />
+              </g>
+            );
+          if (n >= 3 && r < 0.42)
+            return (
+              <g
+                key={i}
+                className="sf-cottage"
+                transform={`translate(${x + (h(i, 4) - 0.5) * 8} ${y + 2})`}
+              >
+                <path d="M-6 5 V-1 L0 -6 L6 -1 V5 Z" className="sf-cottage-wall" />
+                <rect x="-2" y="0" width="4" height="3.5" className="sf-cottage-window" />
+              </g>
+            );
+          if (r < 0.7)
+            return (
+              <g
+                key={i}
+                className="sf-nighttree"
+                transform={`translate(${x + (h(i, 5) - 0.5) * 10} ${y + 2})`}
+              >
+                <circle cy="-3" r="5.5" />
+                <path d="M0 2 V6" className="sf-pine-trunk" />
+              </g>
+            );
+          return null;
+        }
         if (art === "polar") {
           if (n >= 4 && r < 0.5)
             return (

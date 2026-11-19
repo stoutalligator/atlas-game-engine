@@ -1438,6 +1438,88 @@
 
 /* ── The Frozen Passages (December): polar palette and art ────────────── */
 
+/* ── The Lantern Sea (January): night palette and art ─────────────────── */
+
+.sf-root[data-theme="lantern-sea"] {
+  --sf-deep: #070f26;
+  --sf-deep-2: #050b1c;
+  --sf-sea-0: #1b2c58;
+  --sf-sea-1: #203466;
+  --sf-sea-2: #182a52;
+  --sf-tile-line: rgba(165, 180, 252, 0.16);
+  --sf-ripple: rgba(165, 180, 252, 0.32);
+  /* Bioluminescent shallows */
+  --sf-shallow: #15606b;
+  --sf-shallow-ripple: rgba(94, 234, 212, 0.85);
+  /* Night currents */
+  --sf-current: #2a4a8a;
+  --sf-current-band: #7b9cff;
+  --sf-current-ink: #e0e7ff;
+  --sf-reef: #121c38;
+  /* Moonlit islands */
+  --sf-sand: #8d8668;
+  --sf-grass: #284235;
+  --sf-hill: #3a4860;
+  --sf-land-shadow: rgba(0, 0, 0, 0.55);
+}
+.sf-root[data-theme="lantern-sea"] .sf-flats-hex {
+  fill: rgba(56, 120, 200, 0.35);
+  stroke: rgba(125, 211, 252, 0.6);
+}
+.sf-root[data-theme="lantern-sea"] .sf-flats[data-high="false"] .sf-flats-hex {
+  fill: #6f6a52;
+  stroke: #a39b73;
+}
+.sf-root[data-theme="lantern-sea"] .sf-flats-sand {
+  stroke: #d6cfa8;
+}
+.sf-glowrock-wake {
+  fill: rgba(94, 234, 212, 0.12);
+}
+.sf-glowrock-stone {
+  fill: #0e1630;
+  stroke: #2b3a66;
+  stroke-width: 1.2;
+}
+.sf-glow {
+  fill: #5eead4;
+  filter: drop-shadow(0 0 2px #5eead4);
+  animation: sf-glow-pulse 3.2s ease-in-out infinite;
+}
+@keyframes sf-glow-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+.sf-lighthouse-glow {
+  fill: rgba(253, 224, 71, 0.22);
+  animation: sf-glow-pulse 2.6s ease-in-out infinite;
+}
+.sf-lighthouse-lamp {
+  fill: #fde047;
+  filter: drop-shadow(0 0 3px #fde047);
+}
+.sf-cottage-wall {
+  fill: #2c2a3a;
+  stroke: #57536b;
+  stroke-width: 1;
+}
+.sf-cottage-window {
+  fill: #fbbf24;
+  filter: drop-shadow(0 0 2px #fbbf24);
+}
+.sf-nighttree circle {
+  fill: #1a2e26;
+  stroke: #33503f;
+  stroke-width: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf-glow,
+  .sf-lighthouse-glow {
+    animation: none;
+  }
+}
+
 .sf-root[data-theme="frozen-passages"] {
   --sf-deep: #13314d;
   --sf-deep-2: #0c2238;

@@ -30,6 +30,7 @@ export { generateCandidate, generateCandidates, measure } from "./generator.js";
 export type { Candidate, Metrics, Recipe } from "./generator.js";
 export {
   FROZEN_PASSAGES,
+  LANTERN_SEA,
   SEAFARER_PACKS,
   SHATTERED_ISLES,
   seafarerPack,

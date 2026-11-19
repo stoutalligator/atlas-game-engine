@@ -77,6 +77,19 @@ const PATHS: Record<GameId, React.ReactNode> = {
  * the same little sailboat, in that month's waters.
  */
 const SEAFARER_VARIANTS: Record<string, React.ReactNode> = {
+  // January, the Lantern Sea: sailing by night, under a crescent moon, past a lighthouse.
+  "lantern-sea": (
+    <>
+      <path d="M4.6 1.8a3 3 0 1 0 2.9 4.3 2.4 2.4 0 1 1-2.9-4.3z" />
+      <path d="M9 7v7" />
+      <path d="M9 8c2.2 1.3 3.4 3.4 3.8 6H9" />
+      <path d="M3.5 15.5h10.5l-1.6 2.5H5.1z" />
+      <path d="M15.8 21l1.3-8.5h2.8l1.3 8.5" />
+      <path d="M17.4 12.5v-2.2h2.2v2.2M16.9 10.3l1.6-1.8 1.6 1.8" />
+      <path d="M22.8 8.6l-1.4.8M14.2 8.6l1.4.8" />
+      <path d="M2 21.5c1.7-1 3.3-1 5 0s3.3 1 5 0" />
+    </>
+  ),
   // November, the Shattered Isles: sailing past a palm island.
   "shattered-isles": (
     <>

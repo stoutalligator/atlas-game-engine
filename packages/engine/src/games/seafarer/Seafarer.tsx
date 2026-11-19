@@ -557,7 +557,7 @@ function SeafarerGame({
               disabled={!canRestart}
               title="Start over from the harbor. Costs one day."
             >
-              ↺ Return to harbor · +1 day
+              ↺ Return to harbor · +1 {theme.words.day}
             </button>
             {timed && (
               <button
@@ -573,7 +573,7 @@ function SeafarerGame({
                     : "You can't wait here: the storm arrives or the flats dry out tomorrow."
                 }
               >
-                ⚓ Drop anchor · +1 day
+                ⚓ Drop anchor · +1 {theme.words.day}
               </button>
             )}
             {charter && route.complete && !busy && (
@@ -619,7 +619,7 @@ function objectiveText(p: SeafarerPuzzle, t: SeafarerTheme): string {
   const ports = p.places.filter((pl) => pl.kind === "port");
   switch (p.objective.type) {
     case "voyage":
-      return `Sail to ${ports[0]?.name} in as few days as you can.`;
+      return `Sail to ${ports[0]?.name} in as few ${t.words.days} as you can.`;
     case "rounds":
       return `Call at ${ports.length === 2 ? "both" : `all ${ports.length}`} ${t.words.ports}, in any order${
         p.objective.returnHome ? ", then sail home" : ""
@@ -649,7 +649,7 @@ function VoyageLog({
   return (
     <div className="sf-log">
       <div className="sf-stat">
-        <span className="sf-stat-label">Days at sea</span>
+        <span className="sf-stat-label">{capitalize(theme.words.days)} at sea</span>
         <span className="sf-stat-big sf-bump" key={route.days}>
           {route.days}
         </span>
@@ -692,7 +692,7 @@ function VoyageLog({
 
 function Legend({ puzzle, theme }: { puzzle: SeafarerPuzzle; theme: SeafarerTheme }) {
   const all = puzzle.map.join("");
-  const items: Array<[string, string]> = [["sea", "Open sea: 1 day"]];
+  const items: Array<[string, string]> = [["sea", `Open sea: 1 ${theme.words.day}`]];
   if (all.includes(",")) items.push(["shallows", theme.words.shallows]);
   if (/[qeadzc]/.test(all)) items.push(["current", theme.words.current]);
   items.push(["block", theme.words.reef]);
@@ -886,12 +886,14 @@ function ResultCard({
   );
 }
 
+const capitalize = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
+
 function shareLine(pack: SeafarerPack, p: SeafarerPuzzle, r: RouteState, stars: number): string {
   const s = "⭐".repeat(stars) + "☆".repeat(3 - stars);
   const what =
     p.objective.type === "charter"
       ? `${r.cargo}/${p.best} cargo`
-      : `${r.days} days at sea (par ${p.par})`;
+      : `${r.days} ${themeFor(pack.theme).words.days} at sea (par ${p.par})`;
   return `Seafarer · ${pack.title} ${p.number}/${pack.puzzles.length}\n${s} ${what}`;
 }
 

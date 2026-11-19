@@ -175,13 +175,14 @@ break the symmetry.
 |---|---|---|---|
 | `shattered-isles` | November | 30 (Gold at 30) | Tropical archipelago: palms, coral reefs, shallows, currents, storms. |
 | `frozen-passages` | December | 31 (Gold at 31) | Polar sea: snowy islands and pines, icebergs, slush ice, the polar drift, blizzards. |
+| `lantern-sea` | January | 31 (Gold at 31) | Night voyage (`night` art): lighthouses, lantern-lit cottages, glowing rocks and shallows, night currents, squalls, and **tides** (tidal flats). |
 
 December uses **the same mechanics and difficulty curve**: day N reuses November's day-N recipe
 (same validation), with its own seeds, polar names, titles and tips, and slightly larger ice
 islands. Day 31 is a second finale with two blizzards. Every challenge id carries its pack
 (`frozen-passages-07`), so the server's `seafarerPuzzle` finds it in either pack.
 
-### January: The Lantern Sea (planned, decided 2026-11-19)
+### January: The Lantern Sea (built 2026-11-19, engine 3.10.0)
 
 The third pack adds **one new mechanic** (December re-skinned November; by month 3 the rhythm
 needs something new). Decisions:
@@ -214,7 +215,11 @@ needs something new). Decisions:
 | 27–30 | Charters and the hardest rounds |
 | 31 | Finale: everything |
 
-Work: engine rules/solver/generator/UI for tides, the `night` art style, the plan (31 days,
+Built: tides in the rules, solver (time-aware like storms), generator (`placeFlats`, `tideCost`,
+`minTideCost`), naive sailor and UI (tide clock, flats drawn open or dry, "Ride the high tide"
+routes); the `night` art; the plan (`packs/lantern-sea.plan.ts`, pinned); theme words count nights
+and lamp oil. The finale needed par up to 36 and lure/greedy ≥ 3 (tides make finale charts longer).
+Original work list: engine rules/solver/generator/UI for tides, the `night` art style, the plan (31 days,
 ~65 names, titles, tips), catalog tagline + icon; atlas `SEAFARER_SEASONS["2027-01"]`, three
 badges (definitions, migration, emblem art) and a tile skin. Content built and QA'd by about
 December 20 for a January 1 launch (a month later if November's pack slips to December).
