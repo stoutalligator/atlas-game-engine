@@ -55,8 +55,8 @@ const PATHS: Record<GameId, React.ReactNode> = {
   // Doodle: a pencil finishing a dashed curve.
   doodle: (
     <>
-      <path d="M3 17c2-6 5-9 9-9" />
-      <path d="M12 8c2 0 3.5.6 4.6 1.6" strokeDasharray="1.5 2.5" />
+      <path d="M11.7 20.3c-4 0-6.6-3.2-7.2-7.8" />
+      <path d="M4.5 12.5c-.4-3.4.4-6.6 2.6-9" strokeDasharray="1.5 2.5" />
       <path d="M14.5 19.5l6-6-2-2-6 6-.8 2.8z" />
     </>
   ),
