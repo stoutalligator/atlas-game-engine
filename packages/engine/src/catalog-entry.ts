@@ -1,7 +1,7 @@
 // @stoutalligator/engine/catalog — hook-free metadata and helpers, safe to
 // import from React Server Components (game lists, admin pages, routing).
 
-export { GAME_CATALOG, GAME_IDS, getGameInfo, isGameId } from "./catalog.js";
+export { GAME_CATALOG, GAME_IDS, SEAFARER_TILES, getGameInfo, isGameId } from "./catalog.js";
 export type { GameAccent, GameInfo } from "./catalog.js";
 export { GameIcon } from "./ui/GameIcon.js";
 export { EPOCH, formatDateLabel, localDateKey, puzzleNumber } from "./core/daily.js";

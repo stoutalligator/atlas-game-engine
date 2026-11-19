@@ -32,6 +32,9 @@ export interface Storm {
 
 export type PlaceKind = "harbor" | "port" | "cargo";
 
+/** A side of a region's chart (where it meets its neighbours on the expedition chart). */
+export type ChartSide = "n" | "s" | "e" | "w";
+
 export interface Place {
   /** Short stable id, e.g. "A". */
   id: string;

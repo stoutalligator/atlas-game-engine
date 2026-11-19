@@ -72,8 +72,47 @@ const PATHS: Record<GameId, React.ReactNode> = {
   ),
 };
 
-/** Line icons in the same 24px / 2px-stroke style as the ATLAS dashboard tiles. */
-export function GameIcon({ game, className }: { game: GameId; className?: string }) {
+/**
+ * Seafarer's icon changes with the month's pack (variant = the pack's theme):
+ * the same little sailboat, in that month's waters.
+ */
+const SEAFARER_VARIANTS: Record<string, React.ReactNode> = {
+  // November, the Shattered Isles: sailing past a palm island.
+  "shattered-isles": (
+    <>
+      <path d="M7 3v10" />
+      <path d="M7 4c2.6 1.6 4.2 4.4 4.6 8H7" />
+      <path d="M2.5 15h10l-1.6 2.5H4.1z" />
+      <path d="M18.5 20.5c0-3-.4-5.2-1.4-7.3" />
+      <path d="M17.1 13.2c-.9-1.6-2.7-2.2-4.4-1.7" />
+      <path d="M17.1 13.2c.2-1.9 1.6-3.2 3.4-3.3" />
+      <path d="M17.1 13.2c1.6-.5 3.2.1 4 1.6" />
+      <path d="M2 21.5c1.7-1 3.3-1 5 0s3.3 1 5 0 3.3-1 5 0 3.3 1 5 0" />
+    </>
+  ),
+  // December, the Frozen Passages: an iceberg and falling snow.
+  "frozen-passages": (
+    <>
+      <path d="M7 3v10" />
+      <path d="M7 4c2.6 1.6 4.2 4.4 4.6 8H7" />
+      <path d="M2.5 15h10l-1.6 2.5H4.1z" />
+      <path d="M13 19l3-8 2.2 2.6 1.8-3.6 3 9z" />
+      <path d="M19.5 1.8v4.4M17.6 2.9l3.8 2.2M21.4 2.9l-3.8 2.2" />
+      <path d="M2 21.5c1.7-1 3.3-1 5 0s3.3 1 5 0 3.3-1 5 0 3.3 1 5 0" />
+    </>
+  ),
+};
+
+/**
+ * Line icons in the same 24px / 2px-stroke style as the ATLAS dashboard tiles.
+ * `variant` picks a seasonal version where a game has one (Seafarer: the
+ * running pack's theme); unknown variants fall back to the standard icon.
+ */
+export function GameIcon({
+  game,
+  className,
+  variant,
+}: { game: GameId; className?: string; variant?: string | null }) {
   return (
     <svg
       className={className}
@@ -87,7 +126,7 @@ export function GameIcon({ game, className }: { game: GameId; className?: string
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {PATHS[game]}
+      {(game === "seafarer" && variant && SEAFARER_VARIANTS[variant]) || PATHS[game]}
     </svg>
   );
 }

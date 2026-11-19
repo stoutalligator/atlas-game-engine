@@ -63,7 +63,7 @@ export const SEAFARER_THEMES: Record<string, SeafarerTheme> = {
       crossShallows: "Cut through the shallows",
       waitStorm: "Wait out the storm",
       stormHint:
-        "Storms drift one hex a day (dashed hexes show tomorrow). Tap your ship to drop anchor and wait.",
+        "Storms drift one hex a day: dashed hexes show tomorrow, faint ones (+2, +3) the days after. Tap your ship to drop anchor and wait.",
       stuck:
         "You can't finish from here: a current, a storm or your provisions won't allow it. Return to harbor to start over.",
     },
@@ -91,7 +91,7 @@ export const SEAFARER_THEMES: Record<string, SeafarerTheme> = {
       crossShallows: "Break through the slush",
       waitStorm: "Wait out the blizzard",
       stormHint:
-        "Blizzards drift one hex a day (dashed hexes show tomorrow). Tap your ship to drop anchor and wait.",
+        "Blizzards drift one hex a day: dashed hexes show tomorrow, faint ones (+2, +3) the days after. Tap your ship to drop anchor and wait.",
       stuck:
         "You can't finish from here: the drift, a blizzard or your provisions won't allow it. Return to harbor to start over.",
     },

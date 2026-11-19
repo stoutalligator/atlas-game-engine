@@ -78,12 +78,21 @@ export function SeafarerPlayground() {
 
 function PlayPack({ pack }: { pack: SeafarerPack }) {
   const [finished, setFinished] = useState(() => loadFinished(pack));
-  const [unlockAll, setUnlockAll] = useState(true);
+  // ?locked=1 starts with the real unlock rule (one new region per finished one), to see the fog.
+  const [unlockAll, setUnlockAll] = useState(
+    () => new URLSearchParams(window.location.search).get("locked") !== "1",
+  );
   const done = Object.keys(finished).length;
   // The real rule: your next unfinished challenge, at most one new one a day.
   // Here "a day" is simulated: the next one opens as soon as you finish.
   const available = unlockAll ? pack.puzzles.length : Math.min(pack.puzzles.length, done + 1);
-  const [challenge, setChallenge] = useState(Math.min(done + 1, pack.puzzles.length));
+  // ?day=N opens challenge N (dev shortcut).
+  const [challenge, setChallenge] = useState(() => {
+    const asked = Number(new URLSearchParams(window.location.search).get("day"));
+    return asked >= 1 && asked <= pack.puzzles.length
+      ? asked
+      : Math.min(done + 1, pack.puzzles.length);
+  });
   const [nonce, setNonce] = useState(0);
 
   const reset = () => {

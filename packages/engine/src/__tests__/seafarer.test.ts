@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { generateCandidate } from "../games/seafarer/generator.js";
+import { expeditionWorld, regionSides, seaLane } from "../games/seafarer/expedition.js";
+import {
+  generateCandidate,
+  measure,
+  naiveDays,
+  sideDistance,
+} from "../games/seafarer/generator.js";
 import {
   FROZEN_PASSAGES,
   SEAFARER_PACKS,
@@ -26,6 +32,7 @@ import {
   extendRoute,
   harborOf,
   isNavigable,
+  linkVoyages,
   neighbor,
   replayRoute,
   sail,
@@ -283,6 +290,37 @@ describe("seafarer storms", () => {
   });
 });
 
+describe("the naive sailor (plans by eye)", () => {
+  // Straight through the shallows looks shortest (3 hexes) but costs 5 days;
+  // dipping into the open row below costs 4.
+  //   row 0   H , , A .
+  //   row 1    . . . . .
+  const lure: SeafarerPuzzle = {
+    ...tiny,
+    id: "lure",
+    cols: 5,
+    rows: 2,
+    map: [".,,..", "....."],
+    places: [
+      { id: "H", kind: "harbor", cell: 0, name: "Home" },
+      { id: "A", kind: "port", cell: 3, name: "Port" },
+    ],
+    par: 4,
+  };
+
+  it("takes the straight line and pays for the shallows", () => {
+    expect(solve(lure).days).toBe(4);
+    expect(naiveDays(lure)).toBe(5);
+    expect(measure(lure)?.lureGap).toBe(1);
+  });
+
+  it("doesn't ride a current on purpose, so misses the free ride", () => {
+    // In `tiny` the current carries you two hexes east for one day's sailing.
+    expect(solve(tiny).days).toBe(2);
+    expect(naiveDays(tiny)).toBe(3);
+  });
+});
+
 describe("seafarer generator", () => {
   it("is deterministic for a seed", () => {
     const recipe = SHATTERED_ISLES_PLAN[3].recipe;
@@ -353,6 +391,61 @@ describe.each([
     },
   );
 
+  it("names every port once: the month is one journey with no repeats", () => {
+    const seen = new Set<string>([harborOf(pack.puzzles[0]).name]);
+    for (const p of pack.puzzles)
+      for (const pl of p.places.filter((x) => x.kind === "port")) {
+        expect(seen.has(pl.name), `${p.id}: ${pl.name} again`).toBe(false);
+        seen.add(pl.name);
+      }
+  });
+
+  it("puts each harbor on the side facing yesterday's region", () => {
+    pack.puzzles.forEach((p, i) => {
+      const { entry } = regionSides(i, pack.puzzles.length);
+      if (!entry) return;
+      expect(sideDistance(p.cols, p.rows, harborOf(p).cell, entry)).toBeLessThanOrEqual(2);
+    });
+  });
+
+  it.each(pack.puzzles.map((p) => [p.number, p] as const))(
+    "challenge %i still meets its recipe (mechanics matter, the obvious route costs)",
+    (n, p) => {
+      const r = plan.days[n - 1].recipe;
+      const m = measure(p);
+      expect(m).not.toBeNull();
+      if (!m) return;
+      if (r.minLureGap !== undefined) expect(m.lureGap).toBeGreaterThanOrEqual(r.minLureGap);
+      if (r.maxLureGap !== undefined) expect(m.lureGap).toBeLessThanOrEqual(r.maxLureGap);
+      if (r.naiveFinishes) expect(m.par + m.lureGap).toBeLessThanOrEqual(p.provisions);
+      if (r.minShallowCost !== undefined)
+        expect(m.shallowCost).toBeGreaterThanOrEqual(r.minShallowCost);
+      if (r.minCurrentGain !== undefined)
+        expect(m.currentGain).toBeGreaterThanOrEqual(r.minCurrentGain);
+      if (r.minStormCost !== undefined) expect(m.stormCost).toBeGreaterThanOrEqual(r.minStormCost);
+    },
+  );
+
+  it("stitches the month into one map, with a sea lane between every pair of days", () => {
+    const world = expeditionWorld(pack.id, pack.puzzles);
+    pack.puzzles.forEach((p, i) => {
+      const local = buildBoard({ ...p, storms: [] });
+      local.cells.forEach((cell, c) =>
+        expect(world.board.cells[world.toWorld(i, c)]).toEqual(cell),
+      );
+      expect(world.slots[i].row % 2).toBe(0); // odd-row shifts line up
+    });
+    for (let i = 1; i < pack.puzzles.length; i++) {
+      const from = world.toWorld(i - 1, voyageExit(pack.puzzles[i - 1]).cell);
+      const to = world.toWorld(i, harborOf(pack.puzzles[i]).cell);
+      const lane = seaLane(world.board, from, to);
+      expect(lane[0]).toBe(from);
+      expect(lane[lane.length - 1]).toBe(to);
+      for (let k = 1; k < lane.length; k++)
+        expect(HEX_DIRS.some((d) => neighbor(world.board, lane[k - 1], d) === lane[k])).toBe(true);
+    }
+  });
+
   it("brings storms in for storm season (days 21–25) and never before", () => {
     for (let n = 1; n <= 20; n++) expect(pack.puzzles[n - 1].storms ?? []).toEqual([]);
     for (let n = 21; n <= 25; n++) {
@@ -414,6 +507,46 @@ describe.each([
       verifyGameResult({ game: "seafarer", date: "2026-11-18", proof: { puzzleId: "nope", taps } }),
     ).toBeNull();
     expect(seafarerPuzzle(p.id)).toBe(p);
+  });
+});
+
+describe("the expedition chart", () => {
+  it("snakes five regions per row, entering from yesterday's side", () => {
+    expect(regionSides(0, 30)).toEqual({ entry: undefined, exit: "e" });
+    expect(regionSides(3, 30)).toEqual({ entry: "w", exit: "e" });
+    expect(regionSides(4, 30)).toEqual({ entry: "w", exit: "s" });
+    expect(regionSides(5, 30)).toEqual({ entry: "n", exit: "w" });
+    expect(regionSides(9, 30)).toEqual({ entry: "e", exit: "s" });
+    expect(regionSides(29, 30)).toEqual({ entry: "e", exit: undefined });
+  });
+
+  it("never lets filler land touch a region", () => {
+    const pack = SHATTERED_ISLES;
+    const world = expeditionWorld(pack.id, pack.puzzles);
+    const inRegion = new Set<number>();
+    pack.puzzles.forEach((p, i) => {
+      for (let c = 0; c < p.cols * p.rows; c++) inRegion.add(world.toWorld(i, c));
+    });
+    world.board.cells.forEach((cell, c) => {
+      if (inRegion.has(c) || cell.terrain !== "land") return;
+      for (const d of HEX_DIRS) expect(inRegion.has(neighbor(world.board, c, d))).toBe(false);
+    });
+  });
+
+  it("links days by name, with every port new and a clear error when names run out", () => {
+    const day = (id: string, port: string): SeafarerPuzzle => ({
+      ...tiny,
+      id,
+      places: [
+        { id: "H", kind: "harbor", cell: 1, name: "Home" },
+        { id: "A", kind: "port", cell: 17, name: port },
+      ],
+    });
+    const linked = linkVoyages([day("a", "Gull"), day("b", "Gull")], ["Gull", "Tern"]);
+    expect(linked[1].places.map((pl) => pl.name)).toEqual(["Gull", "Tern"]);
+    expect(() =>
+      linkVoyages([day("a", "Gull"), day("b", "Gull"), day("c", "Gull")], ["Gull", "Tern"]),
+    ).toThrow(/ran out of port names/);
   });
 });
 

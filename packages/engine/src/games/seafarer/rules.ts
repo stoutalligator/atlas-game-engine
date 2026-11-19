@@ -178,38 +178,52 @@ export function sail(board: Board, from: number, dir: HexDir, day = 0): Leg | nu
 }
 
 /**
- * Where a region's voyage ends on the expedition chart: its port, its last
- * port, or home again (round trips and charters). Tomorrow departs from here.
+ * Where a region's voyage ends on the expedition chart, and so where tomorrow
+ * departs from: the port (voyage), home again (round trips and charters), or,
+ * for rounds that end away from home, the port the best route calls at last.
+ * Players who finish in a different order still continue from there; the
+ * month follows the charted course.
  */
-export function voyageExit(p: Pick<SeafarerPuzzle, "places" | "objective">): Place {
-  const goesOn =
-    p.objective.type === "voyage" || (p.objective.type === "rounds" && !p.objective.returnHome);
+export function voyageExit(
+  p: Pick<SeafarerPuzzle, "places" | "objective"> &
+    Partial<Pick<SeafarerPuzzle, "routes" | "cols" | "rows" | "map" | "storms" | "provisions">>,
+): Place {
   const ports = p.places.filter((pl) => pl.kind === "port");
-  return goesOn && ports.length ? ports[ports.length - 1] : harborOf(p);
+  if (!ports.length || p.objective.type === "charter") return harborOf(p);
+  if (p.objective.type === "rounds" && p.objective.returnHome) return harborOf(p);
+  if (p.objective.type === "voyage") return ports[ports.length - 1];
+  const best = p.routes?.[0];
+  if (best && p.cols && p.rows && p.map) {
+    const r = replayRoute({ ...(p as SeafarerPuzzle), provisions: 999 }, best.taps);
+    const last = r?.visited[r.visited.length - 1];
+    const port = ports.find((pl) => pl.id === last);
+    if (port) return port;
+  }
+  return ports[ports.length - 1];
 }
 
 /**
- * Names each day's harbor after the place the previous day's voyage ended,
- * so the month reads as one journey ("you set out from Gull's Rest"). Any
- * port that would now share the harbor's name is renamed from `spare`.
+ * Turns a month of separately generated charts into one journey:
+ * - each day's harbor takes the name of the place yesterday's voyage ended
+ *   ("you set out from Gull's Rest"), and
+ * - every other port is a new place: no name is used twice in the pack
+ *   (ports are renamed from `pool`, in order, when their name is taken).
+ * Throws if the pool runs out, so a pack can't ship with repeats.
  */
-export function linkVoyages(puzzles: SeafarerPuzzle[], spare: readonly string[]): SeafarerPuzzle[] {
+export function linkVoyages(puzzles: SeafarerPuzzle[], pool: readonly string[]): SeafarerPuzzle[] {
   const out: SeafarerPuzzle[] = [];
+  const used = new Set<string>();
+  const fresh = (name: string): string => {
+    if (!used.has(name)) return name;
+    const next = pool.find((n) => !used.has(n));
+    if (!next) throw new Error(`Seafarer: ran out of port names (need more than ${used.size})`);
+    return next;
+  };
   puzzles.forEach((p, i) => {
-    if (i === 0) {
-      out.push(p);
-      return;
-    }
-    const from = voyageExit(out[i - 1]).name;
-    const used = new Set<string>([from]);
+    const from = i === 0 ? null : voyageExit(out[i - 1]).name;
     const places = p.places.map((pl) => {
-      if (pl.kind === "harbor") return { ...pl, name: from };
-      if (!used.has(pl.name)) {
-        used.add(pl.name);
-        return pl;
-      }
-      const name =
-        spare.find((n) => !used.has(n) && !p.places.some((q) => q.name === n)) ?? pl.name;
+      if (pl.kind === "cargo") return pl;
+      const name = pl.kind === "harbor" && from !== null ? from : fresh(pl.name);
       used.add(name);
       return { ...pl, name };
     });

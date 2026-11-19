@@ -10,6 +10,7 @@
 
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { regionSides } from "../src/games/seafarer/expedition.js";
 import {
   type Candidate,
   generateCandidate,
@@ -43,6 +44,7 @@ const reviewOut: Array<{
   candidates: Array<Candidate & { seed: string }>;
 }> = [];
 const usedSeeds = new Set<string>();
+const failed: number[] = [];
 
 plan.days.forEach((day, i) => {
   const n = i + 1;
@@ -50,21 +52,29 @@ plan.days.forEach((day, i) => {
   const t0 = Date.now();
   let chosen: Candidate | null = null;
   let candidates: Candidate[] = [];
+  // Where this region meets yesterday's and tomorrow's on the expedition chart.
+  const sides = regionSides(i, plan.days.length);
+  const recipe = { ...day.recipe, entrySide: sides.entry, exitSide: sides.exit };
   if (day.pick) {
-    chosen = generateCandidate(day.recipe, day.pick);
+    chosen = generateCandidate(recipe, day.pick);
     if (!chosen) throw new Error(`Day ${n}: pinned seed ${day.pick} no longer passes its recipe`);
   }
   if (!chosen || review) {
-    candidates = generateCandidates(day.recipe, prefix, day.attempts ?? 600).filter(
+    candidates = generateCandidates(recipe, prefix, day.attempts ?? 600).filter(
       (c) => !usedSeeds.has(c.puzzle.id),
     );
     chosen ??= candidates[0] ?? null;
   }
-  if (!chosen) throw new Error(`Day ${n} (${day.title}): no candidate passed — loosen the recipe`);
+  if (!chosen) {
+    // Keep going, so one run lists every day that needs a looser recipe.
+    console.log(`${String(n).padStart(2)} ${day.title.padEnd(22)} NO CANDIDATE PASSED`);
+    failed.push(n);
+    return;
+  }
   usedSeeds.add(chosen.puzzle.id);
   const m = chosen.metrics;
   console.log(
-    `${String(n).padStart(2)} ${day.title.padEnd(22)} ${chosen.puzzle.objective.type.padEnd(7)} par ${String(m.par).padStart(2)} prov ${String(chosen.puzzle.provisions).padStart(2)} detour ${m.detour.toFixed(2)} cur+${m.currentGain} shal-${m.shallowCost} greedy+${m.greedyGap}  [${candidates.length || 1} ok, ${Date.now() - t0}ms] ${chosen.puzzle.id}`,
+    `${String(n).padStart(2)} ${day.title.padEnd(22)} ${chosen.puzzle.objective.type.padEnd(7)} par ${String(m.par).padStart(2)} prov ${String(chosen.puzzle.provisions).padStart(2)} detour ${m.detour.toFixed(2)} cur+${m.currentGain} shal-${m.shallowCost} greedy+${m.greedyGap} lure+${m.lureGap} exit${m.exitDistance}  [${candidates.length || 1} ok, ${Date.now() - t0}ms] ${chosen.puzzle.id}`,
   );
   puzzles.push({
     ...chosen.puzzle,
@@ -82,6 +92,12 @@ plan.days.forEach((day, i) => {
       candidates: candidates.slice(0, 6).map((c) => ({ ...c, seed: c.puzzle.id })),
     });
 });
+
+if (failed.length) {
+  console.error(`
+No chart passed for day(s) ${failed.join(", ")}: loosen those recipes. Nothing written.`);
+  process.exit(1);
+}
 
 const pack: SeafarerPack = {
   id: PACK_ID,
