@@ -21,6 +21,7 @@ import {
   hasInk,
   parseStrokes,
   pickDoodleVariants,
+  placeMapLabels,
   planDoodleSchedule,
   scoreDoodle,
   toCanvasUnits,
@@ -875,5 +876,32 @@ describe("Doodle: map context stops at the drawing area", () => {
     expect(p.guides.flat().every(([x]) => x < 600)).toBe(true);
     const chart = buildDoodlePuzzle(trend, variant);
     expect(chart.guides.flat().some(([x]) => x > 600)).toBe(true);
+  });
+});
+
+describe("Doodle: map labels stay out of the drawing area", () => {
+  const region = [{ x: 400, y: 0, w: 300, h: 600 }];
+  it("uses the first spot outside the region, and drops a label with none", () => {
+    const out = placeMapLabels(
+      [
+        { x: 500, y: 300, text: "Iowa", alt: [[200, 300]] },
+        { x: 550, y: 100, text: "MO" },
+      ],
+      region,
+    );
+    expect(out).toEqual([{ x: 200, y: 300, text: "Iowa" }]);
+  });
+  it("keeps labels from overlapping each other", () => {
+    const out = placeMapLabels(
+      [
+        { x: 150, y: 300, text: "Kansas" },
+        { x: 160, y: 305, text: "Texas", alt: [[150, 500]] },
+      ],
+      region,
+    );
+    expect(out.map((l) => [l.x, l.y])).toEqual([
+      [150, 300],
+      [150, 500],
+    ]);
   });
 });

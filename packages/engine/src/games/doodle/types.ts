@@ -48,6 +48,12 @@ export interface DoodleLabel {
   y: number;
   text: string;
   anchor?: "start" | "middle" | "end";
+  /**
+   * Map labels: other spots for the label, best first. The board uses the
+   * first spot (x/y, then these) that stays out of the drawing area and clear
+   * of the labels already placed, and leaves the label out when none does.
+   */
+  alt?: Array<[number, number]>;
 }
 
 /** A trend source's underlying numbers, kept so the chart can be redrawn from data. */
