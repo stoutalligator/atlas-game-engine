@@ -4,7 +4,7 @@
 import { getGameInfo } from "../../catalog.js";
 import { puzzleNumber } from "../../core/daily.js";
 import { withShareLink } from "../../core/share.js";
-import { clampRects, cutPaths, roundPath, simplify } from "./geometry.js";
+import { clampRects, cutPaths, inRects, roundPath, simplify, splitRuns } from "./geometry.js";
 import type {
   DoodleDifficulty,
   DoodlePath,
@@ -52,7 +52,14 @@ export function buildDoodlePuzzle(source: DoodleSource, variant: DoodleVariant):
     width: DOODLE_WIDTH,
     height: source.height,
     visible: compact(cut.visible),
-    guides: compact(source.guides ?? []),
+    // Map context (borders around a river or lake) stops at the drawing area: a
+    // border that follows the hidden river would otherwise draw the answer.
+    // Chart axes stay whole.
+    guides: compact(
+      source.type === "trend"
+        ? (source.guides ?? [])
+        : (source.guides ?? []).flatMap((g) => splitRuns(g, (p) => !inRects(p, region))),
+    ),
     labels: source.labels ?? [],
     region,
     visibility: Math.round(cut.visibility * 1000) / 1000,
