@@ -137,6 +137,24 @@ export const GAME_CATALOG: readonly GameInfo[] = [
     minutes: "1–2 min",
     needsContent: true,
   },
+  {
+    id: "seafarer",
+    title: "Seafarer",
+    tagline: "Chart the best course through the isles.",
+    description:
+      "A monthly expedition of route-planning puzzles. Plot a course around islands, reefs, shallows and currents, and reach every port in as few days as you can. One new challenge a day.",
+    howToPlay: [
+      "Tap the glowing water next to your ship to plot a course, or drag from the ship to draw one.",
+      "Each cell costs a day of provisions. Shallows cost 2. Islands and reefs block your way.",
+      "Currents carry your ship along for free, but you can't sail straight against one.",
+      "Tap any point on your course to cut it back there. When the objective is met, set sail.",
+      "Match par (the fewest days possible) for three stars. Every finished voyage earns at least one.",
+      "One new challenge unlocks each day. Missing a day only pauses your expedition.",
+    ],
+    accent: "cyan",
+    minutes: "2–5 min",
+    needsContent: false,
+  },
 ];
 
 export const GAME_IDS: readonly GameId[] = GAME_CATALOG.map((g) => g.id);

@@ -11,6 +11,7 @@ component per game, and the games' code doesn't live in the main repo.
 | **Box Plot** | Picture logic puzzle (nonogram) that grows through the week, 5×5 Mon → 12×12 weekend; a Check button outlines mistakes, and the solved picture flips to colour. 364 pictures, all solvable without guessing. | Built-in coloured library (52 per weekday) |
 | **Cube Rush** | Slide cubicles until the analyst can reach the exit. Easy Mon → hard weekend; scored by time, with the optimal move count shown. | Built-in verified library (240 puzzles) |
 | **Word Web** | A crossword that unfolds: one category, no clues; solving a word reveals the words that cross it. Easy Mon → hardest Sun. | Validated puzzles supplied by the host (built-in canonical fallback) |
+| **Seafarer** | Plot a ship's course across a hex sea chart around islands, reefs, shallows and currents. Monthly packs (November: The Shattered Isles, 30; December: The Frozen Passages, 31); one new challenge per player per day; stars against the solver's exact par. Design: [docs/seafarer.md](docs/seafarer.md). | Built-in packs, generated + reviewed (`scripts/build-seafarer-pack.ts`) |
 | **Outlier** (id `black-swan`) | Seven prompts ("Name a loss reserving method."). Any accepted answer counts; the rarer it is, the more it scores and the farther from Earth it takes you. Each prompt hides one Outlier. | Question pool + guess counts supplied by the host's server |
 
 Every player gets the same puzzle for a date. New puzzles unlock at the player's local midnight.

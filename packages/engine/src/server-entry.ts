@@ -15,6 +15,8 @@ import {
 } from "./games/box-plot/logic.js";
 import { type CubeStep, cubeRushForDate, replayCubeRush } from "./games/cube-rush/daily.js";
 import { generateRiskPool, isComplete } from "./games/risk-pool/logic.js";
+import { seafarerPuzzle } from "./games/seafarer/packs/index.js";
+import { scoreRoute } from "./games/seafarer/rules.js";
 import { replayLog, wordWebForDate } from "./games/wordweb/logic.js";
 
 export interface VerifiedScore {
@@ -27,6 +29,11 @@ export interface VerifiedScore {
   par?: number;
   /** Box Plot grid size (5–12), which bounds the fastest plausible time. */
   size?: number;
+  /** Seafarer: stars (1–3), days at sea (restarts included), cargo, returns to harbor. */
+  stars?: number;
+  days?: number;
+  cargo?: number;
+  restarts?: number;
 }
 
 export interface VerifyInput {
@@ -109,6 +116,16 @@ export function verifyGameResult({
       case "doodle":
         // Scored on the host's server from the submitted strokes (see scoreDoodle).
         return null;
+      case "seafarer": {
+        // Seafarer is per player, not per date: the proof names its challenge.
+        const puzzle = typeof proof.puzzleId === "string" ? seafarerPuzzle(proof.puzzleId) : null;
+        const taps = proof.taps;
+        if (!puzzle || !Array.isArray(taps) || taps.length > 500 || !taps.every(isInt)) return null;
+        const restarts = proof.restarts ?? 0;
+        if (!isInt(restarts) || restarts < 0) return null;
+        const score = scoreRoute(puzzle, taps as number[], restarts);
+        return score ? { solved: true, moves: taps.length, ...score } : null;
+      }
       case "black-swan":
         // Scored on the host's server as each answer is locked in (see scoreGuess):
         // there is no client proof to replay.
@@ -135,6 +152,9 @@ export function minPlausibleSeconds(game: GameId, score: VerifiedScore): number 
     case "wordweb":
       // A few seconds per answer, at the very least.
       return 8;
+    case "seafarer":
+      // A quarter of a second per tapped cell (dragging is fast).
+      return Math.max(3, Math.ceil((score.moves ?? 0) * 0.25));
     case "assumption-drift":
     case "black-swan":
     case "doodle":
@@ -210,3 +230,7 @@ export * from "./games/wordweb/logic.js";
 // Doodle: geometry, scoring, variant generation and validation, scheduling.
 // Hosts score submissions and run the content pipeline with these.
 export * from "./games/doodle/logic.js";
+
+// Seafarer: packs, rules (route replay and scoring), the exact solver and the
+// content pipeline. Hosts verify submissions and track pack progress with these.
+export * from "./games/seafarer/logic.js";

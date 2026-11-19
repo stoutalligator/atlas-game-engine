@@ -5,7 +5,8 @@ export type GameId =
   | "risk-pool"
   | "black-swan"
   | "wordweb"
-  | "doodle";
+  | "doodle"
+  | "seafarer";
 
 export interface GameStat {
   label: string;
@@ -44,6 +45,10 @@ export interface GameScore {
   rarity?: number;
   /** Doodle: 0–100 match. */
   match?: number;
+  /** Seafarer: stars (1–3), days sailed and cargo delivered. */
+  stars?: number;
+  days?: number;
+  cargo?: number;
 }
 
 /**
