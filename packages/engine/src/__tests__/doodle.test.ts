@@ -25,6 +25,7 @@ import {
   scoreDoodle,
   toCanvasUnits,
   trendSource,
+  trendTicks,
   validateDoodleSource,
   validateDoodleVariant,
 } from "../games/doodle/logic.js";
@@ -808,5 +809,71 @@ describe("Doodle: symmetric shapes keep their middle visible", () => {
     expect(corner.problems.join()).not.toMatch(/middle is hidden/);
     for (const v of pickDoodleVariants(bell))
       expect(validateDoodleVariant(bell, v.mask.rects).ok).toBe(true);
+  });
+});
+
+describe("Doodle: chart axis ticks", () => {
+  const weekly = Array.from({ length: 104 }, (_, i) => {
+    const d = new Date(Date.UTC(2023, 0, 2 + 7 * i));
+    return d.toISOString().slice(0, 10);
+  });
+  it("labels a two-year chart by quarter, with the year under each January", () => {
+    const ticks = trendTicks(weekly) ?? [];
+    expect(ticks.map((t) => t.text)).toEqual([
+      "Jan",
+      "Apr",
+      "Jul",
+      "Oct",
+      "Jan",
+      "Apr",
+      "Jul",
+      "Oct",
+    ]);
+    expect(ticks.filter((t) => t.sub).map((t) => t.sub)).toEqual(["2023", "2024"]);
+  });
+  it("labels a long chart by year, thinned to a readable count", () => {
+    const yearly = Array.from({ length: 66 }, (_, i) => String(1960 + i));
+    const ticks = trendTicks(yearly) ?? [];
+    expect(ticks.length).toBeLessThanOrEqual(9);
+    expect(ticks[0].text).toBe("1960");
+  });
+  it("falls back to evenly spaced labels when periods aren't dates", () => {
+    expect(trendTicks(["Q1", "Q2"])).toBeNull();
+  });
+});
+
+describe("Doodle: map context stops at the drawing area", () => {
+  const river: DoodleSource = {
+    ...ring,
+    id: "river",
+    type: "line",
+    paths: [
+      [
+        [100, 300],
+        [500, 320],
+        [900, 300],
+      ],
+    ],
+    // A border that follows the river: inside the drawing area it would draw the answer.
+    guides: [
+      [
+        [100, 305],
+        [500, 325],
+        [900, 305],
+      ],
+    ],
+  };
+  it("hides guides inside the region for maps, keeps chart axes whole", () => {
+    const variant = {
+      id: "v",
+      sourceId: "river",
+      difficulty: "easy" as const,
+      mask: { rects: [{ x: 600, y: 0, w: 400, h: 700 }], strategy: "side-right" },
+      metrics: { visibility: 0.45, missingLength: 1, detail: 0, missingRuns: 1, regionShare: 0.3 },
+    };
+    const p = buildDoodlePuzzle(river, variant);
+    expect(p.guides.flat().every(([x]) => x < 600)).toBe(true);
+    const chart = buildDoodlePuzzle(trend, variant);
+    expect(chart.guides.flat().some(([x]) => x > 600)).toBe(true);
   });
 });

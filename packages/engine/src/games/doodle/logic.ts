@@ -64,7 +64,7 @@ export {
   doodleReserveByDifficulty,
   planDoodleSchedule,
 } from "./schedule.js";
-export { trendSource, type TrendSourceInput } from "./trend.js";
+export { trendSource, trendTicks, type TrendSourceInput } from "./trend.js";
 export { DOODLE_PRACTICE_SOURCE, DOODLE_PRACTICE_VARIANT } from "./practice.js";
 export {
   DOODLE_ERASER_RADIUS,
