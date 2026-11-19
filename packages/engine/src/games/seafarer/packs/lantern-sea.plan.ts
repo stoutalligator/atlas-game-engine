@@ -4,7 +4,7 @@
 // docs/seafarer.md, "January: The Lantern Sea".
 //
 // Every month starts gentle (late joiners start at day 1) and gets harder:
-//   1–3   Voyages, a refresher (day 1 rewards the obvious route).
+//   1–3   Voyages, a refresher, with the base mechanic (glowing shallows) from day 1.
 //   4–8   Tides: first open/closed flats, then racing the tide.
 //   9–12  Tides with the glowing shallows.
 //   13–16 Tides with night currents.
@@ -143,11 +143,16 @@ const DAYS: PlannedDay[] = [
       islands: [2, 3],
       reefs: [0, 1],
       slack: 4,
-      par: [5, 8],
-      maxLureGap: 0,
+      par: [5, 9],
+      shallows: 0.35,
+      minShallowCost: 1,
+      minLureGap: 1,
+      maxLureGap: 2,
       naiveFinishes: true,
     },
-    { tip: "Tap the glowing water beside your ship to sail there. Every move is final." },
+    {
+      tip: "Tap the water beside your ship to sail there. Every move is final, and the glowing shallows cost 2 nights.",
+    },
   ),
   day(
     "Moonrise",
@@ -159,7 +164,9 @@ const DAYS: PlannedDay[] = [
       rows: 9,
       islands: [3, 4],
       slack: 4,
-      par: [6, 10],
+      par: [6, 11],
+      shallows: 0.35,
+      minShallowCost: 1,
       minLureGap: 1,
       maxLureGap: 2,
       naiveFinishes: true,
@@ -176,7 +183,9 @@ const DAYS: PlannedDay[] = [
       rows: 10,
       islands: [4, 5],
       reefs: [2, 3],
-      par: [8, 12],
+      par: [8, 13],
+      shallows: 0.35,
+      minShallowCost: 1,
       minLureGap: 1,
       maxLureGap: 2,
       naiveFinishes: true,
@@ -267,7 +276,9 @@ const DAYS: PlannedDay[] = [
       minLureGap: 2,
       naiveFinishes: true,
     },
-    { tip: "Glowing water is shallow: each hex costs 2 nights. Is the long way round quicker?" },
+    {
+      tip: "The glowing shallows spread from here: 2 nights a hex. Is the long way round quicker?",
+    },
   ),
   day("Phosphor Banks", 3, {
     ...base,
@@ -694,9 +705,9 @@ const DAYS: PlannedDay[] = [
  * rebuilds are exact. Empty: the build takes each day's top-ranked candidate.
  */
 const PICKS: Array<string | undefined> = [
-  "lantern-sea-01-2502",
-  "lantern-sea-02-443",
-  "lantern-sea-03-277",
+  "lantern-sea-01-1842",
+  "lantern-sea-02-2312",
+  "lantern-sea-03-2300",
   "lantern-sea-04-225",
   "lantern-sea-05-1707",
   "lantern-sea-06-1063",

@@ -537,12 +537,14 @@ describe.each([
     });
   });
 
-  it("starts gentle: the first days are plain voyages", () => {
+  it("starts gentle but never trivial: shallows from day 1, nothing else yet", () => {
     for (let n = 1; n <= 3; n++) {
       const p = pack.puzzles[n - 1];
       expect(p.objective.type).toBe("voyage");
-      expect(/[,~qeadzc]/.test(p.map.join(""))).toBe(false);
+      expect(/[~qeadzc]/.test(p.map.join(""))).toBe(false);
       expect(p.storms ?? []).toEqual([]);
+      // The base mechanic is there and in the way: the best route works around it.
+      expect(measure(p)?.shallowCost, p.id).toBeGreaterThanOrEqual(1);
     }
   });
 

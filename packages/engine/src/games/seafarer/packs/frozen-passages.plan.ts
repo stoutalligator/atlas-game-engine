@@ -98,7 +98,7 @@ const NAMES: PlaceNames = {
 const DAYS: Array<{ title: string; tip?: string }> = [
   {
     title: "First Frost",
-    tip: "Tap the glowing water beside your ship to sail there. Every move is final.",
+    tip: "Tap the glowing water beside your ship to sail there. Every move is final, and pale slush ice costs 2 days.",
   },
   { title: "Snowbound Sound", tip: "Look ahead: there's usually more than one good way through." },
   { title: "The Ice Gate" },
@@ -106,7 +106,7 @@ const DAYS: Array<{ title: string; tip?: string }> = [
   { title: "Northern Lights" },
   {
     title: "Slush Shoals",
-    tip: "Pale, broken water is slush ice: each hex costs 2 days. Is the long way round quicker?",
+    tip: "The slush ice thickens from here: 2 days a hex. Is the long way round quicker?",
   },
   { title: "Thin Ice" },
   { title: "Rimefield" },
@@ -148,11 +148,11 @@ const DAYS: Array<{ title: string; tip?: string }> = [
 
 /** The reviewed chart for each day (seeds from the --review build), so rebuilds are exact. */
 const PICKS: Array<string | undefined> = [
-  "frozen-passages-01-1528",
-  "frozen-passages-02-4503",
-  "frozen-passages-03-5547",
-  "frozen-passages-04-226",
-  "frozen-passages-05-5549",
+  "frozen-passages-01-5063",
+  "frozen-passages-02-2367",
+  "frozen-passages-03-5091",
+  "frozen-passages-04-5518",
+  "frozen-passages-05-291",
   "frozen-passages-06-1411",
   "frozen-passages-07-432",
   "frozen-passages-08-3610",

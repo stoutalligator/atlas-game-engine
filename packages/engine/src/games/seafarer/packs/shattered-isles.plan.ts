@@ -4,8 +4,8 @@
 // with `pick` (the candidate's seed), so the pack rebuilds identically.
 //
 // Progression (mechanics arrive gradually, then combine):
-//   1–5   Voyages: islands and reefs.
-//   6–10  Shallows (2 days each) and tighter provisions.
+//   1–5   Voyages: islands, reefs and the base mechanic, shallows (2 days each).
+//   6–10  Heavier shallows and tighter provisions.
 //   11–15 Currents: free rides, but never upstream.
 //   16–20 Rounds: call at 2–3 ports in the best order.
 //   21–25 Storm season: fronts drift a hex a day; wait at anchor, race, or detour.
@@ -38,7 +38,7 @@ const DAYS: PlannedDay[] = [
   {
     title: "First Light",
     difficulty: 1,
-    tip: "Tap the glowing water beside your ship to sail there. Every move is final.",
+    tip: "Tap the glowing water beside your ship to sail there. Every move is final, and pale shallow water costs 2 days.",
     recipe: {
       ...base,
       objective: voyage,
@@ -117,7 +117,7 @@ const DAYS: PlannedDay[] = [
   {
     title: "Sandbar Bay",
     difficulty: 2,
-    tip: "Pale water is shallow: each shallow cell costs 2 days. Is the long way round quicker?",
+    tip: "The shallows spread from here: 2 days a hex. Is the long way round quicker?",
     recipe: {
       ...base,
       objective: voyage,
@@ -618,12 +618,14 @@ const DAYS: PlannedDay[] = [
  *   within the provisions, so a day is never hopeless.
  */
 const TUNING: Array<Partial<Recipe>> = [
-  // 1–5 Voyages: the first day rewards the obvious route; then it starts to cost
-  { maxLureGap: 0, naiveFinishes: true },
-  { minLureGap: 1, maxLureGap: 2, naiveFinishes: true },
-  { minLureGap: 1, naiveFinishes: true },
-  { minLureGap: 1, naiveFinishes: true },
-  { minLureGap: 2, naiveFinishes: true },
+  // 1–5 Voyages with the base mechanic, shallows, from day 1: there is always
+  // a decision (cut through for 2 days, or go round), and the obvious route
+  // costs a little (never more than 2 days on these days; it always arrives)
+  { shallows: 0.35, minShallowCost: 1, minLureGap: 1, maxLureGap: 2, naiveFinishes: true },
+  { shallows: 0.35, minShallowCost: 1, minLureGap: 1, maxLureGap: 2, naiveFinishes: true },
+  { shallows: 0.35, minShallowCost: 1, minLureGap: 1, maxLureGap: 2, naiveFinishes: true },
+  { shallows: 0.35, minShallowCost: 1, minLureGap: 1, naiveFinishes: true },
+  { shallows: 0.35, minShallowCost: 1, minLureGap: 2, naiveFinishes: true },
   // 6–10 Shallows: cutting straight through the shallows is the trap
   { minShallowCost: 1, minLureGap: 2, naiveFinishes: true },
   { minShallowCost: 1, minLureGap: 2, naiveFinishes: true },
@@ -662,11 +664,11 @@ const TUNING: Array<Partial<Recipe>> = [
  * rebuilds are exact. Empty: the build takes each day's top-ranked candidate.
  */
 const PICKS: Array<string | undefined> = [
-  "shattered-isles-01-1447",
-  "shattered-isles-02-2117",
-  "shattered-isles-03-3213",
-  "shattered-isles-04-1253",
-  "shattered-isles-05-1412",
+  "shattered-isles-01-1563",
+  "shattered-isles-02-1493",
+  "shattered-isles-03-1680",
+  "shattered-isles-04-111",
+  "shattered-isles-05-1348",
   "shattered-isles-06-1625",
   "shattered-isles-07-1888",
   "shattered-isles-08-1367",
