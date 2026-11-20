@@ -49,13 +49,18 @@ import {
   restoreState,
   scoreDifficulty,
   selectAnswer,
+  startIndexes,
+  startMiss,
+  startOrder,
+  startStyle,
   submitGuess,
   takeHint,
   tick,
   toEvergreen,
   treeStats,
   typeLetter,
-  unfurlIndex,
+  unfurlCount,
+  unfurlIndexes,
   validateLayout,
   validateUnlockGraph,
   visibleAnswers,
@@ -182,25 +187,25 @@ describe("guess evaluation", () => {
   });
 
   it("an ordinary miss counts a guess, changes nothing else and clears typed letters", () => {
-    const typed = type(fresh(), "HAMPTER");
+    const typed = type(fresh(), "AMPE"); // around the shown H, T and R: HAMPTER
     expect(typed.outcome).toBeNull();
     const res = submitGuess(PETS, typed.state);
     expect(res.outcome).toBe("incorrect");
     expect(res.state.guessCount).toBe(1);
     expect(res.state.solved).toEqual([]);
-    expect(currentLetters(PETS, res.state, id("HAMSTER")).join("")).toBe("T");
+    expect(currentLetters(PETS, res.state, id("HAMSTER")).join("")).toBe("HTR");
   });
 
   it("a plausible alternate gets the Close! outcome", () => {
-    // RABBIT unfurls as ?A??I?; MAGPIE fits those letters.
+    // RABBIT unfurls as RA????; RAPTOR fits those letters.
     const puzzle = {
       ...PETS,
       answers: PETS.answers.map((a) =>
-        a.grid === "RABBIT" ? { ...a, alternates: ["MAGPIE"] } : a,
+        a.grid === "RABBIT" ? { ...a, alternates: ["RAPTOR"] } : a,
       ),
     };
     const s = solve(fresh(), "HAMSTER");
-    const res = submitGuess(puzzle, s, id("RABBIT"), "magpie");
+    const res = submitGuess(puzzle, s, id("RABBIT"), "raptor");
     expect(submitGuess(puzzle, s, id("RABBIT"), "parrot").outcome).toBe("mismatch");
     expect(res.outcome).toBe("alternate");
     expect(res.state.solved).toEqual([id("HAMSTER")]);
@@ -236,7 +241,7 @@ describe("guess evaluation", () => {
   });
 
   it("grades automatically once the typed letters spell the answer", () => {
-    const res = type(fresh(), "HAMSER");
+    const res = type(fresh(), "AMSE");
     expect(res.outcome).toBe("correct");
     expect(res.state.solved).toEqual([id("HAMSTER")]);
   });
@@ -301,8 +306,8 @@ describe("unlock progression", () => {
     s = selectAnswer(PETS, s, id("CAT"));
     s = typeLetter(PETS, s, "C")?.state as WordWebState;
     s = selectAnswer(PETS, s, id("BIRD"));
-    // BIRD unfurled as B?R?; CAT, a 3-letter word, shows only its crossing T.
-    expect(currentLetters(PETS, s, id("BIRD"))).toEqual(["B", "I", "R", ""]);
+    // BIRD and CAT (4 and 3 letters) unfurl with only their crossings: B???, ??T.
+    expect(currentLetters(PETS, s, id("BIRD"))).toEqual(["B", "I", "", ""]);
     expect(currentLetters(PETS, s, id("CAT"))).toEqual(["C", "", "T"]);
     expect(backspace(PETS, s).typed).not.toHaveProperty("3,3");
   });
@@ -525,15 +530,15 @@ describe("hints", () => {
       order.push(res.index);
       s = res.state;
     }
-    // HAMSTER: T (index 4) is given; hints fill 0,1,2,3,5 and leave 6.
-    expect(order).toEqual([0, 1, 2, 3, 5]);
+    // HAMSTER: H, T and R (0, 4, 6) are given; hints fill 1, 2, 3 and leave 5.
+    expect(order).toEqual([1, 2, 3]);
     expect(hintStatus(PETS, ready(s))).toMatchObject({ available: false, reason: "final-letter" });
 
-    let r = solve(fresh(), "HAMSTER"); // RABBIT active, A fixed by HAMSTER
+    let r = solve(fresh(), "HAMSTER"); // RABBIT active: A fixed by HAMSTER, R unfurled
     r = takeHint(PETS, ready(r)).state;
-    expect([...r.hinted]).toEqual(["0,2"]); // R, the top cell
+    expect([...r.hinted]).toEqual(["2,2"]); // skips the R and A above
     r = takeHint(PETS, ready(r)).state;
-    expect([...r.hinted]).toEqual(["0,2", "2,2"]); // skips the A at 1,2
+    expect([...r.hinted]).toEqual(["2,2", "3,2"]);
   });
 
   it("counts hints, not guesses, and resets the cooldown", () => {
@@ -558,10 +563,12 @@ describe("hints", () => {
   });
 
   it("never hints a word with only one unknown letter (crossings count as known)", () => {
-    let s = solve(solve(fresh(), "HAMSTER"), "RABBIT"); // BIRD active: B crossing, R unfurled
+    let s = solve(solve(fresh(), "HAMSTER"), "RABBIT"); // BIRD active: only its B crossing
     expect(hintStatus(PETS, ready(s)).available).toBe(true);
     s = takeHint(PETS, ready(s)).state;
     expect(fixedCells(PETS, s).get("3,3")).toBe("I");
+    s = takeHint(PETS, ready(s)).state;
+    expect(fixedCells(PETS, s).get("3,4")).toBe("R"); // D is DOG's crossing, still unknown
     expect(hintStatus(PETS, ready(s)).reason).toBe("final-letter");
     // CAT (3 letters, no unfurl letter): T from RABBIT, then one hint for C.
     s = selectAnswer(PETS, s, id("CAT"));
@@ -574,35 +581,59 @@ describe("hints", () => {
   it("starting letters and crossings aren't counted as hints", () => {
     const s = solve(fresh(), "HAMSTER");
     expect(s.hintsUsed).toBe(0);
-    expect(currentLetters(PETS, s, id("RABBIT"))).toEqual(["", "A", "", "", "I", ""]);
+    expect(currentLetters(PETS, s, id("RABBIT"))).toEqual(["R", "A", "", "", "", ""]);
   });
 });
 
-// ── Unfurl letter ────────────────────────────────────────────────────────
+// ── Unfurl letters ───────────────────────────────────────────────────────
 
-describe("unfurl letter", () => {
-  it("is the letter farthest from the parent crossing, skipping other crossings", () => {
-    const at = (grid: string) => unfurlIndex(PETS.answers, id(grid));
-    expect(at("HAMSTER")).toBeNull(); // the start has its own starting letters
-    expect(at("RABBIT")).toBe(4); // crosses HAMSTER at 1; 3 and 5 are crossings
-    expect(at("BIRD")).toBe(2); // crosses RABBIT at 0; 3 is DOG's
-    expect(at("DOG")).toBeNull(); // 3-letter words get no extra letter
-    expect(at("CAT")).toBeNull();
+describe("unfurl letters", () => {
+  it("scale with word length: 0 up to 4 letters, 1 for 5, 2 for 6, 3 from 7", () => {
+    expect([3, 4, 5, 6, 7, 8, 12].map(unfurlCount)).toEqual([0, 0, 1, 2, 3, 3, 3]);
+  });
+
+  it("skip other crossings and always leave two such cells blank", () => {
+    const at = (grid: string) => unfurlIndexes(PETS.answers, id(grid));
+    expect(at("HAMSTER")).toEqual([]); // the start has its own starting letters
+    // RABBIT crosses HAMSTER at 1; 3 and 5 are crossings, so of 0, 2, 4 only one shows.
+    expect(at("RABBIT")).toEqual([0]);
+    expect(at("BIRD")).toEqual([]); // 4 letters
+    expect(at("DOG")).toEqual([]);
+    expect(at("CAT")).toEqual([]);
+  });
+
+  it("top the starting answer up to the same count, keeping the puzzle's letters", () => {
+    // HAMSTER (7) keeps its T and gains H, then R (the later of 2 and 6).
+    expect(startIndexes("HAMSTER", [4])).toEqual([0, 4, 6]);
+    expect(startIndexes("WINDSHIELD", [6])).toEqual([0, 6, 9]); // W _ _ _ _ _ I _ _ D
+    expect(startIndexes("CAT", [1])).toEqual([1]); // never fewer than the puzzle picked
+    expect(startIndexes("SKIRT", [1, 3])).toEqual([1, 3]); // already past 5's one letter
+    expect(startIndexes("TIGER", [2])).toEqual([2]); // 5 letters: 1, which it has
+  });
+
+  it("start with the first letter, then spread out (the later on a tie)", () => {
+    const parent = { id: "p", grid: "RED", row: 1, col: 0, direction: "across", parent: null };
+    const pencil = { id: "c", grid: "PENCIL", row: 0, col: 1, direction: "down", parent: "p" };
+    expect(unfurlIndexes([parent, pencil] as never, "c")).toEqual([0, 5]); // PE___L
+    const cat = { id: "p", grid: "CAT", row: 0, col: 0, direction: "across", parent: null };
+    const charcoal = { id: "c", grid: "CHARCOAL", row: 0, col: 0, direction: "down", parent: "p" };
+    // The shared C is the first letter, so: L (farthest), C (later of the middle two), A.
+    expect(unfurlIndexes([cat, charcoal] as never, "c")).toEqual([2, 4, 7]); // C_A_C__L
   });
 
   it("shows only once the word unfurls, as a given letter, not a hint", () => {
     const s0 = fresh();
-    expect(fixedCells(PETS, s0).has("4,2")).toBe(false); // RABBIT's I, still hidden
-    expect(givenCells(PETS, s0).has("4,2")).toBe(false);
+    expect(fixedCells(PETS, s0).has("0,2")).toBe(false); // RABBIT's R, still hidden
+    expect(givenCells(PETS, s0).has("0,2")).toBe(false);
     const s1 = solve(s0, "HAMSTER");
-    expect(givenCells(PETS, s1).get("4,2")).toBe("I");
+    expect(givenCells(PETS, s1).get("0,2")).toBe("R");
     expect(s1.hintsUsed).toBe(0);
-    expect(hintStatus(PETS, { ...s1, hintCooldownMs: 0 }).nextIndex).toBe(0);
+    expect(hintStatus(PETS, { ...s1, hintCooldownMs: 0 }).nextIndex).toBe(2); // past the R and A
   });
 
   it("typing skips it, and replay still verifies a finished game", () => {
     let s = solve(fresh(), "HAMSTER");
-    s = type(s, "RBBT").state; // R, B, B, T around the shown A and I
+    s = type(s, "BBIT").state; // B, B, I, T after the shown R and A
     expect(s.solved).toContain(id("RABBIT"));
     s = solve(solve(solve(s, "BIRD"), "DOG"), "CAT");
     expect(s.done).toBe(true);
@@ -856,6 +887,36 @@ describe("generation pipeline and queue", () => {
       expect(r.answers.every((a) => a.fit.length >= 10)).toBe(true);
       expect(allPass(r.validation.safety)).toBe(true);
     }
+  });
+
+  it("rotates the starting word: longest, shortest, middle, any direction", async () => {
+    expect(["2026-11-21", "2026-11-22", "2026-11-23", "2026-11-24"].map(startStyle)).toEqual([
+      "longest",
+      "shortest",
+      "middle",
+      "longest",
+    ]);
+    // PETS lengths 3,3,4,6,7: longest HAMSTER, shortest CAT/DOG (reading order), median 4 = BIRD.
+    const ids = (style: "longest" | "shortest" | "middle", wd: 0 | 1) =>
+      startOrder(PETS.answers, PETS.answers, style, wd).map(
+        (x) => PETS.answers.find((a) => a.id === x)?.grid,
+      );
+    expect(ids("longest", 0)[0]).toBe("HAMSTER");
+    expect(ids("shortest", 0).slice(0, 2).sort()).toEqual(["CAT", "DOG"]);
+    expect(ids("middle", 0)[0]).toBe("BIRD");
+    expect(ids("shortest", 1)).not.toContain("CAT"); // no 3-letter start on Monday
+    expect(startMiss(PETS.answers, id("RABBIT"), "longest", 0)).toBe(1);
+    // Generated puzzles start the day's way, across or down.
+    const directions = new Set<string>();
+    for (let d = 0; d < 6; d++) {
+      const date = addDays("2026-11-02", d);
+      const { record } = await generateForDate({ date, generator: gen, history: [], now: NOW });
+      const p = (record as NonNullable<typeof record>).puzzle;
+      const start = p.answers.find((a) => a.id === p.start) as Placed;
+      directions.add(start.direction);
+      expect(startMiss(p.answers, p.start, startStyle(date), weekday(date) as 0)).toBe(0);
+    }
+    expect(directions.size).toBe(2);
   });
 
   it("easy days use the category's most generic answers (top of the list)", async () => {

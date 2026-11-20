@@ -16,8 +16,10 @@ import {
   buildUnlockTree,
   crossingIndexes,
   orderForSelection,
-  unfurlIndex,
+  startIndexes,
+  unfurlIndexes,
 } from "./graph.js";
+import type { Placed } from "./grid.js";
 import { normalizeWord } from "./normalize.js";
 import {
   type HistoryItem,
@@ -81,6 +83,8 @@ export interface PipelineResult {
 }
 
 interface Candidate {
+  /** How far the start is from the day's start style (startMiss); 0 = a match. */
+  startMiss: number;
   puzzle: WordWebPuzzle;
   meta: AnswerMeta[];
   validation: WordWebRecord["validation"];
@@ -126,12 +130,79 @@ function cleanAnswers(
 /**
  * Step 7: other category members that fit the same space — same length and
  * the same letters wherever the player will already see one when the space
- * appears (the parent crossing and the unfurl letter, or the starting reveal).
+ * appears (the parent crossing and the unfurl letters, or the starting reveal).
  */
 export function alternatesFor(grid: string, members: string[], known: number[]): string[] {
   return members
     .filter((m) => m.length === grid.length && m !== grid && known.every((i) => m[i] === grid[i]))
     .sort();
+}
+
+/** Which word a day's puzzle prefers to start from; rotates day by day. */
+export type StartStyle = "longest" | "shortest" | "middle";
+const START_STYLES: StartStyle[] = ["longest", "shortest", "middle"];
+
+/**
+ * Longest, shortest, middle, repeating by date. Seven days don't divide by
+ * three, so every weekday gets each style over three weeks.
+ */
+export function startStyle(date: string): StartStyle {
+  const day = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
+  return START_STYLES[((day % 3) + 3) % 3];
+}
+
+/**
+ * The words to try as the starting answer, best first for the day's style:
+ * any word, across or down. Easy days (Monday, Tuesday) never start on a
+ * 3-letter word. Ties go to the more familiar word, then reading order. The
+ * rest of the list is the fallback when the preferred start fails a check or
+ * misses the day's difficulty band.
+ */
+export function startOrder(
+  layout: readonly Placed[],
+  chosen: readonly { grid: string; familiarity: number }[],
+  style: StartStyle,
+  wd: Weekday,
+): string[] {
+  const rank = styleRank(layout, style);
+  const fam = (grid: string) => chosen.find((c) => c.grid === grid)?.familiarity ?? 0;
+  return startable(layout, wd)
+    .map((a, i) => ({ id: a.id, grid: a.grid, i }))
+    .sort(
+      (a, b) => rank(a.grid.length) - rank(b.grid.length) || fam(b.grid) - fam(a.grid) || a.i - b.i,
+    )
+    .map((a) => a.id);
+}
+
+/**
+ * How far `root` is from the best start for the style, in letters (0 when its
+ * length is the best one available). Candidates with a smaller miss win, so the
+ * generator tries other answer sets before giving up on the day's style.
+ */
+export function startMiss(
+  layout: readonly Placed[],
+  root: string,
+  style: StartStyle,
+  wd: Weekday,
+): number {
+  const rank = styleRank(layout, style);
+  const best = Math.min(...startable(layout, wd).map((a) => rank(a.grid.length)));
+  const len = layout.find((a) => a.id === root)?.grid.length ?? 0;
+  return rank(len) - best;
+}
+
+/** Words that may start the puzzle, in reading order: any, but no 3-letter start on easy days. */
+function startable(layout: readonly Placed[], wd: Weekday): Placed[] {
+  const easy = wd === 1 || wd === 2;
+  return orderForSelection([...layout]).filter((a) => !easy || a.grid.length > 3);
+}
+
+/** Lower is better for the style: longest first, shortest first, or nearest the median length. */
+function styleRank(layout: readonly Placed[], style: StartStyle): (len: number) => number {
+  const lengths = layout.map((a) => a.grid.length).sort((x, y) => x - y);
+  const median = lengths[Math.floor((lengths.length - 1) / 2)];
+  return (len) =>
+    style === "longest" ? -len : style === "shortest" ? len : Math.abs(len - median);
 }
 
 /**
@@ -217,119 +288,123 @@ function buildCandidate(
       steps,
     };
   const reasons: string[] = [];
+  const style = startStyle(date);
   for (const layout of layouts) {
-    const tree = buildUnlockTree(layout, startGrid, shape, rng);
-    // Stable ids in reading order.
-    const ordered = orderForSelection(tree);
-    const idOf = new Map(ordered.map((a, i) => [a.id, `a${i + 1}`]));
-    const nodes: (UnlockNode & { familiarity: number; alternates: string[] })[] = ordered.map(
-      (a) => {
-        const src = chosen.find((c) => c.grid === a.grid) as CleanAnswer;
-        return {
-          ...a,
-          id: idOf.get(a.id) as string,
-          parent: a.parent ? (idOf.get(a.parent) as string) : null,
-          familiarity: src.familiarity,
-          alternates: [] as string[],
-        };
-      },
-    );
-    const startNode = nodes.find((n) => n.parent === null) as UnlockNode;
-    const revealed = chooseRevealed(
-      startNode.grid,
-      target.revealed,
-      crossingIndexes(startNode, nodes),
-      rng,
-    );
-    for (const n of nodes) {
-      const parent = nodes.find((p) => p.id === n.parent);
-      const extra = unfurlIndex(nodes, n.id);
-      const known = parent
-        ? [...crossingIndexes(n, [parent]), ...(extra === null ? [] : [extra])]
-        : revealed;
-      n.alternates = alternatesFor(n.grid, members, known);
-    }
+    // The grid is built around a long anchor; the puzzle can start from any of its words.
+    for (const root of startOrder(layout, chosen, style, wd)) {
+      const tree = buildUnlockTree(layout, root, shape, rng);
+      // Stable ids in reading order.
+      const ordered = orderForSelection(tree);
+      const idOf = new Map(ordered.map((a, i) => [a.id, `a${i + 1}`]));
+      const nodes: (UnlockNode & { familiarity: number; alternates: string[] })[] = ordered.map(
+        (a) => {
+          const src = chosen.find((c) => c.grid === a.grid) as CleanAnswer;
+          return {
+            ...a,
+            id: idOf.get(a.id) as string,
+            parent: a.parent ? (idOf.get(a.parent) as string) : null,
+            familiarity: src.familiarity,
+            alternates: [] as string[],
+          };
+        },
+      );
+      const startNode = nodes.find((n) => n.parent === null) as UnlockNode;
+      const revealed = chooseRevealed(
+        startNode.grid,
+        target.revealed,
+        crossingIndexes(startNode, nodes),
+        rng,
+      );
+      for (const n of nodes) {
+        const parent = nodes.find((p) => p.id === n.parent);
+        const known = parent
+          ? [...crossingIndexes(n, [parent]), ...unfurlIndexes(nodes, n.id)]
+          : startIndexes(n.grid, revealed);
+        n.alternates = alternatesFor(n.grid, members, known);
+      }
 
-    const layoutResults = validateLayout(nodes);
-    const graphResults = [
-      ...validateUnlockGraph(nodes, startNode.id),
-      validateStart(startNode, revealed),
-    ];
-    if (!allPass(layoutResults) || !allPass(graphResults)) {
-      reasons.push(...failures([...layoutResults, ...graphResults]));
-      continue;
-    }
-    const difficulty = scoreDifficulty(
-      {
-        answers: nodes,
+      const layoutResults = validateLayout(nodes);
+      const graphResults = [
+        ...validateUnlockGraph(nodes, startNode.id),
+        validateStart(startNode, revealed),
+      ];
+      if (!allPass(layoutResults) || !allPass(graphResults)) {
+        reasons.push(...failures([...layoutResults, ...graphResults]));
+        continue;
+      }
+      const difficulty = scoreDifficulty(
+        {
+          answers: nodes,
+          start: startNode.id,
+          revealed,
+          breadth: proposal.breadth,
+          ambiguity: proposal.ambiguity,
+          actuarial: proposal.actuarial,
+        },
+        wd,
+        opts.weights,
+        opts.targets,
+      );
+      if (!inTarget(difficulty)) {
+        reasons.push(`difficulty ${difficulty.score} outside ${difficulty.target.join("–")}`);
+        continue;
+      }
+      const rows = Math.max(
+        ...nodes.map((n) => (n.direction === "down" ? n.row + n.grid.length : n.row + 1)),
+      );
+      const cols = Math.max(
+        ...nodes.map((n) => (n.direction === "across" ? n.col + n.grid.length : n.col + 1)),
+      );
+      const puzzle: WordWebPuzzle = {
+        schemaVersion: WORDWEB_SCHEMA_VERSION,
+        gameType: "wordweb",
+        id: `ww-${date}-${proposal.categoryId}`,
+        date,
+        category: proposal.category,
+        weekday: wd,
+        difficulty: target.label,
+        difficultyScore: difficulty.score,
+        rows,
+        cols,
         start: startNode.id,
         revealed,
-        breadth: proposal.breadth,
-        ambiguity: proposal.ambiguity,
-        actuarial: proposal.actuarial,
-      },
-      wd,
-      opts.weights,
-      opts.targets,
-    );
-    if (!inTarget(difficulty)) {
-      reasons.push(`difficulty ${difficulty.score} outside ${difficulty.target.join("–")}`);
-      continue;
-    }
-    const rows = Math.max(
-      ...nodes.map((n) => (n.direction === "down" ? n.row + n.grid.length : n.row + 1)),
-    );
-    const cols = Math.max(
-      ...nodes.map((n) => (n.direction === "across" ? n.col + n.grid.length : n.col + 1)),
-    );
-    const puzzle: WordWebPuzzle = {
-      schemaVersion: WORDWEB_SCHEMA_VERSION,
-      gameType: "wordweb",
-      id: `ww-${date}-${proposal.categoryId}`,
-      date,
-      category: proposal.category,
-      weekday: wd,
-      difficulty: target.label,
-      difficultyScore: difficulty.score,
-      rows,
-      cols,
-      start: startNode.id,
-      revealed,
-      answers: nodes.map((n) => {
-        const src = chosen.find((c) => c.grid === n.grid) as CleanAnswer;
-        return {
-          id: n.id,
-          display: src.display,
-          grid: n.grid,
-          row: n.row,
-          col: n.col,
-          direction: n.direction,
-          parent: n.parent,
-          alternates: n.alternates,
-          familiarity: n.familiarity,
-        };
-      }),
-    };
-    const meta: AnswerMeta[] = puzzle.answers.map((a) => {
-      const src = chosen.find((c) => c.grid === a.grid) as CleanAnswer;
-      const kind = src.kind ?? (/[\s-]/.test(src.display.trim()) ? "multiword" : "noun");
-      return { id: a.id, display: src.display, fit: src.fit, familiarity: src.familiarity, kind };
-    });
-    return {
-      candidate: {
-        puzzle,
-        meta,
-        validation: {
-          layout: layoutResults,
-          graph: graphResults,
-          safety: [],
-          recurrence: [],
-          difficulty,
+        answers: nodes.map((n) => {
+          const src = chosen.find((c) => c.grid === n.grid) as CleanAnswer;
+          return {
+            id: n.id,
+            display: src.display,
+            grid: n.grid,
+            row: n.row,
+            col: n.col,
+            direction: n.direction,
+            parent: n.parent,
+            alternates: n.alternates,
+            familiarity: n.familiarity,
+          };
+        }),
+      };
+      const meta: AnswerMeta[] = puzzle.answers.map((a) => {
+        const src = chosen.find((c) => c.grid === a.grid) as CleanAnswer;
+        const kind = src.kind ?? (/[\s-]/.test(src.display.trim()) ? "multiword" : "noun");
+        return { id: a.id, display: src.display, fit: src.fit, familiarity: src.familiarity, kind };
+      });
+      return {
+        candidate: {
+          startMiss: startMiss(layout, root, style, wd),
+          puzzle,
+          meta,
+          validation: {
+            layout: layoutResults,
+            graph: graphResults,
+            safety: [],
+            recurrence: [],
+            difficulty,
+          },
         },
-      },
-      reasons,
-      steps,
-    };
+        reasons,
+        steps,
+      };
+    }
   }
   return { candidate: null, reasons, steps };
 }
@@ -420,10 +495,13 @@ export async function generateForDate(options: PipelineOptions): Promise<Pipelin
     // widen only when nothing fits.
     const rng = mulberry32(seed + attempt * 31337);
     const found: Candidate[] = [];
-    // Enough to choose from: four, one of them interlocking — or eight.
+    // Enough to choose from: four, one of them interlocking — or eight — with
+    // at least one starting the day's way; failing that, keep looking up to 16.
     const enough = () =>
-      found.length >= 8 ||
-      (found.length >= 4 && found.some((c) => extraCrossings(c.puzzle.answers) > 0));
+      found.length >= 16 ||
+      (found.some((c) => c.startMiss === 0) &&
+        (found.length >= 8 ||
+          (found.length >= 4 && found.some((c) => extraCrossings(c.puzzle.answers) > 0))));
     const collect = (pool: CleanAnswer[]) => {
       for (const chosen of subsets(rng, pool, target.answers, subsetsPerProposal)) {
         const starts = [...chosen]
@@ -466,11 +544,12 @@ export async function generateForDate(options: PipelineOptions): Promise<Pipelin
       reject();
       continue;
     }
-    // Crossword-style first: the most interlocking candidate wins, then the
-    // one nearest the middle of the day's difficulty band.
+    // The day's start style first, then crossword-style: the most interlocking
+    // candidate wins, then the one nearest the middle of the day's difficulty band.
     const mid = (target.range[0] + target.range[1]) / 2;
     found.sort(
       (a, b) =>
+        a.startMiss - b.startMiss ||
         extraCrossings(b.puzzle.answers) - extraCrossings(a.puzzle.answers) ||
         Math.abs(a.puzzle.difficultyScore - mid) - Math.abs(b.puzzle.difficultyScore - mid),
     );

@@ -1,4 +1,4 @@
-import { orderForSelection, unfurlIndex } from "./graph.js";
+import { orderForSelection, startIndexes, unfurlIndexes } from "./graph.js";
 import { cellKey, cellsOf } from "./grid.js";
 import { normalizeLetter, normalizeWord } from "./normalize.js";
 import type { WordWebAnswer, WordWebPuzzle } from "./types.js";
@@ -103,19 +103,20 @@ export function openAnswers(puzzle: WordWebPuzzle, state: WordWebState): WordWeb
 }
 
 /**
- * Cells shown for free: the starting letters, plus the extra letter each
- * visible word gets when it unfurls (unfurlIndex). Not hints.
+ * Cells shown for free: the starting letters (startIndexes), plus the extra letters each
+ * visible word gets when it unfurls (unfurlIndexes). Not hints.
  */
 export function givenCells(puzzle: WordWebPuzzle, state: WordWebState): Map<string, string> {
   const given = new Map<string, string>();
   const start = byId(puzzle, puzzle.start) as WordWebAnswer;
   const startCells = cellsOf(start);
-  for (const i of puzzle.revealed) given.set(cellKey(...startCells[i]), start.grid[i]);
+  for (const i of startIndexes(start.grid, puzzle.revealed))
+    given.set(cellKey(...startCells[i]), start.grid[i]);
   const visible = visibleIds(puzzle.answers, new Set(state.solved));
   for (const a of puzzle.answers) {
     if (a.id === puzzle.start || !visible.has(a.id)) continue;
-    const i = unfurlIndex(puzzle.answers, a.id);
-    if (i !== null) given.set(cellKey(...cellsOf(a)[i]), a.grid[i]);
+    const cells = cellsOf(a);
+    for (const i of unfurlIndexes(puzzle.answers, a.id)) given.set(cellKey(...cells[i]), a.grid[i]);
   }
   return given;
 }

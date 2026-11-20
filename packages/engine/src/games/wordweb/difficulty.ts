@@ -1,4 +1,4 @@
-import { crossingIndexes, treeStats, unfurlIndex } from "./graph.js";
+import { crossingIndexes, startIndexes, treeStats, unfurlIndexes } from "./graph.js";
 import { type Placed, boundsOf, cellsOf } from "./grid.js";
 import type { DifficultyBreakdown, DifficultyLabel, Weekday } from "./types.js";
 import type { UnlockNode } from "./validate.js";
@@ -81,7 +81,7 @@ export const WEEKDAY_TARGETS: Record<Weekday, WeekdayTarget> = {
   },
   3: {
     label: "Moderate",
-    range: [34, 52],
+    range: [29, 47],
     answers: [5, 5],
     revealed: 1,
     minFamiliarity: 3,
@@ -89,7 +89,7 @@ export const WEEKDAY_TARGETS: Record<Weekday, WeekdayTarget> = {
   },
   4: {
     label: "Moderate–Hard",
-    range: [42, 60],
+    range: [37, 55],
     answers: [5, 6],
     revealed: 1,
     minFamiliarity: 3,
@@ -97,7 +97,7 @@ export const WEEKDAY_TARGETS: Record<Weekday, WeekdayTarget> = {
   },
   5: {
     label: "Hard",
-    range: [50, 68],
+    range: [45, 63],
     answers: [6, 6],
     revealed: 1,
     minFamiliarity: 3,
@@ -105,7 +105,7 @@ export const WEEKDAY_TARGETS: Record<Weekday, WeekdayTarget> = {
   },
   6: {
     label: "Hard",
-    range: [54, 74],
+    range: [49, 69],
     answers: [6, 7],
     revealed: 1,
     minFamiliarity: 2,
@@ -113,7 +113,7 @@ export const WEEKDAY_TARGETS: Record<Weekday, WeekdayTarget> = {
   },
   0: {
     label: "Hardest",
-    range: [60, 100],
+    range: [55, 100],
     answers: [7, 7],
     revealed: 1,
     minFamiliarity: 2,
@@ -148,13 +148,13 @@ export function difficultyComponents(
   const start = answers.find((a) => a.id === input.start) as Placed;
 
   // Letters the player gets for free: the starting reveal, every crossing
-  // (supplied by a solved neighbour), and each word's unfurl letter.
+  // (supplied by a solved neighbour), and each word's unfurl letters.
+  const startLetters = startIndexes(start.grid, input.revealed);
   const given = [
-    ...input.revealed.map((i) => start.grid[i]),
+    ...startLetters.map((i) => start.grid[i]),
     ...answers.flatMap((a) => {
       if (a.id === input.start) return [];
-      const extra = unfurlIndex(answers, a.id);
-      return [...crossingIndexes(a, answers), ...(extra === null ? [] : [extra])].map(
+      return [...crossingIndexes(a, answers), ...unfurlIndexes(answers, a.id)].map(
         (i) => a.grid[i],
       );
     }),
@@ -170,7 +170,7 @@ export function difficultyComponents(
     maxLength: clamp01((Math.max(...lengths) - 4) / 5),
     unfamiliarity: clamp01((5 - fam) / 3),
     categoryBreadth: clamp01(input.breadth),
-    startLetters: input.revealed.length >= 2 ? 0.3 : 1,
+    startLetters: startLetters.length >= 2 ? 0.3 : 1,
     letterInformativeness: clamp01(1 - info * 1.6),
     alternatives: clamp01(alts / 4),
     branching: clamp01((stats.maxBranch - 1) / 2),

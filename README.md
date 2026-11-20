@@ -172,11 +172,11 @@ per module:
 | `normalize.ts` | One normalization for answers and guesses (A–Z only; accents fold; spaces and hyphens drop) |
 | `grid.ts`, `construct.ts` | Geometry, and the deterministic seeded builder that proposes layouts: crossword-style, ranking placements and layouts by crossings (a beam search finds interlocking loops), with legality always decided by the validator |
 | `validate.ts` | Every hard rule: matching crossings, one answer per direction per cell, every run of letters is an answer, connected, in bounds; unlock tree single-start, acyclic, reachable, parent crosses child, no hidden word showing early, always completable |
-| `graph.ts` | Unlock tree from a layout (wide or deep), its stats, and each word's unfurl letter (the extra letter shown when it appears; none for 3-letter words) |
+| `graph.ts` | Unlock tree from a layout (wide or deep), its stats, and the free letters by word length (`unfurlCount`: none up to 4 letters, 1 for 5, 2 for 6, 3 from 7): each word's unfurl letters when it appears, and the starting word's letters topped up to the same count |
 | `difficulty.ts` | 15 weighted components → 0–100, weekday bands (`DIFFICULTY_WEIGHTS`, `WEEKDAY_TARGETS`) |
 | `safety.ts`, `recurrence.ts` | Deny-lists, brand/proper-noun/abbreviation policy; repeat rules |
 | `generator.ts` | The `WordWebGenerator` contract and the local bank generator |
-| `pipeline.ts`, `queue.ts` | Generate one date; fill a queue idempotently; serve with fallbacks |
+| `pipeline.ts`, `queue.ts` | Generate one date (the starting word rotates longest → shortest → middle by date, across or down; `startStyle`); fill a queue idempotently; serve with fallbacks |
 | `schema.ts` | Runtime parsing at every ingestion point |
 | `play.ts`, `clock.ts`, `share.ts` | Player state (guesses, hints, cooldowns, restore, replay), active-play clock, share text |
 | `fixture.ts` | The canonical HOUSEHOLD PETS puzzle (coordinates adjusted to be legal; see the comment) |
