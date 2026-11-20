@@ -122,28 +122,71 @@ export function crossingIndexes(a: Placed, others: Placed[]): number[] {
 }
 
 /**
- * The free letter a word shows when it unfurls, on top of the one it shares
- * with the word that revealed it (its parent): the letter farthest from that
- * crossing (the later one on a tie), skipping cells another answer will fill
- * anyway. null for the starting answer and for 3-letter words (two of three
- * letters would show, leaving nothing to hint). Fixed per puzzle, so every player —
- * and the server's replay — sees the same letter.
+ * How many free letters a word gets when it unfurls, by length, on top of
+ * the one it shares with its parent: none for 3- and 4-letter words, one for
+ * 5, two for 6, three for 7 and longer.
  */
-export function unfurlIndex(
+export function unfurlCount(length: number): number {
+  if (length <= 4) return 0;
+  if (length === 5) return 1;
+  if (length === 6) return 2;
+  return 3;
+}
+
+/** Free letters no other word supplies that always stay for the player to type. */
+const UNFURL_KEEP_BLANK = 2;
+
+/**
+ * The free letters a word shows when it unfurls, on top of the one it shares
+ * with the word that revealed it (its parent); unfurlCount says how many.
+ * Only cells no other answer fills: the first letter if it's one, then each
+ * next letter as far as possible from the ones already showing (the later on
+ * a tie). At least two such cells always stay blank. Empty for the starting
+ * answer. Fixed per puzzle, so every player — and the server's replay — sees
+ * the same letters.
+ */
+export function unfurlIndexes(
   nodes: readonly (Placed & { parent: string | null })[],
   id: string,
-): number | null {
+): number[] {
   const a = nodes.find((n) => n.id === id);
   const parent = a?.parent ? nodes.find((n) => n.id === a.parent) : undefined;
-  if (!a || !parent || a.grid.length <= 3) return null;
+  if (!a || !parent) return [];
   const shared = crossingsBetween(a, parent)[0];
-  if (!shared) return null;
+  if (!shared) return [];
   const crossed = new Set(crossingIndexes(a, [...nodes]));
-  const all = Array.from(a.grid, (_, i) => i).filter((i) => i !== shared.ia);
-  const fresh = all.filter((i) => !crossed.has(i));
-  const pool = fresh.length ? fresh : all;
-  if (!pool.length) return null;
-  return pool.reduce((best, i) =>
-    Math.abs(i - shared.ia) >= Math.abs(best - shared.ia) ? i : best,
+  const fresh = Array.from(a.grid, (_, i) => i).filter((i) => !crossed.has(i));
+  const count = Math.min(unfurlCount(a.grid.length), fresh.length - UNFURL_KEEP_BLANK);
+  const known = [shared.ia];
+  const picked: number[] = [];
+  const gap = (i: number) => Math.min(...known.map((k) => Math.abs(k - i)));
+  for (let n = 0; n < count; n++) {
+    const pool = fresh.filter((i) => !picked.includes(i));
+    const next =
+      n === 0 && pool.includes(0) ? 0 : pool.reduce((best, i) => (gap(i) >= gap(best) ? i : best));
+    picked.push(next);
+    known.push(next);
+  }
+  return picked.sort((x, y) => x - y);
+}
+
+/**
+ * The starting answer's free letters: the ones the puzzle picked
+ * (`revealed`), topped up to unfurlCount for its length. Added letters
+ * follow the unfurl order (the first letter, then spread out, the later on a
+ * tie). Nothing crosses the start before it's solved, so any cell can show,
+ * and at least two stay blank.
+ */
+export function startIndexes(word: string, revealed: readonly number[]): number[] {
+  const known = [...revealed];
+  const target = Math.min(
+    Math.max(known.length, unfurlCount(word.length)),
+    word.length - UNFURL_KEEP_BLANK,
   );
+  const gap = (i: number) => Math.min(...known.map((k) => Math.abs(k - i)));
+  while (known.length < target) {
+    const pool = Array.from(word, (_, i) => i).filter((i) => !known.includes(i));
+    known.push(pool.includes(0) ? 0 : pool.reduce((best, i) => (gap(i) >= gap(best) ? i : best)));
+  }
+  return known.sort((x, y) => x - y);
 }
